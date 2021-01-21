@@ -23,7 +23,6 @@ class Parameters(SourceName, APIBase):
     order_by: Literal["id", "name", "preferredUnit"] = Query("id")
 
 
-
 @router.get(
     "/v2/parameters", response_model=OpenAQParametersResult, tags=["v2"]
 )
