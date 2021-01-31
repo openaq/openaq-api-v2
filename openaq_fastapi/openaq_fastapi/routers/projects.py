@@ -24,6 +24,7 @@ class ProjectsOrder(str, Enum):
 class Projects(Project, Measurands, APIBase, Country):
     order_by: ProjectsOrder = Query("lastUpdated")
     isMobile: Optional[bool] = None
+    isAnalysis: Optional[bool] = None
     entity: Optional[str] = None
     sensorType: Optional[str] = None
     sourceName: Optional[List[str]] = None
@@ -66,6 +67,12 @@ class Projects(Project, Measurands, APIBase, Country):
                         "isMobile" = :is_mobile
                         """
                     )
+                elif f == "isAnalysis":
+                    wheres.append(
+                        """
+                        "isAnalysis" = :is_analysis
+                        """
+                    )
                 elif f == "entity":
                     wheres.append(
                         """
@@ -87,6 +94,8 @@ class Projects(Project, Measurands, APIBase, Country):
 
                 # elif isinstance(v, List):
                 #    wheres.append(f"{f} = ANY(:{f})")
+
+        wheres.append(" groups_id not in (28978,28972) ")
 
         if len(wheres) > 0:
             return (" AND ").join(wheres)
@@ -113,9 +122,7 @@ async def projects_get(
                 "isMobile",
                 "entity",
                 "sensorType",
-                --geog,
-                value_count as count,
-                value_sum / value_count as average,
+                "isAnalysis",
                 locations,
                 measurand as parameter,
                 units as unit,
@@ -123,6 +130,8 @@ async def projects_get(
                 sensor_nodes_arr as location_ids,
                 sources(sensor_nodes_arr) as sources,
                 countries,
+                sum(value_count) as count,
+                sum(value_sum) / sum(value_count) as average,
                 last(last_value, last_datetime) as "lastValue",
                 max(last_datetime) as "lastUpdated",
                 min(first_datetime) as "firstUpdated",
@@ -131,13 +140,15 @@ async def projects_get(
                 max(maxx) as maxx,
                 max(maxy) as maxy
             FROM
-                rollups LEFT JOIN groups_view g
+                --rollups
+                sensor_stats
+                LEFT JOIN groups_sensors using (sensors_id)
+                LEFT JOIN groups_view g
                 USING (groups_id, measurands_id)
-                --LEFT JOIN sources s ON (g.name=s.slug)
             WHERE
-                g.type='source' AND rollup='total'
+                g.type='source'
                 AND {projects.where()}
-            GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+            GROUP BY 1,2,3,4,5,6,7,8,9,10,11,12,13,14
             ORDER BY "{projects.order_by}" {projects.sort}
 
         )
@@ -149,6 +160,7 @@ async def projects_get(
             "isMobile",
             "entity",
             "sensorType",
+            "isAnalysis",
             CASE WHEN min(minx) is null THEN null ELSE
             ARRAY[min(minx), min(miny), max(maxx), max(maxy)] END as bbox,
             sources,
@@ -173,7 +185,7 @@ async def projects_get(
                 countries
             }}'::text[]) as parameters
             FROM bysensor
-            GROUP BY 1,2,3,4,5,6,8
+            GROUP BY 1,2,3,4,5,6,7,9
         )
         select count(*) OVER () as count,
         --jsonb_strip_nulls(

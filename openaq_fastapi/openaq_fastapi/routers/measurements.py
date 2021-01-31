@@ -22,7 +22,7 @@ from ..models.queries import (
     Measurands,
     Sort,
     SensorTypes,
-    EntityTypes
+    EntityTypes,
 )
 import csv
 import io
@@ -39,6 +39,7 @@ def meas_csv(rows):
     output = io.StringIO()
     writer = csv.writer(output)
     header = [
+        "locationId",
         "location",
         "city",
         "country",
@@ -54,6 +55,7 @@ def meas_csv(rows):
     for r in rows:
         try:
             row = [
+                r["locationId"],
                 r["location"],
                 r["city"],
                 r["country"],
@@ -84,7 +86,8 @@ class Measurements(
 ):
     order_by: MeasOrder = Query("datetime")
     sort: Sort = "desc"
-    isMobile: bool = None
+    isMobile: Optional[bool] = None
+    isAnalysis: Optional[bool] = None
     project: Optional[int] = None
     entity: Optional[EntityTypes] = None
     sensorType: Optional[SensorTypes] = None
@@ -106,11 +109,24 @@ class Measurements(
                 elif f == "location":
                     wheres.append(" site_name = ANY(:location) ")
                 elif f == "parameter":
-                    wheres.append(" measurand = ANY(:measurand) ")
+                    if all(isinstance(x, int) for x in v):
+                        wheres.append(
+                            """
+                            b.measurands_id = ANY(:parameter::int[])
+                            """
+                        )
+                    else:
+                        wheres.append(
+                            """
+                            b.measurand = ANY(:parameter::text[])
+                            """
+                        )
                 elif f == "unit":
                     wheres.append(" units = ANY(:unit) ")
                 elif f == "isMobile":
-                    wheres.append(" ismobile = :mobile ")
+                    wheres.append(" ismobile = :is_mobile ")
+                elif f == "isAnalysis":
+                    wheres.append(" is_analysis = :is_analysis ")
                 elif f == "entity":
                     wheres.append(" b.entity = :entity ")
                 elif f == "sensorType":
@@ -119,6 +135,7 @@ class Measurements(
                     wheres.append(f"{f} = ANY(:{f})")
         wheres.append(self.where_geo())
         wheres = list(filter(None, wheres))
+        wheres.append(" sensor_nodes_id not in (61485,61505,61506) ")
         if len(wheres) > 0:
             return (" AND ").join(wheres)
         return " TRUE "
@@ -148,53 +165,70 @@ async def measurements_get(
         params["locations"] = locations
         where = f"{where} AND sensor_nodes_id = ANY(:locations) "
 
-    joins = """
-        LEFT JOIN groups_sensors USING (groups_id)
-        LEFT JOIN measurements_fastapi_base b
-        ON (groups_sensors.sensors_id=b.sensors_id)
-    """
-    params["mobile"] = m.isMobile
-    if m.isMobile is None:
-        if (
-            (m.location is None or len(m.location) == 0)
-            and m.isMobile is None
-            and m.coordinates is None
-            and m.project is None
-            and m.entity is None
-            and m.sensorType is None
-            and m.project is None
-        ):
-            joins = ""
-            if m.country is None or len(m.country) == 0:
-                rolluptype = "total"
-            else:
-                rolluptype = "country"
-                params["country"] = m.country
-                where = " name =ANY(:country) "
-    # get overall summary numbers
+    # joins = """
+    #     LEFT JOIN groups_sensors USING (groups_id)
+    #     LEFT JOIN measurements_fastapi_base b
+    #     ON (groups_sensors.sensors_id=b.sensors_id)
+    # """
+    # if m.isMobile is None:
+    #     if (
+    #         (m.location is None or len(m.location) == 0)
+    #         and m.isMobile is None
+    #         and m.coordinates is None
+    #         and m.project is None
+    #         and m.entity is None
+    #         and m.sensorType is None
+    #         and m.project is None
+    #         and m.isAnalysis is None
+    #     ):
+    #         joins = ""
+    #         if m.country is None or len(m.country) == 0:
+    #             rolluptype = "total"
+    #         else:
+    #             rolluptype = "country"
+    #             params["country"] = m.country
+    #             where = " name =ANY(:country) "
+    # # get overall summary numbers
+    # q = f"""
+    #     SELECT
+    #         sum(value_count),
+    #         min(first_datetime),
+    #         max(last_datetime)
+    #     FROM rollups
+    #     LEFT JOIN groups_view USING (groups_id, measurands_id)
+    #     {joins}
+    #     WHERE rollup = 'month' and type='{rolluptype}'
+    #         AND
+    #         st >= :date_from::timestamptz
+    #         AND
+    #         st < :date_to::timestamptz
+    #         AND
+    #         {where}
+    #     """
+    # logger.debug(f"Params: {params}")
+    # rows = await db.fetch(q, params)
+    # logger.debug(f"{rows}")
+
     q = f"""
         SELECT
             sum(value_count),
             min(first_datetime),
             max(last_datetime)
-        FROM rollups
-        LEFT JOIN groups_view USING (groups_id, measurands_id)
-        {joins}
-        WHERE rollup = 'month' and type='{rolluptype}'
-            AND
-            st >= :date_from::timestamptz
-            AND
-            st < :date_to::timestamptz
-            AND
+        FROM
+            sensor_stats
+            LEFT JOIN measurements_fastapi_base b USING (sensors_id, sensor_nodes_id)
+
+            --LEFT JOIN groups_sensors USING (sensors_id)
+            --LEFT JOIN groups_view b USING (groups_id, measurands_id)
+        WHERE
             {where}
         """
-    logger.debug(f"Params: {params}")
     rows = await db.fetch(q, params)
     logger.debug(f"{rows}")
     if rows is None:
         return OpenAQResult()
     try:
-        total_count = rows[0][0]
+        total_count = int(rows[0][0])
         range_start = rows[0][1].replace(tzinfo=UTC)
         range_end = rows[0][2].replace(tzinfo=UTC)
     except Exception:
@@ -212,10 +246,20 @@ async def measurements_get(
             date_to, range_end, datetime.utcnow().replace(tzinfo=UTC)
         )
 
-    count = total_count
+    dq = float((date_to - date_from).total_seconds())  # duration of query
+    dd = float((range_end - range_start).total_seconds())  # duration of data
+
     # if time is unbounded, we can just use the total count
     if (date_from == range_start) and (date_to == range_end):
         count = total_count
+    else:
+        count = int(total_count * dq / dd)
+
+    logger.debug(
+        f"count {count}, dd {dd}, dq {dq}, secs {(m.limit / total_count) * dd}"
+    )
+
+    deltasecs = max(600, 2 * (m.limit / total_count) * dd)
 
     date_from_adj = date_from
     date_to_adj = date_to
@@ -223,12 +267,12 @@ async def measurements_get(
     params["date_from_adj"] = date_from_adj
     params["date_to_adj"] = date_to_adj
 
-    days = (date_to_adj - date_from_adj).total_seconds() / (24 * 60 * 60)
-    logger.debug(f" days {days}")
+    # days = (date_to_adj - date_from_adj).total_seconds() / (24 * 60 * 60)
+    logger.debug(f" delta {deltasecs}")
 
     # if we are ordering by time, keep us from searching everything
     # for paging
-    delta = timedelta(days=1)
+    delta = timedelta(seconds=int(deltasecs))
     if m.order_by == "datetime":
         if m.sort == "asc":
             date_to_adj = date_from_adj + delta
@@ -271,7 +315,14 @@ async def measurements_get(
         rc = 0
         params["rangestart"] = rangestart
         params["rangeend"] = rangeend
-        while rc < m.limit and rangestart >= date_from and rangeend <= date_to:
+        iteration = 0
+        while (
+            rc < m.limit
+            and rc < total_count
+            and rangestart >= date_from
+            and rangeend <= date_to
+            and iteration <= 20
+        ):
             logger.debug(f"looping... {rc} {rangestart} {rangeend}")
             q = f"""
             WITH t AS (
@@ -297,10 +348,11 @@ async def measurements_get(
                     country,
                     city,
                     ismobile,
+                    is_analysis,
                     entity, "sensorType" {fields}
-                FROM measurements a
+                FROM measurements_analyses a
                 LEFT JOIN measurements_fastapi_base b USING (sensors_id)
-                WHERE {m.where()} {vwhere}
+                WHERE {where} {vwhere}
                 AND datetime >= :rangestart::timestamptz
                 AND datetime <= :rangeend::timestamptz
                 ORDER BY "{m.order_by}" {m.sort}
@@ -323,6 +375,7 @@ async def measurements_get(
                         country,
                         city,
                         ismobile as "isMobile",
+                        is_analysis as "isAnalysis",
                         entity, "sensorType" {fields}
                     FROM t
                 )
@@ -358,6 +411,7 @@ async def measurements_get(
             )
             params["rangestart"] = rangestart
             params["rangeend"] = rangeend
+            iteration += 1
     meta = Meta(
         website=os.getenv("APP_HOST", "/"),
         page=m.page,

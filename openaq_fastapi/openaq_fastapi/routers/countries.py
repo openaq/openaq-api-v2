@@ -25,13 +25,14 @@ class CountriesOrder(str, Enum):
 
 class Countries(Country, APIBase):
     order_by: CountriesOrder = Query("country")
+    limit: int = Query(200)
 
     def where(self):
         wheres = []
         for f, v in self:
             if v is not None:
                 if f == "country":
-                    wheres.append(" cl.iso = ANY(:country) ")
+                    wheres.append(" code = ANY(:country) ")
         if len(wheres) > 0:
             return (" AND ").join(wheres)
         return " TRUE "
@@ -58,43 +59,21 @@ async def countries_get(
     elif countries.order_by == "firstUpdated":
         order_by = "7"
     elif countries.order_by == "country":
-        order_by = "iso"
+        order_by = "code"
     elif countries.order_by == "count":
-        order_by = "sum(value_count)"
+        order_by = "count"
     elif countries.order_by == "locations":
-        order_by = "count(*)"
+        order_by = "locations"
 
     q = f"""
     WITH t AS (
     SELECT
     count(*) over () as countriescount,
-        cl.iso as code,
-        cl.name,
-        --cl.bbox,
-        sn.cities,
-        sn.locations,
-        sn.sources,
-        sum(value_count) as count,
-        min(first_datetime) as "firstUpdated",
-        max(last_datetime) as "lastUpdated",
-        array_agg(DISTINCT measurand) as parameters
-    FROM countries cl
-    JOIN groups_view gv ON (gv.name=cl.iso)
-    JOIN rollups r USING (groups_id, measurands_id)
-    JOIN LATERAL (
-        SELECT
-            count(DISTINCT sensor_nodes_id) as locations,
-            count(DISTINCT city) as cities ,
-            count(DISTINCT sources_id) as sources
-        FROM sensor_nodes
-        LEFT JOIN sensor_nodes_sources USING (sensor_nodes_id)
-        WHERE country=cl.iso
-        ) sn ON TRUE
-    WHERE r.rollup='total' AND gv.type='country'
-    AND
+        *
+    FROM country_stats
+    WHERE
     {countries.where()}
-    GROUP BY
-    2,3,4,5,6
+    AND code is not null
     ORDER BY {order_by} {countries.sort}
     OFFSET :offset
     LIMIT :limit

@@ -85,7 +85,7 @@ class OpenAQAveragesResult(OpenAQResult):
 
 
 class CitiesRow(BaseModel):
-    country: str
+    country: Optional[str]
     city: str
     count: int
     locations: int
@@ -166,6 +166,7 @@ class ProjectsRow(BaseModel):
     name: str
     subtitle: str
     isMobile: Optional[bool]
+    isAnalysis: Optional[bool]
     entity: Optional[str]
     sensorType: Optional[str]
     locations: int
@@ -214,6 +215,7 @@ class LocationsRow(BaseModel):
     country: Optional[str]
     sources: List[Any]
     isMobile: bool
+    isAnalysis: bool
     parameters: List[LocationParameterDetails]
     sourceType: str
     coordinates: CoordinatesDict

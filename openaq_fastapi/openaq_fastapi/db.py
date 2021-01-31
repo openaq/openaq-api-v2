@@ -70,14 +70,11 @@ class DB:
 
     @cached(900, **cache_config)
     async def fetch(self, query, kwargs):
-        disable_nestloop=kwargs.get('disable_nestloop', None)
         pool = await self.pool()
         start = time.time()
         logger.debug("Start time: %s Query: %s Args:%s", start, query, kwargs)
         rquery, args = render(query, **kwargs)
         async with pool.acquire() as con:
-            if disable_nestloop:
-                await con.fetch("SET ENABLE_NESTLOOP to off;")
             try:
                 r = await con.fetch(rquery, *args)
             except asyncpg.exceptions.UndefinedColumnError as e:

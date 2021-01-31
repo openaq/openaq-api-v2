@@ -161,7 +161,7 @@ class EntityTypes(str, Enum):
 
 
 class SensorTypes(str, Enum):
-    reference = "reference"
+    reference = "reference grade"
     lcs = "low-cost sensor"
 
 

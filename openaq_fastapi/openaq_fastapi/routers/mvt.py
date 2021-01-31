@@ -63,6 +63,7 @@ class MobileTile(TileBase):
     lastUpdatedTo: Optional[Union[datetime, date]] = None
     isMobile: Optional[bool] = None
     project: Optional[int] = None
+    isAnalysis: Optional[bool] = None
 
     def where(self):
         wheres = []
@@ -82,11 +83,14 @@ class MobileTile(TileBase):
                     wheres.append(" last_datetime >= :last_updated_to ")
                 elif f == "isMobile":
                     wheres.append(" ismobile=:is_mobile ")
+                elif f == "isAnalysis":
+                    wheres.append(" is_analysis=:is_analysis ")
                 elif f == "project":
                     wheres.append(
                         "project_in_nodes(ARRAY[location_id],ARRAY[:project::int]) "
                     )
         wheres = list(filter(None, wheres))
+        wheres.append(" location_id not in (61485,61505,61506) ")
         if len(wheres) > 0:
             return (" AND ").join(wheres)
         return " TRUE "
@@ -102,9 +106,9 @@ class MobileTile(TileBase):
         return paramcols
 
     def paramgroup(self):
-        paramgroup = "1,2,3,4,5"
+        paramgroup = "1,2,3,4,5,6"
         if self.parameter is not None:
-            paramgroup = "1,2,3,4,5,6,7"
+            paramgroup = "1,2,3,4,5,6,7,8"
         return paramgroup
 
 
@@ -133,6 +137,7 @@ async def get_tile(
                 country,
                 ismobile as "isMobile",
                 "sensorType",
+                is_analysis as "isAnalysis",
                 {t.paramcols()}
                 sum(count) as count,
                 ST_AsMVTGeom(
@@ -308,6 +313,7 @@ async def get_mobilegentile(
                 country,
                 ismobile as "isMobile",
                 "sensorType",
+                is_analysis as "isAnalysis",
                 {t.paramcols()}
                 sum(count) as count
             FROM locations, tile
@@ -327,7 +333,7 @@ async def get_mobilegentile(
                     tile
                 ) as mvt
             FROM
-                mobile_gen, nodes, tile
+                mobile_generalized, nodes, tile
             WHERE
                 geom && tile AND sensor_nodes_id = ANY(nodes.nodes)
             GROUP BY 1,2

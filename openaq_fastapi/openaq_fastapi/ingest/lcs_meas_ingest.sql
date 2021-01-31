@@ -12,6 +12,8 @@ INSERT INTO rejects (tbl,r) SELECT
     to_jsonb(meas)
 FROM meas WHERE sensors_id IS NULL;
 
+
+
 DELETE FROM meas WHERE sensors_id IS NULL;
 
 INSERT INTO measurements (

@@ -38,13 +38,7 @@ class Cities(City, Country, APIBase):
                 elif f == "country":
                     wheres.append(
                         """
-                        country = ANY(:country)
-                        """
-                    )
-                elif f == "entity":
-                    wheres.append(
-                        """
-                        sensor_nodes.metadata @> jsonb_build_object('entity',:entity::text)
+                        code = ANY(:country)
                         """
                     )
         if len(wheres) > 0:
@@ -61,36 +55,42 @@ class Cities(City, Country, APIBase):
 async def cities_get(
     db: DB = Depends(), cities: Cities = Depends(Cities.depends())
 ):
+    order_by = cities.order_by
+    if cities.order_by == "lastUpdated":
+        order_by = "8"
+    elif cities.order_by == "firstUpdated":
+        order_by = "7"
+    elif cities.order_by == "country":
+        order_by = "code"
+    elif cities.order_by == "count":
+        order_by = "count"
+    elif cities.order_by == "city":
+        order_by = "city"
+    elif cities.order_by == "locations":
+        order_by = "locations"
     q = f"""
     WITH t AS (
     SELECT
-    count(*) over () as numcities,
+    count(*) over () as citiescount,
+        code as country,
         city,
-        country,
-        sum(value_count) as count,
-        count(*) as locations,
-        min(first_datetime) as "firstUpdated",
-        max(last_datetime) as "lastUpdated",
-        array_agg(DISTINCT measurand) as parameters
-    FROM
-    sensor_nodes
-    LEFT JOIN sensor_systems USING (sensor_nodes_id)
-    LEFT JOIN sensors USING (sensor_systems_id)
-    LEFT JOIN rollups USING (sensors_id, measurands_id)
-    LEFT JOIN groups_view USING (groups_id, measurands_id)
-    WHERE rollup='total' AND groups_view.type='node' and city is not null
-    AND {cities.where()}
-    GROUP BY
-    2,3
-    ORDER BY "{cities.order_by}" {cities.sort}
+        count,
+        locations,
+        "firstUpdated",
+        "lastUpdated",
+        parameters
+    FROM city_stats
+    WHERE
+    {cities.where()}
+    and city is not null
+    ORDER BY {order_by} {cities.sort}
     OFFSET :offset
     LIMIT :limit
     )
-    SELECT numcities as count,
-        to_jsonb(t)-'{{numcities}}'::text[] FROM t;
+    SELECT citiescount as count, to_jsonb(t)-'{{citiescount}}'::text[] as json FROM t
+
     """
     params=cities.params()
-    params['disable_nestloop']=True
     output = await db.fetchOpenAQResult(q, params)
 
     return output

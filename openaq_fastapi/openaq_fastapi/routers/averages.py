@@ -12,6 +12,7 @@ from ..models.queries import (
     Project,
     Spatial,
     Temporal,
+    Sort,
 )
 from openaq_fastapi.models.responses import OpenAQResult
 from pydantic import root_validator
@@ -27,6 +28,7 @@ class Averages(APIBase, Country, Project, Measurands, DateRange):
     temporal: Temporal = Query(...)
     location: Optional[List[str]] = None
     group: Optional[bool] = False
+    sort: Optional[Sort] = Query("desc", description="Define sort order.")
 
     def where(self):
         wheres = []
@@ -47,6 +49,7 @@ class Averages(APIBase, Country, Project, Measurands, DateRange):
         for f, v in self:
             if v is not None and f in ["units"]:
                 wheres.append(f"{f} = ANY(:{f})")
+        wheres.append(" groups_id not in (28978,28972) ")
         if len(wheres) > 0:
             return (" AND ").join(wheres)
         return " TRUE "
@@ -178,7 +181,7 @@ async def averages_v2_get(
             AND datetime>=:date_from::timestamptz
             AND datetime<=:date_to::timestamptz
             GROUP BY {groupby}
-            ORDER BY 4 DESC
+            ORDER BY 4 {av.sort}
             OFFSET :offset
             LIMIT :limit
             """
@@ -243,7 +246,7 @@ async def averages_v2_get(
             LEFT JOIN groups_view USING (groups_id, measurands_id)
             {where}
             {group_clause}
-            ORDER BY 3 DESC
+            ORDER BY 3 {av.sort}
             OFFSET :offset
             LIMIT :limit
         """

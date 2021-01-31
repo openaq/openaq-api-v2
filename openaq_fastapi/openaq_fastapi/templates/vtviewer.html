@@ -26,6 +26,7 @@
       bottom: 0;
       width: 100%;
     }
+
     #info {
       display: block;
       position: relative;
@@ -107,8 +108,81 @@
         paint: {
           'circle-color': 'rgba(10, 10, 240, 0.4)',
           'circle-stroke-color': '#000'
+        },
+        minzoom:7
+      })
+
+      map.addLayer({
+        id: 'mobile-generalized-heat',
+        source: 'mobilegen',
+        'source-layer': 'default',
+        type: 'heatmap',
+
+        'paint': {
+          // Increase the heatmap weight based on frequency and property magnitude
+          'heatmap-weight': [
+            'interpolate',
+            ['linear'],
+            ['get', 'mag'],
+            0,
+            0,
+            6,
+            1
+          ],
+          // Increase the heatmap color weight weight by zoom level
+          // heatmap-intensity is a multiplier on top of heatmap-weight
+          'heatmap-intensity': [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            0,
+            1,
+            9,
+            3
+          ],
+          // Color ramp for heatmap.  Domain is 0 (low) to 1 (high).
+          // Begin color ramp at 0-stop with a 0-transparancy color
+          // to create a blur-like effect.
+          'heatmap-color': [
+            'interpolate',
+            ['linear'],
+            ['heatmap-density'],
+            0,
+            'rgba(33,102,172,0)',
+            0.2,
+            'rgb(103,169,207)',
+            0.4,
+            'rgb(209,229,240)',
+            0.6,
+            'rgb(253,219,199)',
+            0.8,
+            'rgb(239,138,98)',
+            1,
+            'rgb(178,24,43)'
+          ],
+          // Adjust the heatmap radius by zoom level
+          'heatmap-radius': [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            0,
+            2,
+            9,
+            20
+          ],
+          // Transition from heatmap to circle layer by zoom level
+          'heatmap-opacity': [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            7,
+            1,
+            9,
+            0
+          ]
         }
       })
+
       map.addLayer({
         id: 'mobile',
         source: 'mobile',
@@ -135,7 +209,7 @@
       map.on('click', 'table', function (e) {
         props = e.features[0].properties;
         t = '<table>';
-        for (var key in props){
+        for (var key in props) {
           t += "<tr><td>" + key + "</td><td>" + props[key] + "</td></tr>";
         }
         t += '</table>';
@@ -145,7 +219,7 @@
           .addTo(map);
       })
 
-        // Change the cursor to a pointer when the mouse is over the places layer.
+      // Change the cursor to a pointer when the mouse is over the places layer.
       map.on('mouseenter', 'mobile', function () {
         map.getCanvas().style.cursor = 'pointer'
       })
@@ -158,7 +232,7 @@
       map.on('click', 'mobile', function (e) {
         props = e.features[0].properties;
         t = '<table>';
-        for (var key in props){
+        for (var key in props) {
           t += "<tr><td>" + key + "</td><td>" + props[key] + "</td></tr>";
         }
         t += '</table>';
@@ -168,8 +242,8 @@
           .addTo(map);
       })
 
-        // Change the cursor to a pointer when the mouse is over the places layer.
-        map.on('mouseenter', 'bounds', function () {
+      // Change the cursor to a pointer when the mouse is over the places layer.
+      map.on('mouseenter', 'bounds', function () {
         map.getCanvas().style.cursor = 'pointer'
       })
 
@@ -181,7 +255,7 @@
       map.on('click', 'bounds', function (e) {
         props = e.features[0].properties;
         t = '<table>';
-        for (var key in props){
+        for (var key in props) {
           t += "<tr><td>" + key + "</td><td>" + props[key] + "</td></tr>";
         }
         t += '</table>';
@@ -194,12 +268,12 @@
 
       map.on('mousemove', function (e) {
         document.getElementById('info').innerHTML =
-        // e.point is the x, y coordinates of the mousemove event relative
-        // to the top-left corner of the map
-        JSON.stringify(e.point) +
-        '<br />' +
-        // e.lngLat is the longitude, latitude geographical position of the event
-        JSON.stringify(e.lngLat.wrap());
+          // e.point is the x, y coordinates of the mousemove event relative
+          // to the top-left corner of the map
+          JSON.stringify(e.point) +
+          '<br />' +
+          // e.lngLat is the longitude, latitude geographical position of the event
+          JSON.stringify(e.lngLat.wrap());
       });
 
     })

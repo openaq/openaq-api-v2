@@ -20,11 +20,9 @@ from ..models.queries import (
     SensorTypes,
 )
 
-from openaq_fastapi.models.responses import (
-    OpenAQResult,
-    converter
-)
+from openaq_fastapi.models.responses import OpenAQResult, converter
 from starlette.responses import JSONResponse
+
 logger = logging.getLogger("locations")
 logger.setLevel(logging.DEBUG)
 
@@ -48,6 +46,13 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
     )
     sort: Optional[Sort] = Query("desc", description="Sort Direction")
     isMobile: Optional[bool] = Query(None, description="Location is mobile")
+    isAnalysis: Optional[bool] = Query(
+        None,
+        description=(
+            "Data is the product of a previous "
+            "analysis/aggregation and not raw measurements"
+        ),
+    )
     sourceName: Optional[List[str]] = Query(
         None, description="Name of the data source"
     )
@@ -141,6 +146,8 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
                     )
                 elif f == "isMobile":
                     wheres.append(f' "isMobile" = {bool(v)} ')
+                elif f == "isAnalysis":
+                    wheres.append(f' "isAnalysis" = {bool(v)} ')
                 elif f == "unit":
                     wheres.append(
                         """
@@ -150,6 +157,7 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
                             """
                     )
         wheres.append(self.where_geo())
+        wheres.append(" id not in (61485,61505,61506) ")
         wheres = [w for w in wheres if w is not None]
         if len(wheres) > 0:
             return (" AND ").join(wheres)
@@ -161,8 +169,7 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
 )
 @router.get("/v2/locations", response_model=OpenAQResult, tags=["v2"])
 async def locations_get(
-    db: DB = Depends(),
-    locations: Locations = Depends(Locations.depends()),
+    db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
 ):
 
     order_by = locations.order_by
@@ -182,9 +189,9 @@ async def locations_get(
 
     qparams = locations.params()
 
-    hidejson='rawData,'
+    hidejson = "rawData,"
     if locations.dumpRaw:
-        hidejson=""
+        hidejson = ""
 
     q = f"""
         WITH t1 AS (
@@ -194,11 +201,12 @@ async def locations_get(
                 "sensorType",
                 entity,
                 "isMobile",
+                "isAnalysis",
                 city,
                 country,
                 sources,
                 manufacturers,
-                coordinates,
+                case WHEN "isMobile" then null else coordinates end as coordinates,
                 measurements,
                 "firstUpdated",
                 "lastUpdated",
@@ -244,14 +252,12 @@ async def locations_get(
     return output
 
 
-
 @router.get(
     "/v2/latest/{location_id}", response_model=OpenAQResult, tags=["v2"]
 )
 @router.get("/v2/latest", response_model=OpenAQResult, tags=["v2"])
 async def latest_get(
-    db: DB = Depends(),
-    locations: Locations = Depends(Locations.depends()),
+    db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
 ):
     data = await locations_get(db, locations)
     meta = data.meta
@@ -269,7 +275,7 @@ async def latest_get(
                 coordinates: .coordinates,
                 measurements: [
                     .parameters[] | {
-                        parameter: .measurand,
+                        parameter: .parameter,
                         value: .lastValue,
                         lastUpdated: .lastUpdated,
                         unit: .unit
@@ -285,10 +291,9 @@ async def latest_get(
 
 
 async def v1_base(
-    db: DB = Depends(),
-    locations: Locations = Depends(Locations.depends()),
+    db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
 ):
-    locations.entity=['government']
+    locations.entity = "government"
 
     order_by = locations.order_by
     if order_by == "location":
@@ -360,8 +365,7 @@ async def v1_base(
 )
 @router.get("/v1/latest", response_model=OpenAQResult, tags=["v1"])
 async def latest_v1_get(
-    db: DB = Depends(),
-    locations: Locations = Depends(Locations.depends()),
+    db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
 ):
     data = await v1_base(db, locations)
     meta = data.meta
@@ -406,8 +410,7 @@ async def latest_v1_get(
 )
 @router.get("/v1/locations", response_model=OpenAQResult, tags=["v1"])
 async def locationsv1_get(
-    db: DB = Depends(),
-    locations: Locations = Depends(Locations.depends()),
+    db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
 ):
     data = await v1_base(db, locations)
     meta = data.meta

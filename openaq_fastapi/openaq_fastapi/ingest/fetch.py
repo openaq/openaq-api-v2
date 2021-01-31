@@ -183,7 +183,7 @@ def update_rollups(cursor, mindate, maxdate):
 @app.command()
 def load_fetch_file(key: str):
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
-        connection.set_session(autocommit=False)
+        connection.set_session(autocommit=True)
         with connection.cursor() as cursor:
             create_staging_table(cursor)
             copy_data(cursor, key)
@@ -250,7 +250,7 @@ def load_range(
 @app.command()
 def load_db(limit: int = 50):
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
-        connection.set_session(autocommit=False)
+        connection.set_session(autocommit=True)
         with connection.cursor() as cursor:
             cursor.execute(
                 """

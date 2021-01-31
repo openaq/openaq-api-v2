@@ -164,6 +164,7 @@ def crawl(bucket, prefix):
                 print(key)
     f.seek(0)
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
         with connection.cursor() as cursor:
             cursor.copy_expert(
                 """

@@ -4,7 +4,7 @@ import dateparser
 import pytz
 import orjson
 import csv
-from urllib.parse import unquote_plus
+from urllib.parse import unquote, unquote_plus
 
 import boto3
 import psycopg2
@@ -137,17 +137,11 @@ class LCSData:
 
     def load_data(self):
         with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
-            connection.set_session(autocommit=False)
+            connection.set_session(autocommit=True)
             with connection.cursor() as cursor:
                 self.create_staging_table(cursor)
                 write_csv(
-                    cursor,
-                    self.keys,
-                    "keys",
-                    [
-                        "key",
-                        "last_modified",
-                    ],
+                    cursor, self.keys, "keys", ["key", "last_modified",],
                 )
                 cursor.execute(
                     """
@@ -183,11 +177,7 @@ class LCSData:
                     cursor,
                     self.systems,
                     "ms_sensorsystems",
-                    [
-                        "ingest_id",
-                        "ingest_sensor_nodes_id",
-                        "metadata",
-                    ],
+                    ["ingest_id", "ingest_sensor_nodes_id", "metadata",],
                 )
                 write_csv(
                     cursor,
@@ -223,8 +213,17 @@ class LCSData:
                 )
                 connection.commit()
 
+                for notice in connection.notices:
+                    print(notice)
+
     def process_data(self, cursor):
-        query = get_query("lcs_ingest.sql")
+        query = get_query("lcs_ingest_nodes.sql")
+        cursor.execute(query)
+
+        query = get_query("lcs_ingest_systems.sql")
+        cursor.execute(query)
+
+        query = get_query("lcs_ingest_sensors.sql")
         cursor.execute(query)
 
     def create_staging_table(self, cursor):
@@ -233,7 +232,7 @@ class LCSData:
     def get_metadata(self):
         hasnew = False
         with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
-            connection.set_session(autocommit=False)
+            connection.set_session(autocommit=True)
             with connection.cursor() as cursor:
 
                 for obj in self.page:
@@ -259,8 +258,11 @@ class LCSData:
                         )
                         self.get_station(key)
                         hasnew = True
+
                 if hasnew:
                     self.load_data()
+                for notice in connection.notices:
+                    print(notice)
 
 
 def write_csv(cursor, data, table, columns):
@@ -296,7 +298,7 @@ def load_metadata_bucketscan(count=100):
 
 def load_metadata_db(count=250):
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
-        connection.set_session(autocommit=False)
+        connection.set_session(autocommit=True)
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -312,17 +314,17 @@ def load_metadata_db(count=250):
             contents = []
             for row in rows:
                 contents.append(
-                    {
-                        "Key": unquote_plus(row[0]),
-                        "LastModified": row[1],
-                    }
+                    {"Key": unquote_plus(row[0]), "LastModified": row[1],}
                 )
+            for notice in connection.notices:
+                print(notice)
     if len(contents) > 0:
         data = LCSData(contents)
         data.get_metadata()
 
 
 def load_measurements(key):
+    key = unquote_plus(key)
     print(key)
 
     if str.endswith(key, ".gz"):
@@ -345,55 +347,55 @@ def load_measurements(key):
             },
             OutputSerialization={"CSV": {}},
         )
+        content = ""
         for event in resp["Payload"]:
             if "Records" in event:
-                records = event["Records"]["Payload"].decode("utf-8")
-                ret = []
-                for row in csv.reader(records.split("\n")):
-                    if len(row) not in [3, 5]:
-                        continue
-                    if len(row) == 5:
-                        try:
-                            lon = float(row[3])
-                            lat = float(row[4])
-                            if not (
-                                lon is None
-                                or lat is None
-                                or lat == ""
-                                or lon == ""
-                                or lon == 0
-                                or lat == 0
-                                or lon < -180
-                                or lon > 180
-                                or lat < -90
-                                or lat > 90
-                            ):
-                                row[3] = lon
-                                row[4] = lat
-                            else:
-                                row[3] = None
-                                row[4] = None
-                        except Exception:
-                            row[3] = None
-                            row[4] = None
+                content += event["Records"]["Payload"].decode("utf-8")
+
+        ret = []
+        for row in csv.reader(content.split("\n")):
+            if len(row) not in [3, 5]:
+                continue
+            if len(row) == 5:
+                try:
+                    lon = float(row[3])
+                    lat = float(row[4])
+                    if not (
+                        lon is None
+                        or lat is None
+                        or lat == ""
+                        or lon == ""
+                        or lon == 0
+                        or lat == 0
+                        or lon < -180
+                        or lon > 180
+                        or lat < -90
+                        or lat > 90
+                    ):
+                        row[3] = lon
+                        row[4] = lat
                     else:
-                        row.insert(3, None)
-                        row.insert(4, None)
-                    if row[0] == "" or row[0] is None:
-                        continue
-                    dt = row[2]
-                    try:
-                        dt = datetime.fromtimestamp(int(dt), timezone.utc)
-                    except Exception:
-                        try:
-                            dt = dateparser.parse(dt).replace(
-                                tzinfo=timezone.utc
-                            )
-                        except Exception:
-                            continue
-                    row[2] = dt.isoformat()
-                    ret.append(row)
-                return ret
+                        row[3] = None
+                        row[4] = None
+                except Exception:
+                    row[3] = None
+                    row[4] = None
+            else:
+                row.insert(3, None)
+                row.insert(4, None)
+            if row[0] == "" or row[0] is None:
+                continue
+            dt = row[2]
+            try:
+                dt = datetime.fromtimestamp(int(dt), timezone.utc)
+            except Exception:
+                try:
+                    dt = dateparser.parse(dt).replace(tzinfo=timezone.utc)
+                except Exception:
+                    print(f"Exception in parsing date for {dt} {Exception}")
+            row[2] = dt.isoformat()
+            ret.append(row)
+        return ret
     except Exception as e:
         print(f"Could not load {key} {e}")
     return None
@@ -407,7 +409,7 @@ def to_tsv(row):
 
 def load_measurements_db(limit=250):
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
-        connection.set_session(autocommit=False)
+        connection.set_session(autocommit=True)
         with connection.cursor() as cursor:
             cursor.execute(
                 """
@@ -434,12 +436,7 @@ def load_measurements_db(limit=250):
                         data.extend(newdata)
                 if len(data) > 0:
                     write_csv(
-                        cursor,
-                        new,
-                        "keys",
-                        [
-                            "key",
-                        ],
+                        cursor, new, "keys", ["key",],
                     )
 
                     iterator = StringIteratorIO(
@@ -495,3 +492,6 @@ def load_measurements_db(limit=250):
                     status = cursor.statusmessage
                     print(f"UPDATE LOGS Rows: {rows} Status: {status}")
                     connection.commit()
+
+                    for notice in connection.notices:
+                        print(notice)
