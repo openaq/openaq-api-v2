@@ -132,7 +132,7 @@ class Measurements(
                 elif f == "sensorType":
                     wheres.append(' b."sensorType" = :sensor_type ')
                 elif f in ["country", "city"]:
-                    wheres.append(f"{f} = ANY(:{f})")
+                    wheres.append(f"b.{f} = ANY(:{f})")
         wheres.append(self.where_geo())
         wheres = list(filter(None, wheres))
         wheres.append(" sensor_nodes_id not in (61485,61505,61506) ")
@@ -214,6 +214,7 @@ async def measurements_get(
             sum(value_count),
             min(first_datetime),
             max(last_datetime)
+            --,array_agg(sensor_nodes_id) as sensor_nodes
         FROM
             sensor_stats
             LEFT JOIN measurements_fastapi_base b USING (sensors_id, sensor_nodes_id)
@@ -231,6 +232,7 @@ async def measurements_get(
         total_count = int(rows[0][0])
         range_start = rows[0][1].replace(tzinfo=UTC)
         range_end = rows[0][2].replace(tzinfo=UTC)
+        # sensor_nodes = rows[0][3]
     except Exception:
         return OpenAQResult()
 
@@ -316,6 +318,8 @@ async def measurements_get(
         params["rangestart"] = rangestart
         params["rangeend"] = rangeend
         iteration = 0
+        # params["sensor_nodes"]=sensor_nodes
+        # where = " sensor_nodes_id = ANY(:sensor_nodes) "
         while (
             rc < m.limit
             and rc < total_count

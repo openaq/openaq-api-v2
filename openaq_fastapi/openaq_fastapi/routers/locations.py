@@ -181,7 +181,7 @@ async def locations_get(
     if order_by == "random":
         order_by = " random() "
         lastupdateq = """
-            AND "lastUpdated" > now() - '2 weeks'::interval
+            AND "lastUpdated" > now() - '2 weeks'::interval AND entity='government'
             """
     else:
         order_by = f'"{order_by}"'
