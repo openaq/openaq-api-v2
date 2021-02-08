@@ -1,58 +1,51 @@
 
-# Welcome to your CDK Python project!
+# OpenAQ Version 2 API CDK Deployment
 
-This is a blank project for Python development with CDK.
+This is an [AWS CDK](https://aws.amazon.com/cdk/) project that can be used to deploy Lambda Functions for data ingest and the FastAPI based OpenAQ Version 2 API.
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+This code will package the API code and all dependencies into a package.zip file using Docker. CDK can then be used to deploy the code as an AWS CloudFormation Stack.
 
-This project is set up like a standard Python project.  The initialization
-process also creates a virtualenv within this project, stored under the `.venv`
-directory.  To create the virtualenv it assumes that there is a `python3`
-(or `python` for Windows) executable in your path with access to the `venv`
-package. If for any reason the automatic creation of the virtualenv fails,
-you can create the virtualenv manually.
+It is recommended to install this code in a virtual environment.
 
-To manually create a virtualenv on MacOS and Linux:
+Before install the code, you must have Docker and CDK installed on the system.
 
-```
-$ python3 -m venv .venv
-```
+CDK can be installed using the node package manager:
 
-After the init process completes and the virtualenv is created, you can use the following
-step to activate your virtualenv.
+`
+npm install -g aws-cdk
+`
 
-```
-$ source .venv/bin/activate
-```
+Install the cdk project:
 
-If you are a Windows platform, you would activate the virtualenv like this:
+`
+pip install -e .
+`
 
-```
-% .venv\Scripts\activate.bat
-```
+You must have your environment set up ([Setting up your Environment](../README.md)) prior to deploying.
 
-Once the virtualenv is activated, you can install the required dependencies.
+There are three targets for building:
+- openaq-lcs-apistaging (Staging API)
+- openaq-lcs-api (Production API)
+- openaq-lcs-ingeststaging (Ingest Lambda)
 
-```
-$ pip install -r requirements.txt
-```
+To build the project:
 
-At this point you can now synthesize the CloudFormation template for this code.
+`
+cdk synth [target]
+`
 
-```
-$ cdk synth
-```
+To see what changes will be made in a deploy:
 
-To add additional dependencies, for example other CDK libraries, just add
-them to your `setup.py` file and rerun the `pip install -r requirements.txt`
-command.
+`
+cdk diff [target]
+`
 
-## Useful commands
+To deploy:
 
- * `cdk ls`          list all stacks in the app
- * `cdk synth`       emits the synthesized CloudFormation template
- * `cdk deploy`      deploy this stack to your default AWS account/region
- * `cdk diff`        compare deployed stack with current state
- * `cdk docs`        open CDK documentation
+`
+cdk deploy [target]
+`
 
-Enjoy!
+**Note that you do not need to run the synth and diff separately to deploy.**
+
+`cdk deploy`  will return the URL that each resource is available through.
