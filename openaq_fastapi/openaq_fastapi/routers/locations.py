@@ -392,7 +392,7 @@ async def latest_v1_get(
                         averagingPeriod: {
                             value: $loc.systems[].sensors[]
                                 | select(.sensors_id==$p.id)
-                                | .sensor_metadata.data_averaging_period_seconds,
+                                | .data_averaging_period_seconds,
                             unit: "seconds"
                             }
                     }
