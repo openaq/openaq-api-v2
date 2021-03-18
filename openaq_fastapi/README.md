@@ -1,19 +1,76 @@
 # OPENAQ Version 2 API
 
-The OpenAQ Version 2 API, located in the [openaq_fastapi](openaq_fastapi/), is built using Python 3 and [FastAPI](https://fastapi.tiangolo.com/). It takes advantage of [Pydantic](https://pydantic-docs.helpmanual.io/) for data valdation.
+The OpenAQ Version 2 API, located in the [openaq_fastapi](openaq_fastapi/), is built using Python 3 and [FastAPI](https://fastapi.tiangolo.com/). It takes advantage of [Pydantic](https://pydantic-docs.helpmanual.io/) for data validation.
 
-## Installation
-It is recommended to install in a python virtual environment.
+## Getting Started
+Install prerequisites:
 
-`
-pip install -e .[dev]
-`
+- [git](https://git-scm.com)
+- [Docker](https://www.docker.com/)
 
-A convenience executable is included to run a local development version of the API. You must have your environment set up ([Setting up your Environment](../README.md)) prior to running.
+Clone this repository locally (see these [instructions](https://help.github.com/en/articles/cloning-a-repository))
 
-`
+It is recommended to install this code in a virtual environment, [venv](https://docs.python.org/3/tutorial/venv.html) is preferred for Python3:
+
+```
+python3 -m venv /path/to/new/virtual/environment/openaqapi-venv
+source openaqapi-venv/bin/activate
+
+```
+Install dependencies:
+
+```
+pip install -e .
+```
+
+
+## Development
+A convenience executable is included to run a local development version of the API.
+
+### Database Setup
+
+First, set up your development database. Build an image from the Dockerfile:
+```
+docker build -t openaq-db-docker .
+```
+Create and run a container from the docker image:
+```
+docker run -d --name openaq-db -p 5432:5432 openaq-db-docker
+```
+Check to see if it's running:
+```
+docker ps
+```
+
+### Environment Variables
+Next, set up your environment variables. Create a file called `.env` in the parent directory with the following contents:
+
+```
+PGUSER=postgres
+PGPASSWORD=postgres
+PGDATABASE=testdb
+PGHOST=localhost
+PGPORT=5432
+
+
+DATABASE_URL="postgres://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}"
+DATABASE_WRITE_URL="postgres://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}"
+
+#### Only needed for Production, can leave as is #####
+AWS_PROFILE=openaq
+OPENAQ_ENV='staging'
+OPENAQ_FASTAPI_URL=""
+
+OPENAQ_FETCH_BUCKET=openaq-fetches
+OPENAQ_ETL_BUCKET=openaq-fetches
+```
+
+Now you are all set!
+
+Run the API locally:
+```
 openaqapi
-`
+```
 
 
 

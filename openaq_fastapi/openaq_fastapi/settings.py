@@ -1,7 +1,7 @@
 from pydantic import BaseSettings
 from pathlib import Path
 
-parent = Path(__file__).resolve().parent.parent.parent
+parent = Path(__file__).resolve().parent.parent
 env_file = Path.joinpath(parent, ".env")
 
 
