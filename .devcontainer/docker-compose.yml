@@ -1,0 +1,43 @@
+version: '3'
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile.api
+    environment:
+      - DATABASE_URL=postgres://apiuser:apiuserpw@db/openaq
+      - DATABASE_WRITE_URL=postgres://rwuser:rwuserpw@db/openaq
+      - OPENAQ_FETCH_BUCKET=openaq-fetches
+      - OPENAQ_ETL_BUCKET=openaq-fetches
+      - OPENAQ_FASTAPI_URL=http://localhost
+      - WAIT_HOSTS=db:5432
+      - PGUSER=postgres
+      - PGDATABASE=openaq
+      - PGPASSWORD=postgres
+      - PGHOST=db
+
+    volumes:
+      - ..:/workspace
+    network_mode: service:db
+    depends_on:
+      - db
+    command: bash -c "cd /workspace/openaq_fastapi && pip install .[dev] && /wait && sleep 10 && openaqapi"
+
+  db:
+    build:
+      context: ..
+      dockerfile: openaq-db/docker/Dockerfile
+    restart: unless-stopped
+    volumes:
+     - postgres-data:/var/lib/postgresql/data
+     - ../openaq-db:/openaqdb
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=openaq
+      - POSTGRES_PASSWORD=postgres
+      - OPENAQ_APIUSER_PW=apiuserpw
+      - OPENAQ_RWUSER_PW=rwuserpw
+
+volumes:
+  postgres-data:

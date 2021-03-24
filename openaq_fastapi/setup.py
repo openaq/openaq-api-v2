@@ -1,11 +1,17 @@
 from distutils.core import setup
 
 setup(
-    name="OpenAQ-FastAPI",
+    name="openaq_fastapi",
     version="0.0.1",
     author="David Bitner",
     author_email="david@developmentseed.org",
-    packages=["openaq_fastapi"],
+    packages=[
+        "openaq_fastapi",
+        "openaq_fastapi.ingest",
+        "openaq_fastapi.models",
+        "openaq_fastapi.routers",
+        "openaq_fastapi.templates",
+    ],
     url="http://openaq.org/",
     license="LICENSE.txt",
     description="FastAPI API For OpenAQ",
@@ -42,7 +48,7 @@ setup(
             "pytest",
             "requests",
             "schemathesis",
-            "hypothesis<6.0"
+            "hypothesis<6.0",
         ]
     },
     entry_points={
@@ -52,7 +58,5 @@ setup(
         ]
     },
     include_package_data=True,
-    package_data={
-        "": ["*.sql"],
-    },
+    package_data={"": ["*.sql"],},
 )

@@ -1,39 +1,34 @@
+import datetime
 import logging
+import time
 from typing import Any, List
 
-from fastapi.exceptions import RequestValidationError
 import orjson
 from fastapi import FastAPI
-from fastapi.openapi.utils import get_openapi
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.openapi.utils import get_openapi
 from mangum import Mangum
 from pydantic import BaseModel, ValidationError
 from starlette.responses import JSONResponse, RedirectResponse
-from fastapi.encoders import jsonable_encoder
-from .middleware import (
-    CacheControlMiddleware,
-    GetHostMiddleware,
-    StripParametersMiddleware,
-    TotalTimeMiddleware,
-)
-from .routers.averages import router as averages_router
 
-from .routers.locations import router as locations_router
-from .routers.parameters import router as parameters_router
-from .routers.sources import router as sources_router
-from .routers.projects import router as projects_router
-from .routers.measurements import router as measurements_router
-from .routers.mvt import router as mvt_router
-from .routers.cities import router as cities_router
-from .routers.countries import router as countries_router
-from .routers.manufacturers import router as manufacturers_router
-from .routers.summary import router as summary_router
-
-from .settings import settings
-from .db import db_pool
-
-import datetime
+from openaq_fastapi.db import db_pool
+from openaq_fastapi.middleware import (CacheControlMiddleware, GetHostMiddleware,
+                         StripParametersMiddleware, TotalTimeMiddleware)
+from openaq_fastapi.routers.averages import router as averages_router
+from openaq_fastapi.routers.cities import router as cities_router
+from openaq_fastapi.routers.countries import router as countries_router
+from openaq_fastapi.routers.locations import router as locations_router
+from openaq_fastapi.routers.manufacturers import router as manufacturers_router
+from openaq_fastapi.routers.measurements import router as measurements_router
+from openaq_fastapi.routers.mvt import router as mvt_router
+from openaq_fastapi.routers.parameters import router as parameters_router
+from openaq_fastapi.routers.projects import router as projects_router
+from openaq_fastapi.routers.sources import router as sources_router
+from openaq_fastapi.routers.summary import router as summary_router
+from openaq_fastapi.settings import settings
 
 logger = logging.getLogger("locations")
 logger.setLevel(logging.DEBUG)
@@ -43,7 +38,7 @@ def default(obj):
     if isinstance(obj, float):
         return round(obj, 5)
     if isinstance(obj, datetime.datetime):
-        return obj.strptime('%Y-%m-%dT%H:%M:%SZ')
+        return obj.strptime("%Y-%m-%dT%H:%M:%SZ")
 
 
 class ORJSONResponse(JSONResponse):
@@ -163,18 +158,26 @@ app.include_router(parameters_router)
 app.include_router(manufacturers_router)
 app.include_router(summary_router)
 
-handler = Mangum(app, enable_lifespan=False)
+handler = Mangum(app)
 
 
 def run():
-    try:
-        import uvicorn
+    attempts = 0
+    while attempts < 10:
+        try:
+            import uvicorn
 
-        uvicorn.run(
-            "openaq_fastapi.main:app", host="0.0.0.0", port=8888, reload=True
-        )
-    except Exception:
-        pass
+            uvicorn.run(
+                "openaq_fastapi.main:app",
+                host="0.0.0.0",
+                port=8888,
+                reload=True,
+            )
+        except Exception:
+            attempts += 1
+            print("waiting for database to start")
+            time.sleep(3)
+            pass
 
 
 if __name__ == "__main__":

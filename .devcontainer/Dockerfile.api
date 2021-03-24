@@ -1,0 +1,11 @@
+FROM python:3-buster
+COPY openaq_fastapi /workspace
+ADD https://github.com/ufoscout/docker-compose-wait/releases/download/2.7.3/wait /wait
+WORKDIR /workspace
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        postgresql-client \
+    && chmod +x /wait \
+    && pip install -e .[dev] \
+    && rm -rf /var/lib/apt/lists/*
+CMD pip install .[dev] && openaqapi

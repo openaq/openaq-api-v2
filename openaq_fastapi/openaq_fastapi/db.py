@@ -9,7 +9,7 @@ from aiocache.plugins import HitMissRatioPlugin, TimingPlugin
 from buildpg import render
 from fastapi import HTTPException, Request
 
-from .settings import settings
+from openaq_fastapi.settings import settings
 
 from .models.responses import Meta, OpenAQResult
 
