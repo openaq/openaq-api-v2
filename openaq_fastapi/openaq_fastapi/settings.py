@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     TESTLOCAL: bool = True
     OPENAQ_FETCH_BUCKET: str
     OPENAQ_ETL_BUCKET: str
+    OPENAQ_CACHE_TIMEOUT: int = 900
 
     class Config:
         env_file = env_file

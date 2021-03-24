@@ -68,7 +68,7 @@ class DB:
         )
         return self.request.app.state.pool
 
-    @cached(900, **cache_config)
+    @cached(settings.OPENAQ_CACHE_TIMEOUT, **cache_config)
     async def fetch(self, query, kwargs):
         pool = await self.pool()
         start = time.time()
