@@ -44,7 +44,7 @@ In order to use the Docker environment, you must pull in the openaq-db submodule
 git submodule update --init --recursive
 ```
 
-Using VSCode with the Remote - Containers extension, you can start the development environment by clicking on the green box in the lower right hand corner of VSCode and select "Remote-Containers: Reopen in Container" from the menu that drops down. It will take a while the first time to pull down and build the docker images. Once started, the API will be exposed at http://localhost:8888 on your local machine.
+Using VSCode with the Remote - Containers extension, you can start the development environment by clicking on the green box in the lower right hand corner of VSCode and select "Remote-Containers: Reopen in Container" from the menu that drops down. It will take a while the first time to pull down and build the docker images. Once started, the API will be exposed at http://0.0.0.0:8888 on your local machine.
 
 Using Docker Compose Directly
 ```
@@ -53,7 +53,7 @@ docker-compose build
 docker-compose up
 ```
 
-The API and Database will start up. The API will be exposed at http://localhost:8888 on your local machine.
+The API and Database will start up. The API will be exposed at http://0.0.0.0:8888 on your local machine.
 You can enter a terminal on the API Docker instance from another terminal by running:
 ```
 docker-compose exec -it api /bin/bash
