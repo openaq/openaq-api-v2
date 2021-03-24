@@ -11,4 +11,5 @@ RUN apt-get update \
     && chmod +x /wait \
     && pip install -r requirements.txt \
     && rm -rf /var/lib/apt/lists/*
+EXPOSE 8888
 CMD pip install . && openaqapi

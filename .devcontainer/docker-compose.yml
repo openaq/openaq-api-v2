@@ -17,10 +17,10 @@ services:
       - PGPASSWORD=postgres
       - PGHOST=db
       - OPENAQ_CACHE_TIMEOUT=30
-
+    ports:
+      - "8888:8888"
     volumes:
       - ..:/workspace
-    network_mode: service:db
     depends_on:
       - db
     command: bash -c "cd /workspace/openaq_fastapi && pip install .[dev] && /wait && sleep 10 && openaqapi"

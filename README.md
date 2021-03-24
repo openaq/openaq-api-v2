@@ -34,3 +34,33 @@ OPENAQ_FASTAPI_URL=""
 OPENAQ_FETCH_BUCKET=openaq-fetches
 OPENAQ_ETL_BUCKET=openaq-fetches
 ```
+
+## Docker Compose Development Environment ##
+A Docker Compose Development Environment is included that includes both the API and the Database.
+
+In order to use the Docker environment, you must pull in the openaq-db submodule.
+
+```
+git submodule update --init --recursive
+```
+
+Using VSCode with the Remote - Containers extension, you can start the development environment by clicking on the green box in the lower right hand corner of VSCode and select "Remote-Containers: Reopen in Container" from the menu that drops down. It will take a while the first time to pull down and build the docker images. Once started, the API will be exposed at http://localhost:8888 on your local machine.
+
+Using Docker Compose Directly
+```
+cd .devcontainer
+docker-compose build
+docker-compose up
+```
+
+The API and Database will start up. The API will be exposed at http://localhost:8888 on your local machine.
+You can enter a terminal on the API Docker instance from another terminal by running:
+```
+docker-compose exec -it api /bin/bash
+```
+
+From either the VSCode terminal or the terminal as above on the API container, you can load a sample days worth of data using the Fetch data loader and the included sample data from 12/31/2020 by running the following on the API container. This will load the data and run the post-processing scripts that are normally run on a cron in production.
+
+```
+/workspace/sample/load_sample_data.sh
+```
