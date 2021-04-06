@@ -9,7 +9,7 @@ from aiocache.plugins import HitMissRatioPlugin, TimingPlugin
 from buildpg import render
 from fastapi import HTTPException, Request
 
-from .settings import settings
+from openaq_fastapi.settings import settings
 
 from .models.responses import Meta, OpenAQResult
 
@@ -68,7 +68,7 @@ class DB:
         )
         return self.request.app.state.pool
 
-    @cached(900, **cache_config)
+    @cached(settings.OPENAQ_CACHE_TIMEOUT, **cache_config)
     async def fetch(self, query, kwargs):
         pool = await self.pool()
         start = time.time()

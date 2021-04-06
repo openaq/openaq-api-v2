@@ -110,6 +110,23 @@ def copy_data(cursor, key):
             load_fail(cursor, key, e)
 
 
+def copy_file(cursor, file):
+    with gzip.GzipFile(file) as gz:
+        f = io.BufferedReader(gz)
+        iterator = StringIteratorIO(
+            (parse_json(json.loads(line)) for line in f)
+        )
+        try:
+            query = get_query("fetch_copy.sql")
+            cursor.copy_expert(query, iterator)
+            print("status:", cursor.statusmessage)
+            load_success(cursor, file)
+
+        except Exception as e:
+            load_fail(cursor, file, e)
+
+
+
 def process_data(cursor):
     print(1)
     query = get_query("fetch_ingest1.sql")
@@ -181,12 +198,12 @@ def update_rollups(cursor, mindate, maxdate):
 
 
 @app.command()
-def load_fetch_file(key: str):
+def load_fetch_file(file: str):
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
         connection.set_session(autocommit=True)
         with connection.cursor() as cursor:
             create_staging_table(cursor)
-            copy_data(cursor, key)
+            copy_file(cursor, file)
             min_date, max_date = filter_data(cursor)
             mindate, maxdate = process_data(cursor)
             update_rollups(cursor, mindate=mindate, maxdate=maxdate)
@@ -205,8 +222,8 @@ def load_fetch_day(day: str):
         ]:
             # print(f['Key'])
             keys.append(f["Key"])
-    except Exception:
-        print(f"no data found for {day}")
+    except Exception as e:
+        print(f"no data found for {day} Exception:{e}")
         return None
 
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
