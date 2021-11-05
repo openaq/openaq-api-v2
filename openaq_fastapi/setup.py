@@ -55,6 +55,7 @@ setup(
         "console_scripts": [
             "openaqapi=openaq_fastapi.main:run",
             "openaqfetch=openaq_fastapi.ingest.fetch:app",
+            "openaqlcs=openaq_fastapi.ingest.lcs:app",
         ]
     },
     include_package_data=True,

@@ -295,7 +295,7 @@ def load_metadata_bucketscan(count=100):
         except KeyError:
             break
 
-
+@app.command()
 def load_metadata_db(count=250):
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
         connection.set_session(autocommit=True)
@@ -321,7 +321,6 @@ def load_metadata_db(count=250):
     if len(contents) > 0:
         data = LCSData(contents)
         data.get_metadata()
-
 
 def load_measurements(key):
     key = unquote_plus(key)
@@ -353,6 +352,7 @@ def load_measurements(key):
                 content += event["Records"]["Payload"].decode("utf-8")
 
         ret = []
+        print(resp)
         for row in csv.reader(content.split("\n")):
             if len(row) not in [3, 5]:
                 continue
@@ -406,7 +406,7 @@ def to_tsv(row):
     return tsv
     return ""
 
-
+@app.command()
 def load_measurements_db(limit=250):
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
         connection.set_session(autocommit=True)
@@ -425,6 +425,7 @@ def load_measurements_db(limit=250):
             )
             rows = cursor.fetchall()
             keys = [r[0] for r in rows]
+            print(rows)
             if len(keys) > 0:
                 cursor.execute(get_query("lcs_meas_staging.sql"))
                 data = []
@@ -495,3 +496,7 @@ def load_measurements_db(limit=250):
 
                     for notice in connection.notices:
                         print(notice)
+
+
+if __name__ == "__main__":
+    app()
