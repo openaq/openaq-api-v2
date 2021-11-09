@@ -289,7 +289,7 @@ def update_database():
         cur.execute(get_query("../../../openaq-db/openaqdb/tables/versions.sql"))
         cur.close()
         conn.close()
-    except Excpetion as e:
+    except Exception as e:
         print(f"Database update failed: {e}")
 
 def check_sensor_rejects():
@@ -326,7 +326,7 @@ def check_database():
             print(f"CHECK DATABASE {notice}")
         cur.close()
         conn.close()
-    except Excpetion as e:
+    except Exception as e:
         print(f"Database update failed: {e}")
 
 
@@ -772,7 +772,7 @@ def load_versions_db(limit=250):
                     version = {}
                     metadata = {}
                     for key, value in j.items():
-                        if key in ["parent_sensor_id", "sensor_id", "version_id", "life_cycle_id", "readme"]:
+                        if key in ["parent_sensor_id", "sensor_id", "parameter", "version_id", "life_cycle_id", "readme"]:
                             version[key] = value
                         elif key not in ["merged"]:
                             metadata[key] = value
@@ -783,7 +783,7 @@ def load_versions_db(limit=250):
                 cursor.execute(
                     """
                     CREATE TABLE IF NOT EXISTS ms_versions (
-                    sensor_id text,
+                    sensor_id text UNIQUE,
                     parent_sensor_id text,
                     life_cycle_id text,
                     version_id text,
@@ -795,6 +795,7 @@ def load_versions_db(limit=250):
                     measurands_id int,
                     metadata jsonb
                     );
+                    DELETE FROM ms_versions;
                     """
                 )
                 # add the version data into that table
@@ -807,14 +808,18 @@ def load_versions_db(limit=250):
                         "parent_sensor_id",
                         "version_id",
                         "life_cycle_id",
+                        "parameter",
                         "readme",
                         "metadata",
                     ],
                 )
                 # now process that version data as best we can
-
+                cursor.execute(get_query("lcs_ingest_versions.sql"))
                 # now add each of those to the database
-                print(versions)
+                print(len(versions))
+                for notice in connection.notices:
+                   print(notice)
+                
 
     except Exception as e:
         print(f"Failed to ingest versions: {e}")
@@ -829,8 +834,6 @@ def load_versions_db(limit=250):
 # which is fired when the client files are processed and the files are
 # put in the respective buckets.
 
-print("---- Checking database")
-check_database()
 
 ## add the version tables
 # update_database();
@@ -841,18 +844,15 @@ reset_database('versioning')
 
 
 print("---- Queuing files")
-#queue_files('measures')
-#queue_files('stations')
+queue_files('measures')
+queue_files('stations')
 queue_files('versions')
 
-print("----- Loading versions")
-load_versions_db()
-sys.exit()
 
 print("---- Loading metadata")
 load_metadata_db()
 
-# 2.TWE12!@lve
+# 2.
 
 # make sure that ingesting all the measurement files results in the correct
 # amount of sensors created. Regardless of the order of the files.
@@ -862,7 +862,8 @@ load_measurements_db()
 print("----- Loading versions")
 load_versions_db()
 
-
+print("---- Checking database")
+check_database()
 check_sensor_rejects()
 
 # 3.

@@ -12,6 +12,10 @@ FROM sensor_systems;
 RAISE NOTICE 'system count: %', sn;
 
 SELECT COUNT(1) INTO sn
+FROM measurands;
+RAISE NOTICE 'parameter count: %', sn;
+
+SELECT COUNT(1) INTO sn
 FROM sensors;
 RAISE NOTICE 'sensor count: %', sn;
 
@@ -27,9 +31,9 @@ SELECT COUNT(1) INTO sn
 FROM rejects;
 RAISE NOTICE 'rejects count: %', sn;
 
-SELECT COUNT(1) INTO sn
-FROM meas;
-RAISE NOTICE 'meas count: %', sn;
+--SELECT COUNT(1) INTO sn
+--FROM meas;
+--RAISE NOTICE 'meas count: %', sn;
 
 SELECT COUNT(1) INTO sn
 FROM analyses;

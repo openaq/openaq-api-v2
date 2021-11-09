@@ -3,6 +3,7 @@ DECLARE
 reject_count int;
 insert_count int;
 match_count int;
+message text;
 BEGIN
 
 DELETE FROM meas WHERE ingest_id IS NULL OR datetime is NULL or value IS NULL;
@@ -64,5 +65,8 @@ FROM m INTO insert_count;
 
 RAISE NOTICE '% records were inserted', insert_count;
 
+IF reject_count > 0 THEN
+   RAISE NOTICE 'explain here';
+END IF;
 
 END $$
