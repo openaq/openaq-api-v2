@@ -26,7 +26,8 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-OPENAQ_FETCH_BUCKET = "openaq-fetches"
+# I dont see the reasn for this
+# OPENAQ_FETCH_BUCKET = "openaq-fetches"
 
 
 code_dir = pathlib.Path(__file__).parent.absolute()
@@ -42,12 +43,14 @@ print(env)
 
 # create package using docker
 client = docker.from_env()
+print("Building client image", docker_dir)
 client.images.build(
     path=str(docker_dir),
     dockerfile="Dockerfile",
     tag="openaqfastapi",
     nocache=False,
 )
+print("Running client image")
 client.containers.run(
     image="openaqfastapi",
     command="/bin/sh -c 'cp /tmp/package.zip /local/package.zip'",
@@ -56,6 +59,7 @@ client.containers.run(
     user=0,
 )
 
+print("Packaging code")
 stagingpackage = aws_lambda.Code.asset(
     str(pathlib.Path.joinpath(code_dir, "package.zip"))
 )
@@ -137,14 +141,15 @@ class LambdaIngestStack(core.Stack):
         )
 
         openaq_fetch_bucket = aws_s3.Bucket.from_bucket_name(
-            self, "{id}-OPENAQ-FETCH-BUCKET", OPENAQ_FETCH_BUCKET
+            self, "{id}-OPENAQ-FETCH-BUCKET", env['OPENAQ_FETCH_BUCKET']
         )
 
         openaq_fetch_bucket.grant_read(ingest_function)
 
 
 app = core.App()
-print(f"openaq-lcs-api{settings.OPENAQ_ENV}")
+print(f"openaq-lcs-api-{settings.OPENAQ_ENV} using {env['OPENAQ_FETCH_BUCKET']}")
+
 staging = LambdaApiStack(app, "openaq-lcs-apistaging", package=stagingpackage)
 prod = LambdaApiStack(app, "openaq-lcs-api", package=prodpackage)
 ingest = LambdaIngestStack(
