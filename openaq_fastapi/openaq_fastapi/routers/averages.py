@@ -49,7 +49,7 @@ class Averages(APIBase, Country, Project, Measurands, DateRange):
         for f, v in self:
             if v is not None and f in ["units"]:
                 wheres.append(f"{f} = ANY(:{f})")
-        wheres.append(" groups_id not in (28978,28972) ")
+        #wheres.append(" groups_id not in (28978,28972) ")
         if len(wheres) > 0:
             return (" AND ").join(wheres)
         return " TRUE "
@@ -63,6 +63,7 @@ class Averages(APIBase, Country, Project, Measurands, DateRange):
         if (
             temporal in ["hour", "hod"]
             and (date_to - date_from).total_seconds() > 31 * 24 * 60 * 60
+            and False # for testing purposes
         ):
             raise ValueError(
                 "Date range cannot excede 1 month for hourly queries"
@@ -149,7 +150,8 @@ async def averages_v2_get(
 
     wrapper_start = ""
     wrapper_end = ""
-    groupby = "1,2,3,4,5,6,7"
+    # groupby = "1,2,3,4,5,6,7"
+    groupby = "1,2,3,4,5"
     if av.group:
         wrapper_start = "array_agg(DISTINCT "
         wrapper_end = ")"
@@ -166,18 +168,19 @@ async def averages_v2_get(
                 {temporal_col} as {av.temporal},
                 {temporal_col} as o,
                 {temporal_col} as st,
-                {wrapper_start}groups_id{wrapper_end} as id,
-                {wrapper_start}name{wrapper_end} as name,
-                {wrapper_start}subtitle{wrapper_end} as subtitle,
+                --{wrapper_start}groups_id{wrapper_end} as id,
+                {wrapper_start}sensors_id{wrapper_end} as id,
+                --{wrapper_start}name{wrapper_end} as name,
+                --{wrapper_start}subtitle{wrapper_end} as subtitle,
                 count(*) as measurement_count,
                 round((sum(value)/count(*))::numeric, 4) as average
             FROM measurements
-            LEFT JOIN sensors USING (sensors_id)
-            LEFT JOIN groups_sensors USING (sensors_id)
-            LEFT JOIN groups_view USING (groups_id, measurands_id)
+            JOIN sensor_stats_versioning USING (sensors_id)
+            --LEFT JOIN sensors USING (sensors_id)
+            --LEFT JOIN groups_sensors USING (sensors_id)
+            --LEFT JOIN groups_view USING (groups_id, measurands_id)
             WHERE {initwhere}
-            AND
-                type = :spatial::text
+            --AND type = :spatial::text
             AND datetime>=:date_from::timestamptz
             AND datetime<=:date_to::timestamptz
             GROUP BY {groupby}

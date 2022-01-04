@@ -1,4 +1,5 @@
 import os
+import logging
 from datetime import datetime, timezone
 import dateparser
 import pytz
@@ -21,10 +22,13 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 
 FETCH_BUCKET = settings.OPENAQ_ETL_BUCKET
 
+logger = logging.getLogger(__name__)
+logger.setLevel("DEBUG");
+
 
 class LCSData:
     def __init__(
-        self, page=None, key=None, st=datetime.now().replace(tzinfo=pytz.UTC)
+            self, page=None, key=None, st=datetime.now().replace(tzinfo=pytz.UTC)
     ):
         self.sensors = []
         self.systems = []
@@ -88,7 +92,7 @@ class LCSData:
             key = str.replace(key, "sensor_node_", "")
             if key == "id":
                 node["ingest_id"] = value
-            elif key in ["site_name", "source_name", "ismobile"]:
+            elif key in ["site_name", "source_name", "ismobile", "country", "city"]:
                 node[key] = value
             elif key == "geometry":
                 try:
@@ -109,15 +113,16 @@ class LCSData:
         node["metadata"] = orjson.dumps(metadata).decode()
         self.nodes.append(node)
 
+
     def get_station(self, key):
         if str.endswith(key, ".gz"):
             compression = "GZIP"
         else:
             compression = "NONE"
         try:
-            print(f"key: {key}")
+            # logger.debug(f"key: {key}")
             resp = s3c.select_object_content(
-                Bucket=FETCH_BUCKET,
+                Bucket=settings.OPENAQ_FETCH_BUCKET,
                 Key=key,
                 ExpressionType="SQL",
                 Expression="SELECT * FROM s3object",
@@ -133,7 +138,8 @@ class LCSData:
                     self.node(orjson.loads(records))
 
         except Exception as e:
-            print(f"Could not load {key} {e}")
+            logger.debug(f"Could not load {key} {e}")
+
 
     def load_data(self):
         with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
@@ -168,6 +174,8 @@ class LCSData:
                         "ingest_id",
                         "site_name",
                         "source_name",
+                        "city",
+                        "country",
                         "ismobile",
                         "geom",
                         "metadata",
@@ -177,7 +185,11 @@ class LCSData:
                     cursor,
                     self.systems,
                     "ms_sensorsystems",
-                    ["ingest_id", "ingest_sensor_nodes_id", "metadata",],
+                    [
+                        "ingest_id",
+                        "ingest_sensor_nodes_id",
+                        "metadata",
+                    ],
                 )
                 write_csv(
                     cursor,
@@ -214,7 +226,7 @@ class LCSData:
                 connection.commit()
 
                 for notice in connection.notices:
-                    print(notice)
+                    logger.debug(f"METADATA INGEST {notice}")
 
     def process_data(self, cursor):
         query = get_query("lcs_ingest_nodes.sql")
@@ -239,7 +251,7 @@ class LCSData:
 
                     key = obj["Key"]
                     last_modified = obj["LastModified"]
-                    print(f"{key} {last_modified}")
+                    logger.debug(f"{key} {last_modified}")
                     # if last_modified > self.st:
                     cursor.execute(
                         """
@@ -250,9 +262,8 @@ class LCSData:
                         (key,),
                     )
                     rows = cursor.rowcount
-                    print(rows)
                     if rows < 1:
-                        print(f"{key} {last_modified}")
+                        logger.debug(f"{key} {last_modified}")
                         self.keys.append(
                             {"key": key, "last_modified": last_modified}
                         )
@@ -262,8 +273,76 @@ class LCSData:
                 if hasnew:
                     self.load_data()
                 for notice in connection.notices:
-                    print(notice)
+                    logger.debug(notice)
 
+
+def get_bucket_file(key):
+    """Get the file from the ETL bucket designated in settings"""
+    key = unquote_plus(key)
+
+    if str.endswith(key, ".gz"):
+        compression = "GZIP"
+    else:
+        compression = "NONE"
+
+    if "json" in key:
+        inputSerialization = {
+            "JSON": {"Type": "Document"},
+            "CompressionType": compression,
+        }
+        outputSerialization = {
+            "JSON": {},
+        }
+    else:
+        inputSerialization = {
+            "CSV": {"FieldDelimiter": ","},
+            "CompressionType": compression,
+        }
+        outputSerialization = {
+            "CSV": {},
+        }
+
+    try:
+        logger.debug(f"getting {key}")
+        resp = s3c.select_object_content(
+            Bucket=settings.OPENAQ_FETCH_BUCKET,
+            Key=key,
+            ExpressionType="SQL",
+            Expression="SELECT * FROM s3object",
+            InputSerialization = inputSerialization,
+            OutputSerialization = outputSerialization,
+        )
+        content = ""
+        for event in resp["Payload"]:
+            if "Records" in event:
+                content += event["Records"]["Payload"].decode("utf-8")
+        return content
+    except Exception as e:
+        logger.debug(f"Could not read {key} {e}")
+
+def get_local_file(key):
+    """Get the file from the local test data directory"""
+    key = unquote_plus(key)
+    try:
+        filepath = os.path.join(dir_path, key);
+        content = ""
+        if str.endswith(key, ".gz"):
+            with gzip.open(filepath,'rt') as f:
+                for line in f:
+                    content += line;
+        else:
+            content = Path(filepath).read_text()
+        return content
+    except Exception as e:
+        logger.debug(f"Could not find {key} {e}")
+
+def get_file(key):
+    """Get file handler that determines where the file is"""
+    logger.debug(f"get_file: {settings.OPENAQ_ENV}/{key}")
+    if settings.OPENAQ_ENV == "local":
+        return get_local_file(key)
+    else:
+        return get_bucket_file(key)
 
 def write_csv(cursor, data, table, columns):
     fields = ",".join(columns)
@@ -277,8 +356,8 @@ def write_csv(cursor, data, table, columns):
         """,
         sio,
     )
-    print("rowcount:", cursor.rowcount)
-    print("status:", cursor.statusmessage)
+    logger.debug("rowcount:", cursor.rowcount)
+    logger.debug("status:", cursor.statusmessage)
 
 
 def load_metadata_bucketscan(count=100):
@@ -296,19 +375,21 @@ def load_metadata_bucketscan(count=100):
             break
 
 @app.command()
-def load_metadata_db(count=250):
+def load_metadata_db(limit=250):
+    bucket = settings.OPENAQ_FETCH_BUCKET
+    logger.debug(f"Checking for metadata files in {settings.OPENAQ_FETCH_BUCKET}")
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
         connection.set_session(autocommit=True)
         with connection.cursor() as cursor:
             cursor.execute(
-                """
+                f"""
                     SELECT key,last_modified FROM fetchlogs
-                    WHERE key~'lcs-etl-pipeline/stations/' AND
+                    WHERE key~*'stations/.*\\.json' AND
                     completed_datetime is null order by
                     last_modified asc nulls last
                     limit %s;
                     """,
-                (count,),
+                (limit,),
             )
             rows = cursor.fetchall()
             contents = []
@@ -317,14 +398,92 @@ def load_metadata_db(count=250):
                     {"Key": unquote_plus(row[0]), "LastModified": row[1],}
                 )
             for notice in connection.notices:
-                print(notice)
+                logger.debug(f"Load Metadata Notice: {notice}")
     if len(contents) > 0:
         data = LCSData(contents)
         data.get_metadata()
 
+def load_versions_db(limit=250):
+    bucket = settings.OPENAQ_FETCH_BUCKET
+    logger.debug(f"Checking for version files in {bucket}")
+    try:
+        with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+            with connection.cursor() as cursor:
+                connection.set_session(autocommit=True)
+                cursor.execute(
+                    f"""
+                    UPDATE fetchlogs
+                    SET loaded_datetime = clock_timestamp()
+                    WHERE key~*'versions/.*\\.json'
+                    AND completed_datetime is null
+                    RETURNING key, last_modified
+                    """
+                )
+                rows = cursor.fetchall()
+                versions = []
+                for row in rows:
+                    logger.debug(f"{row}")
+                    raw = get_file(unquote_plus(row[0]))
+                    j = orjson.loads(raw)
+                    version = {}
+                    metadata = {}
+                    for key, value in j.items():
+                        if key in ["parent_sensor_id", "sensor_id", "parameter", "version_id", "life_cycle_id", "readme"]:
+                            version[key] = value
+                        elif key not in ["merged"]:
+                            metadata[key] = value
+                    version["metadata"] = orjson.dumps(metadata).decode()
+                    versions.append(version)
+
+                # create a temporary table for matching
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS ms_versions (
+                    sensor_id text UNIQUE,
+                    parent_sensor_id text,
+                    life_cycle_id text,
+                    version_id text,
+                    parameter text,
+                    readme text,
+                    sensors_id int,
+                    parent_sensors_id int,
+                    life_cycles_id int,
+                    measurands_id int,
+                    metadata jsonb
+                    );
+                    DELETE FROM ms_versions;
+                    """
+                )
+                # add the version data into that table
+                write_csv(
+                    cursor,
+                    versions,
+                    "ms_versions",
+                    [
+                        "sensor_id",
+                        "parent_sensor_id",
+                        "version_id",
+                        "life_cycle_id",
+                        "parameter",
+                        "readme",
+                        "metadata",
+                    ],
+                )
+                # now process that version data as best we can
+                cursor.execute(get_query("lcs_ingest_versions.sql"))
+                # now add each of those to the database
+                logger.debug(len(versions))
+                for notice in connection.notices:
+                   logger.debug(notice)
+
+
+    except Exception as e:
+        logger.debug(f"Failed to ingest versions: {e}")
+
+
 def load_measurements(key):
     key = unquote_plus(key)
-    print(key)
+    logger.debug(key)
 
     if str.endswith(key, ".gz"):
         compression = "GZIP"
@@ -352,7 +511,7 @@ def load_measurements(key):
                 content += event["Records"]["Payload"].decode("utf-8")
 
         ret = []
-        print(resp)
+        logger.debug(resp)
         for row in csv.reader(content.split("\n")):
             if len(row) not in [3, 5]:
                 continue
@@ -392,12 +551,12 @@ def load_measurements(key):
                 try:
                     dt = dateparser.parse(dt).replace(tzinfo=timezone.utc)
                 except Exception:
-                    print(f"Exception in parsing date for {dt} {Exception}")
+                    logger.debug(f"Exception in parsing date for {dt} {Exception}")
             row[2] = dt.isoformat()
             ret.append(row)
         return ret
     except Exception as e:
-        print(f"Could not load {key} {e}")
+        logger.debug(f"Could not load {key} {e}")
     return None
 
 
@@ -408,26 +567,29 @@ def to_tsv(row):
 
 @app.command()
 def load_measurements_db(limit=250):
-    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
-        connection.set_session(autocommit=True)
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
+    bucket = settings.OPENAQ_FETCH_BUCKET
+    logger.debug(f"Checking for measurement files in {bucket}")
+    try:
+        with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+            with connection.cursor() as cursor:
+                connection.set_session(autocommit=True)
+                cursor.execute(
+                    f"""
                     SELECT key,last_modified FROM fetchlogs
-                    WHERE key~E'^lcs-etl-pipeline/measures/.*\\.csv' AND
+                    WHERE key~E'measures/.*\\.csv' AND
                     completed_datetime is null
                     ORDER BY last_modified desc nulls last
                     LIMIT %s
+                    """,
+                    (limit,),
+                )
+                rows = cursor.fetchall()
+                keys = [r[0] for r in rows]
 
-                    ;
-                """,
-                (limit,),
-            )
-            rows = cursor.fetchall()
-            keys = [r[0] for r in rows]
-            print(rows)
-            if len(keys) > 0:
+                logger.debug(f"Found {len(keys)} files to ingest")
+                # Start by setting up the measure staging table
                 cursor.execute(get_query("lcs_meas_staging.sql"))
+
                 data = []
                 new = []
                 for key in keys:
@@ -435,6 +597,8 @@ def load_measurements_db(limit=250):
                     newdata = load_measurements(key)
                     if newdata is not None:
                         data.extend(newdata)
+
+                # logger.debug(data)
                 if len(data) > 0:
                     write_csv(
                         cursor, new, "keys", ["key",],
@@ -452,7 +616,7 @@ def load_measurements_db(limit=250):
                     )
                     rows = cursor.rowcount
                     status = cursor.statusmessage
-                    print(f"COPY Rows: {rows} Status: {status}")
+                    logger.debug(f"MEASUREMENTS COPIED: {rows} Status: {status}")
                     cursor.execute(
                         """
                         INSERT INTO fetchlogs(
@@ -467,35 +631,37 @@ def load_measurements_db(limit=250):
                         ;
                         """
                     )
-                    connection.commit()
 
-                    cursor.execute(get_query("lcs_meas_ingest.sql"))
-                    rows = cursor.rowcount
-                    status = cursor.statusmessage
-                    print(f"INGEST Rows: {rows} Status: {status}")
-                    cursor.execute(
-                        """
-                        INSERT INTO fetchlogs(
-                            key,
-                            last_modified,
-                            completed_datetime
-                        ) SELECT *, clock_timestamp()
-                        FROM keys
-                        ON CONFLICT (key) DO
-                        UPDATE
-                            SET
-                            last_modified=EXCLUDED.last_modified,
-                            completed_datetime=EXCLUDED.completed_datetime
-                        ;
-                        """
-                    )
-                    rows = cursor.rowcount
-                    status = cursor.statusmessage
-                    print(f"UPDATE LOGS Rows: {rows} Status: {status}")
-                    connection.commit()
+                connection.commit()
+                cursor.execute(get_query("lcs_meas_ingest.sql"))
+                rows = cursor.rowcount
+                status = cursor.statusmessage
+                # logger.debug(f"INGEST Rows: {rows} Status: {status}")
+                cursor.execute(
+                    """
+                    INSERT INTO fetchlogs(
+                        key,
+                        last_modified,
+                        completed_datetime
+                    ) SELECT *, clock_timestamp()
+                    FROM keys
+                    ON CONFLICT (key) DO
+                    UPDATE
+                        SET
+                        last_modified=EXCLUDED.last_modified,
+                        completed_datetime=EXCLUDED.completed_datetime
+                    ;
+                    """
+                )
+                rows = cursor.rowcount
+                status = cursor.statusmessage
+                connection.commit()
+                for notice in connection.notices:
+                    logger.debug(f"LOAD MEASUREMENTS {notice}")
+                logger.debug(f"UPDATED LOGS Rows: {rows} Status: {status}")
 
-                    for notice in connection.notices:
-                        print(notice)
+    except Exception as e:
+        logger.debug(f"Failed to ingest measurements: {e}")
 
 
 if __name__ == "__main__":

@@ -232,6 +232,20 @@ def write_csv(cursor, data, table, columns):
     print(f"wrote {cursor.rowcount} rows to {table}")
     # print("status:", cursor.statusmessage)
 
+def query(sql):
+    try:
+        conn = psycopg2.connect(settings.DATABASE_WRITE_URL)
+        cur = conn.cursor();
+        conn.set_session(autocommit=True)
+        cur.execute(sql)
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        return row
+    except Exception as e:
+        print(f"query failed: {e}")
+
+
 def reset_database(source_name):
     try:
         conn = psycopg2.connect(settings.DATABASE_WRITE_URL)
@@ -271,6 +285,7 @@ def reset_database(source_name):
             WHERE n.source_name = %s
             ), s1 AS (DELETE FROM sensors WHERE sensors_id IN (SELECT sensors_id FROM list)
             ), s2 AS (DELETE FROM sensor_systems WHERE sensor_systems_id IN (SELECT sensor_systems_id FROM list)
+            ), s3 AS (DELETE FROM sensor_nodes_sources WHERE sensor_nodes_id IN (SELECT sensor_nodes_id FROM list)
             ) DELETE FROM sensor_nodes WHERE sensor_nodes_id IN (SELECT sensor_nodes_id FROM list);
             """,
             (source_name,),
@@ -313,6 +328,7 @@ def check_sensor_rejects():
         conn.close()
     except Exception as e:
         print(f"Failed to check rejects: {e}")
+
 
 
 
@@ -721,6 +737,27 @@ class LocalLCSData(LCSData):
             print(f"Could not load {key} {e}")
 
 
+def update_rollups():
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"""
+                SET SEARCH_PATH to public, rollups;
+                SELECT
+                rollups.update_rollups(
+                '2021-01-01'::timestamptz,
+                now(),
+                null,
+                FALSE,
+                FALSE,
+                FALSE
+                );
+                """
+            )
+
+
+
 def load_metadata_db(limit=250):
     bucket = settings.OPENAQ_FETCH_BUCKET
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
@@ -759,7 +796,7 @@ def load_versions_db(limit=250):
                     f"""
                     UPDATE fetchlogs
                     SET loaded_datetime = clock_timestamp()
-                    WHERE key~E'^{bucket}/versions/'
+                    WHERE key~*'versions/'
                     AND completed_datetime is null
                     RETURNING key, last_modified
                     """
@@ -819,10 +856,11 @@ def load_versions_db(limit=250):
                 print(len(versions))
                 for notice in connection.notices:
                    print(notice)
-                
+
 
     except Exception as e:
         print(f"Failed to ingest versions: {e}")
+
 
 
 # Here are the things I want to test here
@@ -842,6 +880,8 @@ def load_versions_db(limit=250):
 print("----- Reseting database")
 reset_database('versioning')
 
+print("----- Getting initial values")
+row = query("SELECT COUNT(1) as n FROM measurements")
 
 print("---- Queuing files")
 queue_files('measures')
@@ -866,5 +906,7 @@ print("---- Checking database")
 check_database()
 check_sensor_rejects()
 
+print("---- Updating rollups")
+## update_rollups()
 # 3.
 # Make sure that the version information is being ingested

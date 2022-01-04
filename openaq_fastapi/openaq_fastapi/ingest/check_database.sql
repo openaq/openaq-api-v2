@@ -20,7 +20,7 @@ FROM sensors;
 RAISE NOTICE 'sensor count: %', sn;
 
 SELECT COUNT(1) INTO sn
-FROM measurands;
+FROM measurements;
 RAISE NOTICE 'measurement count: %', sn;
 
 SELECT COUNT(1) INTO sn

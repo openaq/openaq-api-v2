@@ -18,6 +18,7 @@ from ..models.queries import (
     Sort,
     EntityTypes,
     SensorTypes,
+    Versions,
 )
 
 from openaq_fastapi.models.responses import OpenAQResult, converter
@@ -169,7 +170,8 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
 )
 @router.get("/v2/locations", response_model=OpenAQResult, tags=["v2"])
 async def locations_get(
-    db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
+    db: DB = Depends(),
+    locations: Locations = Depends(Locations.depends()),
 ):
 
     order_by = locations.order_by
@@ -278,7 +280,12 @@ async def latest_get(
                         parameter: .parameter,
                         value: .lastValue,
                         lastUpdated: .lastUpdated,
-                        unit: .unit
+                        unit: .unit,
+                        isVersioned: .isVersioned,
+                        isLatest: .isLatest,
+                        versionDate: .versionDate,
+                        parentSensorsId: .parentSensorsId,
+                        lifeCycle: .lifeCycle
                     }
                 ]
             }

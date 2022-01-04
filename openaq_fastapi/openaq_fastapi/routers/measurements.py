@@ -23,6 +23,7 @@ from ..models.queries import (
     Sort,
     SensorTypes,
     EntityTypes,
+    Versions,
 )
 import csv
 import io
@@ -30,7 +31,7 @@ import io
 from openaq_fastapi.models.responses import OpenAQResult, converter
 
 logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
+##logger.setLevel(logging.DEBUG)
 
 router = APIRouter()
 
@@ -82,7 +83,7 @@ class MeasOrder(str, Enum):
 
 
 class Measurements(
-    Location, City, Country, Geo, Measurands, HasGeo, APIBase, DateRange
+        Location, City, Country, Geo, Measurands, HasGeo, APIBase, DateRange, Versions
 ):
     order_by: MeasOrder = Query("datetime")
     sort: Sort = "desc"
@@ -127,6 +128,12 @@ class Measurements(
                     wheres.append(" ismobile = :is_mobile ")
                 elif f == "isAnalysis":
                     wheres.append(" is_analysis = :is_analysis ")
+                elif f == "isLatest":
+                    wheres.append(" b.is_latest = :is_latest ")
+                elif f == "version_date":
+                    wheres.append(" b.version_date = :version_date")
+                elif f == "life_cycles_id":
+                    wheres.append(" b.life_cycles_id = :life_cycles_id ")
                 elif f == "entity":
                     wheres.append(" b.entity = :entity ")
                 elif f == "sensorType":
@@ -145,7 +152,7 @@ class Measurements(
 async def measurements_get(
     db: DB = Depends(),
     m: Measurements = Depends(Measurements.depends()),
-    format: Optional[str] = None,
+    format: Optional[str] = None
 ):
     count = None
     date_from = m.date_from
@@ -165,49 +172,6 @@ async def measurements_get(
         params["locations"] = locations
         where = f"{where} AND sensor_nodes_id = ANY(:locations) "
 
-    # joins = """
-    #     LEFT JOIN groups_sensors USING (groups_id)
-    #     LEFT JOIN measurements_fastapi_base b
-    #     ON (groups_sensors.sensors_id=b.sensors_id)
-    # """
-    # if m.isMobile is None:
-    #     if (
-    #         (m.location is None or len(m.location) == 0)
-    #         and m.isMobile is None
-    #         and m.coordinates is None
-    #         and m.project is None
-    #         and m.entity is None
-    #         and m.sensorType is None
-    #         and m.project is None
-    #         and m.isAnalysis is None
-    #     ):
-    #         joins = ""
-    #         if m.country is None or len(m.country) == 0:
-    #             rolluptype = "total"
-    #         else:
-    #             rolluptype = "country"
-    #             params["country"] = m.country
-    #             where = " name =ANY(:country) "
-    # # get overall summary numbers
-    # q = f"""
-    #     SELECT
-    #         sum(value_count),
-    #         min(first_datetime),
-    #         max(last_datetime)
-    #     FROM rollups
-    #     LEFT JOIN groups_view USING (groups_id, measurands_id)
-    #     {joins}
-    #     WHERE rollup = 'month' and type='{rolluptype}'
-    #         AND
-    #         st >= :date_from::timestamptz
-    #         AND
-    #         st < :date_to::timestamptz
-    #         AND
-    #         {where}
-    #     """
-    # logger.debug(f"Params: {params}")
-    # rows = await db.fetch(q, params)
-    # logger.debug(f"{rows}")
 
     q = f"""
         SELECT
@@ -218,14 +182,13 @@ async def measurements_get(
         FROM
             sensor_stats
             LEFT JOIN measurements_fastapi_base b USING (sensors_id, sensor_nodes_id)
-
             --LEFT JOIN groups_sensors USING (sensors_id)
             --LEFT JOIN groups_view b USING (groups_id, measurands_id)
         WHERE
             {where}
         """
     rows = await db.fetch(q, params)
-    logger.debug(f"{rows}")
+    logger.info(f"Rows in initial total: {rows}")
     if rows is None:
         return OpenAQResult()
     try:
@@ -303,6 +266,7 @@ async def measurements_get(
     else:
         fields = ""
 
+
     # count = total_count
     results = []
     if count > 0:
@@ -320,102 +284,114 @@ async def measurements_get(
         iteration = 0
         # params["sensor_nodes"]=sensor_nodes
         # where = " sensor_nodes_id = ANY(:sensor_nodes) "
-        while (
-            rc < m.limit
-            and rc < total_count
-            and rangestart >= date_from
-            and rangeend <= date_to
-            and iteration <= 20
-        ):
-            logger.debug(f"looping... {rc} {rangestart} {rangeend}")
-            q = f"""
-            WITH t AS (
-                SELECT
-                    sensor_nodes_id as location_id,
-                    site_name as location,
-                    measurand as parameter,
-                    value,
-                    datetime,
-                    timezone,
-                    CASE WHEN lon is not null and lat is not null THEN
-                        json_build_object(
-                            'latitude',lat,
-                            'longitude', lon
-                            )
-                        WHEN b.geog is not null THEN
-                        json_build_object(
-                                'latitude', st_y(geog::geometry),
-                                'longitude', st_x(geog::geometry)
-                            )
-                        ELSE NULL END AS coordinates,
-                    units as unit,
-                    country,
-                    city,
-                    ismobile,
-                    is_analysis,
-                    entity, "sensorType" {fields}
-                FROM measurements_analyses a
-                LEFT JOIN measurements_fastapi_base b USING (sensors_id)
-                WHERE {where} {vwhere}
-                AND datetime >= :rangestart::timestamptz
-                AND datetime <= :rangeend::timestamptz
-                ORDER BY "{m.order_by}" {m.sort}
-                OFFSET :offset
-                LIMIT :limit
-                ), t1 AS (
+        try:
+            while (
+                rc < m.limit
+                and rc < total_count
+                and rangestart >= date_from
+                and rangeend <= date_to
+                and iteration <= 20
+            ):
+                logger.debug(f"looping... {rc} {rangestart} {rangeend}")
+                q = f"""
+                WITH t AS (
                     SELECT
-                        location_id as "locationId",
-                        location,
-                        parameter,
+                        sensor_nodes_id as location_id,
+                        site_name as location,
+                        measurand as parameter,
                         value,
-                        json_build_object(
-                            'utc',
-                            format_timestamp(datetime, 'UTC'),
-                            'local',
-                            format_timestamp(datetime, timezone)
-                        ) as date,
-                        unit,
-                        coordinates,
+                        datetime,
+                        timezone,
+                        CASE WHEN lon is not null and lat is not null THEN
+                            json_build_object(
+                                'latitude',lat,
+                                'longitude', lon
+                                )
+                            WHEN b.geog is not null THEN
+                            json_build_object(
+                                    'latitude', st_y(geog::geometry),
+                                    'longitude', st_x(geog::geometry)
+                                )
+                            ELSE NULL END AS coordinates,
+                        units as unit,
                         country,
                         city,
-                        ismobile as "isMobile",
-                        is_analysis as "isAnalysis",
+                        ismobile,
+                        is_analysis,
+                        b.is_latest,
+                        b.version_date,
+                        b.life_cycles_label,
                         entity, "sensorType" {fields}
-                    FROM t
-                )
-                SELECT {count}::bigint as count,
-                row_to_json(t1) as json FROM t1;
-            """
-
-            rows = await db.fetch(q, params)
-            if rows:
-                logger.debug(f"{len(rows)} rows found")
-                rc = rc + len(rows)
-                if len(rows) > 0 and rows[0][1] is not None:
-                    results.extend(
-                        [
-                            json.loads(r[1])
-                            for r in rows
-                            if isinstance(r[1], str)
-                        ]
+                    FROM measurements_analyses a
+                    LEFT JOIN measurements_fastapi_base b USING (sensors_id)
+                    WHERE {where} {vwhere}
+                    AND datetime >= :rangestart::timestamptz
+                    AND datetime <= :rangeend::timestamptz
+                    ORDER BY "{m.order_by}" {m.sort}
+                    OFFSET :offset
+                    LIMIT :limit
+                    ), t1 AS (
+                        SELECT
+                            location_id as "locationId",
+                            location,
+                            parameter,
+                            value,
+                            json_build_object(
+                                'utc',
+                                format_timestamp(datetime, 'UTC'),
+                                'local',
+                                format_timestamp(datetime, timezone)
+                            ) as date,
+                            unit,
+                            coordinates,
+                            country,
+                            city,
+                            ismobile as "isMobile",
+                            is_analysis as "isAnalysis",
+                            is_latest as "isLatest",
+                            version_date as "versionDate",
+                            life_cycles_label as "lifeCycle",
+                            entity, "sensorType" {fields}
+                        FROM t
                     )
-            logger.debug(
-                f"ran query... {rc} {rangestart}"
-                f" {date_from_adj}{rangeend} {date_to_adj}"
-            )
-            if m.sort == "desc":
-                rangestart -= delta
-                rangeend -= delta
-            else:
-                rangestart += delta
-                rangeend += delta
-            logger.debug(
-                f"stepped ranges... {rc} {rangestart}"
-                f" {date_from_adj}{rangeend} {date_to_adj}"
-            )
-            params["rangestart"] = rangestart
-            params["rangeend"] = rangeend
-            iteration += 1
+                    SELECT {count}::bigint as count,
+                    row_to_json(t1) as json FROM t1;
+                """
+
+                rows = await db.fetch(q, params)
+                if rows:
+                    logger.debug(f"{len(rows)} rows found")
+                    rc = rc + len(rows)
+                    if len(rows) > 0 and rows[0][1] is not None:
+                        results.extend(
+                            [
+                                json.loads(r[1])
+                                for r in rows
+                                if isinstance(r[1], str)
+                            ]
+                        )
+                logger.debug(
+                    f"ran query... {rc} {rangestart}"
+                    f" {date_from_adj}{rangeend} {date_to_adj}"
+                )
+                if m.sort == "desc":
+                    rangestart -= delta
+                    rangeend -= delta
+                else:
+                    rangestart += delta
+                    rangeend += delta
+                logger.debug(
+                    f"stepped ranges... {rc} {rangestart}"
+                    f" {date_from_adj}{rangeend} {date_to_adj}"
+                )
+                params["rangestart"] = rangestart
+                params["rangeend"] = rangeend
+                iteration += 1
+
+        except Exception:
+            logger.debug('error')
+
+
     meta = Meta(
         website=os.getenv("APP_HOST", "/"),
         page=m.page,

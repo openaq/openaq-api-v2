@@ -8,7 +8,7 @@
 ## Version:
 ## Last-Updated:
 ##           By:
-##     Update #: 5
+##     Update #: 9
 ## URL:
 ## Keywords:
 ## Compatibility:
@@ -30,19 +30,23 @@
 source("~/git/talloaks/talloaks-admin/scripts/google.r");
 
 sheetId <- '1RSRrrR_LeB-t0tIjL4fhinsKP23fuRnpu__PIO9psYA'
-rootDir <- '~/git/caparker/openaq-lcs-fetch/fetcher/data/cmu/staging/pending';
+rootDir <- 'staging/pending';
 
 sheets <- c(
     "measurements_initial"
   , "measurements_v1"
   , "measurements_v1b"
+  , "measurements_v2"
+  , "measurements_v3"
   , "versions_v1"
+  , "sensors_initial"
+  , "sensors_update"
   , "locations"
 )
 
 for(sheet in sheets) {
     m <-readGoogleSheet(sheetId, sheet=sheet)
-    write.csv(m, sprintf('%s/%s.csv', rootDir, sheet))
+    write.csv(m, sprintf('%s/%s.csv', rootDir, sheet, na=""))
 }
 
 

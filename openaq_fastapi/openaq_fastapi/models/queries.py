@@ -18,8 +18,7 @@ from pydantic import (
     root_validator,
 )
 
-logger = logging.getLogger("base")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 maxint = 2147483647
 
@@ -97,7 +96,7 @@ class OBaseModel(BaseModel):
 
     @classmethod
     def depends(cls):
-        logger.debug(f"Depends {cls}")
+        # logger.debug(f"Depends {cls}")
         return parameter_dependency_from_model("depends", cls)
 
     def params(self):
@@ -347,3 +346,18 @@ class DateRange(OBaseModel):
     )
     def check_dates(cls, v, values):
         return fix_datetime(v)
+
+
+class Versions(OBaseModel):
+    version_date: Optional[date] = Query(
+        None,
+        description="Limit to sensors matching the version date",
+    )
+    isLatest: bool = Query(
+        None,
+        description="Limit to the either latest versions or non-versioned sensors (true), old verisions (false) or all sensors and versions",
+    )
+    life_cycles_id: Optional[int] = Query(
+        None,
+        description="Limit to sensors with versions matching the provided life cycle id",
+    )

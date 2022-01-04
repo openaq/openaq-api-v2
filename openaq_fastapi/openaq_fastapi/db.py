@@ -13,8 +13,7 @@ from openaq_fastapi.settings import settings
 
 from .models.responses import Meta, OpenAQResult
 
-logger = logging.getLogger("base")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 def default(obj):
@@ -72,7 +71,7 @@ class DB:
     async def fetch(self, query, kwargs):
         pool = await self.pool()
         start = time.time()
-        logger.debug("Start time: %s Query: %s Args:%s", start, query, kwargs)
+        logger.info("Start time: %s Query: %s Args:%s", start, query, kwargs)
         rquery, args = render(query, **kwargs)
         async with pool.acquire() as con:
             try:
@@ -87,7 +86,7 @@ class DB:
                 logger.debug(f"Database Error: {e}")
                 if str(e).startswith("ST_TileEnvelope"):
                     raise HTTPException(status_code=422, detail=f"{e}")
-                raise HTTPException(status_code=500, detail=f"{e}")
+                raise HTTPException(status_code=500, detail=f"{e} {query} {kwargs}")
         logger.debug(
             "query took: %s results_firstrow: %s",
             time.time() - start,
