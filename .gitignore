@@ -1,2 +1,9 @@
 *.ipynb
 .env*
+*__pycache*
+.venv
+/openaq_fastapi/openaq_fastapi/ingest/testdata*
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out

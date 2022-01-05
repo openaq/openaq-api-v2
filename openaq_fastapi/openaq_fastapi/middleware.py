@@ -8,8 +8,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.types import ASGIApp
 
-logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 class CacheControlMiddleware(BaseHTTPMiddleware):
