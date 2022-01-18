@@ -1,4 +1,4 @@
-# OpenAQ API Version 2 
+# OpenAQ API Version 2
 [![Slack Chat](https://img.shields.io/badge/Chat-Slack-ff69b4.svg "Join us. Anyone is welcome!")](https://openaq-slackin.herokuapp.com/)
 
 ## Overview
@@ -54,14 +54,14 @@ You can enter a terminal on the API Docker instance from another terminal by run
 docker-compose exec api /bin/bash
 ```
 
-From either the VSCode terminal or the terminal as above on the API container, you can load a sample days worth of data using the Fetch data loader and the included sample data from 12/31/2020 by running the following on the API container. This will load the data and run the post-processing scripts that are normally run on a cron in production.  
+From either the VSCode terminal or the terminal as above on the API container, you can load a sample days worth of data using the Fetch data loader and the included sample data from 12/31/2020 by running the following on the API container. This will load the data and run the post-processing scripts that are normally run on a cron in production.
 
 ```
 ./sample/load_sample_data.sh
 ```
 **Note**: This process can take up to 20 minutes, be patient.
 
-## Setting up your environment 
+## Setting up your environment
 **Note: this isn't needed for setting up a local environment**
 
 To set up your environment, create a .env file that includes the following variables
@@ -88,3 +88,15 @@ OPENAQ_FASTAPI_URL=""
 OPENAQ_FETCH_BUCKET=openaq-fetches
 OPENAQ_ETL_BUCKET=openaq-fetches
 ```
+
+## Contributing
+There are a lot of ways to contribute to this project, more details can be found in the [contributing guide](CONTRIBUTING.md).
+
+## Projects using the API
+
+- openaq-browser [site](http://dolugen.github.io/openaq-browser) | [code](https://github.com/dolugen/openaq-browser) - A simple browser to provide a graphical interface to the data.
+- openaq [code](https://github.com/nickolasclarke/openaq) - An isomorphic Javascript wrapper for the API
+- py-openaq [code](https://github.com/dhhagan/py-openaq) - A Python wrapper for the API
+- ropenaq [code](https://github.com/ropenscilabs/ropenaq) - An R package for the API
+
+For more projects that are using OpenAQ API, checkout the [OpenAQ.org Community](https://openaq.org/#/community) page.
