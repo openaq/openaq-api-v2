@@ -298,24 +298,26 @@ def load_metadata_bucketscan(count=100):
             break
 
 
-def load_metadata_db(count=250):
+def load_metadata_db(count=250, ascending: bool = False):
+    order = 'ASC' if ascending else 'DESC'
     with psycopg2.connect(settings.DATABASE_URL) as connection:
         connection.set_session(autocommit=True)
         with connection.cursor() as cursor:
             cursor.execute(
-                """
-                    SELECT key
-                    , last_modified
-                    , fetchlogs_id
-                    FROM fetchlogs
-                    WHERE key~'lcs-etl-pipeline/stations/'
-                    AND completed_datetime is null
-                    ORDER BY last_modified asc nulls last
-                    LIMIT %s;
-                    """,
+                f"""
+                SELECT key
+                , last_modified
+                , fetchlogs_id
+                FROM fetchlogs
+                WHERE key~'lcs-etl-pipeline/stations/'
+                AND completed_datetime is null
+                ORDER BY last_modified {order} nulls last
+                LIMIT %s;
+                """,
                 (count,),
             )
             rows = cursor.fetchall()
+            rowcount = cursor.rowcount
             contents = []
             for row in rows:
                 contents.append(
@@ -326,6 +328,7 @@ def load_metadata_db(count=250):
     if len(contents) > 0:
         data = LCSData(contents)
         data.get_metadata()
+    return rowcount
 
 
 def get_measurements(key):
@@ -446,28 +449,29 @@ def load_measurements_file(fetchlogs_id: int):
             keys = [r[0] for r in rows]
             load_measurements_key(keys, connection, cursor)
 
-def load_measurements_db(limit=250):
+def load_measurements_db(limit=250, ascending: bool = False):
+    order = 'ASC' if ascending else 'DESC'
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
         connection.set_session(autocommit=True)
         with connection.cursor() as cursor:
             cursor.execute(
-                """
-                    SELECT key
-                    , last_modified
-                    , fetchlogs_id
-                    FROM fetchlogs
-                    WHERE key~E'^lcs-etl-pipeline/measures/.*\\.csv'
-                    AND completed_datetime is null
-                    ORDER BY last_modified desc nulls last
-                    LIMIT %s
-                    ;
+                f"""
+                SELECT key
+                , last_modified
+                , fetchlogs_id
+                FROM fetchlogs
+                WHERE key~E'^lcs-etl-pipeline/measures/.*\\.csv'
+                AND completed_datetime is null
+                ORDER BY last_modified {order} nulls last
+                LIMIT %s
+                ;
                 """,
                 (limit,),
             )
             rows = cursor.fetchall()
             keys = [r[0] for r in rows]
-            if len(keys) > 0:
-                load_measurements(keys)
+            load_measurements(keys, connection, cursor)
+            return len(keys)
 
 
 def load_measurements(keys, connection, cursor):
