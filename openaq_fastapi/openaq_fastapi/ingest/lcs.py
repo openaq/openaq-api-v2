@@ -458,7 +458,7 @@ def load_measurements_db(limit=250):
                     FROM fetchlogs
                     WHERE key~E'^lcs-etl-pipeline/measures/.*\\.csv'
                     AND completed_datetime is null
-                    ORDER BY last_modified asc nulls last
+                    ORDER BY last_modified desc nulls last
                     LIMIT %s
                     ;
                 """,
