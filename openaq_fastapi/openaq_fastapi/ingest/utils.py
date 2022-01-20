@@ -1,6 +1,7 @@
 import io
 import os
 from pathlib import Path
+import logging
 
 import boto3
 from io import StringIO
@@ -17,6 +18,8 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 FETCH_BUCKET = settings.OPENAQ_FETCH_BUCKET
 s3 = boto3.resource("s3")
 s3c = boto3.client("s3")
+
+logger = logging.getLogger(__name__)
 
 
 class StringIteratorIO(io.TextIOBase):
@@ -62,10 +65,9 @@ def clean_csv_value(value):
 
 
 def get_query(file, **params):
-    # print(f"{params}")
+    logger.debug("get_query: {file}, params: {params}")
     query = Path(os.path.join(dir_path, file)).read_text()
     if params is not None and len(params) >= 1:
-        print(f"adding parameters {params}")
         query = query.format(**params)
     return query
 

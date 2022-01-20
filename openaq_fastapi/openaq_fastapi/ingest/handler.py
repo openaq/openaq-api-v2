@@ -1,17 +1,25 @@
 import boto3
+import logging
 import psycopg2
 from ..settings import settings
 from .lcs import load_measurements_db, load_metadata_db
 from .fetch import load_db
-import math
+#import math
+import sys
 
 from datetime import datetime, timezone
 
 s3c = boto3.client("s3")
 
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    format = '[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s',
+    level = settings.LOG_LEVEL.upper(),
+    force = True,
+)
 
 def handler(event, context):
-    print(event)
+    logger.debug(event)
     records = event.get("Records")
     if records is not None:
         try:
@@ -21,14 +29,14 @@ def handler(event, context):
                     for record in records:
                         bucket = record["s3"]["bucket"]["name"]
                         key = record["s3"]["object"]["key"]
-                        print(f"{bucket} {object}")
+
                         lov2 = s3c.list_objects_v2(
                             Bucket=bucket, Prefix=key, MaxKeys=1
                         )
                         try:
                             last_modified = lov2["Contents"][0]["LastModified"]
                         except KeyError:
-                            print("could not get last modified time from obj")
+                            logger.error("could not get last modified time from obj")
                         last_modified = datetime.now().replace(
                             tzinfo=timezone.utc
                         )
@@ -45,48 +53,59 @@ def handler(event, context):
                         )
                         row = cursor.fetchone()
                         connection.commit()
-                        print(f"{row}")
+                        logger.info(f"ingest-handler: {row}")
         except Exception as e:
-            print(f"Exception: {e}")
+            logger.warning(f"Exception: {e}")
     elif event.get("source") and event["source"] == "aws.events":
-        print("running cron job")
         cronhandler(event, context)
+    else:
+        logger.warning(f"ingest-handler: nothing to do: {event}")
 
 
 def cronhandler(event, context):
-    print(event)
-    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+    logger.info(f"Running cron job: {event['source']}")
+    with psycopg2.connect(settings.DATABASE_URL) as connection:
         connection.set_session(autocommit=True)
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT count(*) FROM fetchlogs WHERE completed_datetime is null and key ~*'stations';
+                SELECT count(*)
+                FROM fetchlogs
+                WHERE completed_datetime is null
+                AND key ~*'stations';
                 """,
             )
             metadata = cursor.fetchone()
             cursor.execute(
                 """
-                SELECT count(*) FROM fetchlogs WHERE completed_datetime is null and key ~*'measures';
+                SELECT count(*)
+                FROM fetchlogs
+                WHERE completed_datetime is null
+                AND key ~*'measures';
                 """,
             )
             pipeline = cursor.fetchone()
             cursor.execute(
                 """
-                SELECT count(*) FROM fetchlogs WHERE completed_datetime is null and key ~*'realtime';
+                SELECT count(*)
+                FROM fetchlogs
+                WHERE completed_datetime is null
+                AND key ~*'realtime';
                 """,
             )
             realtime = cursor.fetchone()
             for notice in connection.notices:
-                print(notice)
+                logger.debug(notice)
 
-    print(f"Processing {metadata[0]} metadata, {realtime[0]} openaq, {pipeline[0]} pipeline records")
+    logger.info(f"Processing {metadata[0]} metadata, {realtime[0]} openaq, {pipeline[0]} pipeline records")
+
     if metadata is not None:
         val = int(metadata[0])
         cnt = 0
         while cnt < val + 10:
             load_metadata_db(10)
             cnt += 10
-            print(f"loaded {cnt+10} of {val} metadata records")
+            logger.info(f"loaded {cnt+10} of {val} metadata records")
 
     if realtime is not None:
         val = int(realtime[0])
@@ -94,9 +113,9 @@ def cronhandler(event, context):
             val=400
         cnt = 0
         while cnt < val + 25:
-            load_db(25)
+            #load_db(25)
             cnt += 25
-            print(f"loaded {cnt+25} of {val} fetch records")
+            logger.info(f"loaded {cnt+25} of {val} fetch records")
 
     if pipeline is not None:
         val = int(pipeline[0])
@@ -104,8 +123,8 @@ def cronhandler(event, context):
             val=400
         cnt = 0
         while cnt < val + 25:
-            load_measurements_db(25)
+            #load_measurements_db(25)
             cnt += 25
-            print(f"loaded {cnt+25} of {val} pipeline records")
+            logger.info(f"loaded {cnt+25} of {val} pipeline records")
 
-    print("done loading")
+    logger.info("done loading")

@@ -1,9 +1,11 @@
 import os
+import logging
 from datetime import datetime, timezone
 import dateparser
 import pytz
 import orjson
 import csv
+from time import time
 from urllib.parse import unquote, unquote_plus
 
 import boto3
@@ -20,12 +22,13 @@ app = typer.Typer()
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 FETCH_BUCKET = settings.OPENAQ_ETL_BUCKET
-
+logger = logging.getLogger(__name__)
 
 class LCSData:
     def __init__(
         self, page=None, key=None, st=datetime.now().replace(tzinfo=pytz.UTC)
     ):
+        logger.debug(f"Loading data with {len(page)} pages")
         self.sensors = []
         self.systems = []
         self.nodes = []
@@ -110,53 +113,49 @@ class LCSData:
         self.nodes.append(node)
 
     def get_station(self, key):
+        logger.debug(f"get_station - {key}")
         if str.endswith(key, ".gz"):
             compression = "GZIP"
         else:
             compression = "NONE"
-        try:
-            print(f"key: {key}")
-            resp = s3c.select_object_content(
-                Bucket=FETCH_BUCKET,
-                Key=key,
-                ExpressionType="SQL",
-                Expression="SELECT * FROM s3object",
-                InputSerialization={
-                    "JSON": {"Type": "Document"},
-                    "CompressionType": compression,
-                },
-                OutputSerialization={"JSON": {}},
-            )
-            for event in resp["Payload"]:
-                if "Records" in event:
-                    records = event["Records"]["Payload"].decode("utf-8")
-                    self.node(orjson.loads(records))
+        # Removed the try block because getting the data is the whole
+        # purpose of this function and we should not continue without it
+        # if we want to check for specific errors we could do that, but than rethrow
+        resp = s3c.select_object_content(
+            Bucket=FETCH_BUCKET,
+            Key=key,
+            ExpressionType="SQL",
+            Expression="SELECT * FROM s3object",
+            InputSerialization={
+                "JSON": {"Type": "Document"},
+                "CompressionType": compression,
+            },
+            OutputSerialization={"JSON": {}},
+        )
+        for event in resp["Payload"]:
+            if "Records" in event:
+                records = event["Records"]["Payload"].decode("utf-8")
+                self.node(orjson.loads(records))
 
-        except Exception as e:
-            print(f"Could not load {key} {e}")
 
     def load_data(self):
+        logger.debug(f"load_data: {self.keys}")
         with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
             connection.set_session(autocommit=True)
             with connection.cursor() as cursor:
+                start_time = time()
                 self.create_staging_table(cursor)
+
                 write_csv(
-                    cursor, self.keys, "keys", ["key", "last_modified",],
+                    cursor, self.keys, "keys", ["key", "last_modified", "fetchlogs_id",],
                 )
+                # update by id instead of key due to matching issue
                 cursor.execute(
                     """
-                    INSERT INTO fetchlogs(
-                        key,
-                        last_modified,
-                        loaded_datetime
-                    ) SELECT *, clock_timestamp()
-                    FROM keys
-                    ON CONFLICT (key) DO
-                    UPDATE
-                        SET
-                        last_modified=EXCLUDED.last_modified,
-                        loaded_datetime=EXCLUDED.completed_datetime
-                    ;;
+                    UPDATE fetchlogs
+                    SET loaded_datetime = clock_timestamp()
+                    , last_message = 'load_data'
+                    WHERE fetchlogs_id IN (SELECT fetchlogs_id FROM keys)
                     """
                 )
                 connection.commit()
@@ -197,24 +196,16 @@ class LCSData:
 
                 cursor.execute(
                     """
-                    INSERT INTO fetchlogs(
-                        key,
-                        last_modified,
-                        completed_datetime
-                    ) SELECT *, clock_timestamp()
-                    FROM keys
-                    ON CONFLICT (key) DO
-                    UPDATE
-                        SET
-                        last_modified=EXCLUDED.last_modified,
-                        completed_datetime=EXCLUDED.completed_datetime
-                    ;
+                    UPDATE fetchlogs
+                    SET completed_datetime = clock_timestamp()
+                    WHERE fetchlogs_id IN (SELECT fetchlogs_id FROM keys)
                     """
                 )
-                connection.commit()
 
+                connection.commit()
+                logger.info("load_data: files: %s; time: %0.4f", len(self.keys), time() - start_time)
                 for notice in connection.notices:
-                    print(notice)
+                    logger.debug(notice)
 
     def process_data(self, cursor):
         query = get_query("lcs_ingest_nodes.sql")
@@ -231,38 +222,44 @@ class LCSData:
 
     def get_metadata(self):
         hasnew = False
-        with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        with psycopg2.connect(settings.DATABASE_URL) as connection:
             connection.set_session(autocommit=True)
             with connection.cursor() as cursor:
 
                 for obj in self.page:
 
                     key = obj["Key"]
+                    id = obj["id"]
                     last_modified = obj["LastModified"]
-                    print(f"{key} {last_modified}")
+                    logger.debug(f"checking fetchlog again: {key} {last_modified}")
                     # if last_modified > self.st:
                     cursor.execute(
                         """
-                        SELECT 1 FROM fetchlogs
-                        WHERE key=%s
+                        SELECT 1
+                        FROM fetchlogs
+                        WHERE fetchlogs_id=%s
                         AND completed_datetime IS NOT NULL
                         """,
-                        (key,),
+                        (id,),
                     )
                     rows = cursor.rowcount
-                    print(rows)
+                    logger.debug(f"get_metadata:rows - {rows}")
                     if rows < 1:
-                        print(f"{key} {last_modified}")
-                        self.keys.append(
-                            {"key": key, "last_modified": last_modified}
-                        )
-                        self.get_station(key)
-                        hasnew = True
+                        try:
+                            self.get_station(key)
+                            self.keys.append(
+                                {"key": key, "last_modified": last_modified, "fetchlogs_id": id}
+                            )
+                            hasnew = True
+                        except Exception as e:
+                            # catch and continue to next page
+                            logger.error(f"Could not process file: {id}: {key}")
 
                 if hasnew:
+                    logger.debug(f"get_metadata:hasnew - {self.keys}")
                     self.load_data()
                 for notice in connection.notices:
-                    print(notice)
+                    logger.debug(notice)
 
 
 def write_csv(cursor, data, table, columns):
@@ -277,8 +274,8 @@ def write_csv(cursor, data, table, columns):
         """,
         sio,
     )
-    print("rowcount:", cursor.rowcount)
-    print("status:", cursor.statusmessage)
+    logger.debug(f"table: {table}; rowcount: {cursor.rowcount}")
+    #print("status:", cursor.statusmessage)
 
 
 def load_metadata_bucketscan(count=100):
@@ -297,16 +294,19 @@ def load_metadata_bucketscan(count=100):
 
 
 def load_metadata_db(count=250):
-    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+    with psycopg2.connect(settings.DATABASE_URL) as connection:
         connection.set_session(autocommit=True)
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                    SELECT key,last_modified FROM fetchlogs
-                    WHERE key~'lcs-etl-pipeline/stations/' AND
-                    completed_datetime is null order by
-                    last_modified asc nulls last
-                    limit %s;
+                    SELECT key
+                    , last_modified
+                    , fetchlogs_id
+                    FROM fetchlogs
+                    WHERE key~'lcs-etl-pipeline/stations/'
+                    AND completed_datetime is null
+                    ORDER BY last_modified asc nulls last
+                    LIMIT %s;
                     """,
                 (count,),
             )
@@ -314,10 +314,10 @@ def load_metadata_db(count=250):
             contents = []
             for row in rows:
                 contents.append(
-                    {"Key": unquote_plus(row[0]), "LastModified": row[1],}
+                    {"Key": unquote_plus(row[0]), "LastModified": row[1],"id": row[2],}
                 )
             for notice in connection.notices:
-                print(notice)
+                logger.debug(notice)
     if len(contents) > 0:
         data = LCSData(contents)
         data.get_metadata()
@@ -494,4 +494,4 @@ def load_measurements_db(limit=250):
                     connection.commit()
 
                     for notice in connection.notices:
-                        print(notice)
+                        logger.debug(notice)

@@ -1,8 +1,6 @@
 from pydantic import BaseSettings
 from pathlib import Path
-
-parent = Path(__file__).resolve().parent.parent.parent
-env_file = Path.joinpath(parent, ".env")
+from os import environ
 
 
 class Settings(BaseSettings):
@@ -14,9 +12,14 @@ class Settings(BaseSettings):
     OPENAQ_FETCH_BUCKET: str
     OPENAQ_ETL_BUCKET: str
     OPENAQ_CACHE_TIMEOUT: int = 900
+    LOG_LEVEL: str = 'INFO'
 
     class Config:
-        env_file = env_file
+        parent = Path(__file__).resolve().parent.parent.parent
+        if 'DOTENV' in environ:
+            env_file = Path.joinpath(parent, environ['DOTENV'])
+        else:
+            env_file = Path.joinpath(parent, ".env")
 
 
 settings = Settings()

@@ -28,4 +28,4 @@ CREATE TEMP TABLE IF NOT EXISTS ms_sensors (
     metadata jsonb
 );
 
-CREATE TEMP TABLE keys (key text, last_modified timestamptz);
+CREATE TEMP TABLE keys (fetchlogs_id int, key text, last_modified timestamptz);
