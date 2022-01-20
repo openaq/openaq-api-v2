@@ -45,7 +45,6 @@ WHERE
 ON CONFLICT DO NOTHING
 ;
 
-
 DO $$
 BEGIN
   -- Update the export queue/logs to export these records
@@ -53,7 +52,7 @@ BEGIN
   -- we subtract the second because the data is assumed to be time ending
   INSERT INTO open_data_export_logs (sensor_nodes_id, day, records, measurands, modified_on)
   SELECT sn.sensor_nodes_id
-  , ((m.datetime - '1sec'::interval) AT TIME ZONE (sn.metadata->>'timezone')::text)::date as day
+  , ((m.datetime - '1sec'::interval) AT TIME ZONE (COALESCE(sn.metadata->>'timezone', 'UTC'))::text)::date as day
   , COUNT(1)
   , COUNT(DISTINCT p.measurands_id)
   , MAX(now())
@@ -62,8 +61,9 @@ BEGIN
   JOIN measurands p ON (s.measurands_id = p.measurands_id)
   JOIN sensor_systems ss ON (s.sensor_systems_id = ss.sensor_systems_id)
   JOIN sensor_nodes sn ON (ss.sensor_nodes_id = sn.sensor_nodes_id)
+  WHERE m.datetime IS NOT NULL
   GROUP BY sn.sensor_nodes_id
-  , ((m.datetime - '1sec'::interval) AT TIME ZONE (sn.metadata->>'timezone')::text)::date
+  , ((m.datetime - '1sec'::interval) AT TIME ZONE (COALESCE(sn.metadata->>'timezone', 'UTC'))::text)::date
   ON CONFLICT (sensor_nodes_id, day) DO UPDATE
   SET records = EXCLUDED.records
   , measurands = EXCLUDED.measurands

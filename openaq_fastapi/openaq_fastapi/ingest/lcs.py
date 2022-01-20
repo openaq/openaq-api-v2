@@ -7,6 +7,7 @@ import orjson
 import csv
 from time import time
 from urllib.parse import unquote, unquote_plus
+import warnings
 
 import boto3
 import psycopg2
@@ -23,6 +24,11 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 
 FETCH_BUCKET = settings.OPENAQ_ETL_BUCKET
 logger = logging.getLogger(__name__)
+
+warnings.filterwarnings(
+    "ignore",
+    message="The localize method is no longer necessary, as this time zone supports the fold attribute",
+)
 
 class LCSData:
     def __init__(
@@ -275,7 +281,6 @@ def write_csv(cursor, data, table, columns):
         sio,
     )
     logger.debug(f"table: {table}; rowcount: {cursor.rowcount}")
-    #print("status:", cursor.statusmessage)
 
 
 def load_metadata_bucketscan(count=100):
@@ -323,10 +328,8 @@ def load_metadata_db(count=250):
         data.get_metadata()
 
 
-def load_measurements(key):
+def get_measurements(key):
     key = unquote_plus(key)
-    print(key)
-
     if str.endswith(key, ".gz"):
         compression = "GZIP"
     else:
@@ -392,20 +395,56 @@ def load_measurements(key):
                 try:
                     dt = dateparser.parse(dt).replace(tzinfo=timezone.utc)
                 except Exception:
-                    print(f"Exception in parsing date for {dt} {Exception}")
+                    logger.warning(f"Exception in parsing date for {dt} {Exception}")
             row[2] = dt.isoformat()
             ret.append(row)
         return ret
     except Exception as e:
-        print(f"Could not load {key} {e}")
+        submit_file_error(key, e)
     return None
 
+def submit_file_error(key, e):
+    """Update the log to reflect the error and prevent a retry"""
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE fetchlogs
+                SET completed_datetime = clock_timestamp()
+                , last_message = %s
+                WHERE key = %s
+                """
+            ),
+            (f"ERROR: {e}", key),
 
 def to_tsv(row):
     tsv = "\t".join(map(clean_csv_value, row)) + "\n"
     return tsv
     return ""
 
+def load_measurements_file(fetchlogs_id: int):
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT key
+                , init_datetime
+                , loaded_datetime
+                , completed_datetime
+                , last_message
+                FROM fetchlogs
+                WHERE fetchlogs_id = %s
+                LIMIT 1
+                ;
+                """,
+                (fetchlogs_id,),
+            )
+            rows = cursor.fetchall()
+            print(rows)
+            keys = [r[0] for r in rows]
+            load_measurements_key(keys, connection, cursor)
 
 def load_measurements_db(limit=250):
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
@@ -413,12 +452,14 @@ def load_measurements_db(limit=250):
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                    SELECT key,last_modified FROM fetchlogs
-                    WHERE key~E'^lcs-etl-pipeline/measures/.*\\.csv' AND
-                    completed_datetime is null
-                    ORDER BY last_modified desc nulls last
+                    SELECT key
+                    , last_modified
+                    , fetchlogs_id
+                    FROM fetchlogs
+                    WHERE key~E'^lcs-etl-pipeline/measures/.*\\.csv'
+                    AND completed_datetime is null
+                    ORDER BY last_modified asc nulls last
                     LIMIT %s
-
                     ;
                 """,
                 (limit,),
@@ -426,72 +467,79 @@ def load_measurements_db(limit=250):
             rows = cursor.fetchall()
             keys = [r[0] for r in rows]
             if len(keys) > 0:
-                cursor.execute(get_query("lcs_meas_staging.sql"))
-                data = []
-                new = []
-                for key in keys:
-                    new.append({"key": key})
-                    newdata = load_measurements(key)
-                    if newdata is not None:
-                        data.extend(newdata)
-                if len(data) > 0:
-                    write_csv(
-                        cursor, new, "keys", ["key",],
-                    )
+                load_measurements(keys)
 
-                    iterator = StringIteratorIO(
-                        (to_tsv(line) for line in data)
-                    )
-                    cursor.copy_expert(
-                        """
-                        COPY meas (ingest_id, value, datetime, lon, lat)
-                        FROM stdin;
-                        """,
-                        iterator,
-                    )
-                    rows = cursor.rowcount
-                    status = cursor.statusmessage
-                    print(f"COPY Rows: {rows} Status: {status}")
-                    cursor.execute(
-                        """
-                        INSERT INTO fetchlogs(
-                            key,
-                            loaded_datetime
-                        ) SELECT key, clock_timestamp()
-                        FROM keys
-                        ON CONFLICT (key) DO
-                        UPDATE
-                            SET
-                            loaded_datetime=EXCLUDED.loaded_datetime
-                        ;
-                        """
-                    )
-                    connection.commit()
 
-                    cursor.execute(get_query("lcs_meas_ingest.sql"))
-                    rows = cursor.rowcount
-                    status = cursor.statusmessage
-                    print(f"INGEST Rows: {rows} Status: {status}")
-                    cursor.execute(
-                        """
-                        INSERT INTO fetchlogs(
-                            key,
-                            last_modified,
-                            completed_datetime
-                        ) SELECT *, clock_timestamp()
-                        FROM keys
-                        ON CONFLICT (key) DO
-                        UPDATE
-                            SET
-                            last_modified=EXCLUDED.last_modified,
-                            completed_datetime=EXCLUDED.completed_datetime
-                        ;
-                        """
-                    )
-                    rows = cursor.rowcount
-                    status = cursor.statusmessage
-                    print(f"UPDATE LOGS Rows: {rows} Status: {status}")
-                    connection.commit()
+def load_measurements(keys, connection, cursor):
+    logger.debug(f"loading {len(keys)} measurements")
+    start_time = time()
+    data = []
+    new = []
+    for key in keys:
+        new.append({"key": key})
+        newdata = get_measurements(key)
+        if newdata is not None:
+            data.extend(newdata)
 
-                    for notice in connection.notices:
-                        logger.debug(notice)
+    if len(data) > 0:
+        cursor.execute(get_query("lcs_meas_staging.sql"))
+        write_csv(
+            cursor, new, "keys", ["key",],
+        )
+
+        iterator = StringIteratorIO(
+            (to_tsv(line) for line in data)
+        )
+        cursor.copy_expert(
+            """
+            COPY meas (ingest_id, value, datetime, lon, lat)
+            FROM stdin;
+            """,
+            iterator,
+        )
+        mrows = cursor.rowcount
+        status = cursor.statusmessage
+        logger.debug(f"COPY Rows: {mrows} Status: {status}")
+        cursor.execute(
+            """
+            INSERT INTO fetchlogs(
+                key,
+                loaded_datetime
+            ) SELECT key, clock_timestamp()
+            FROM keys
+            ON CONFLICT (key) DO
+            UPDATE
+                SET
+                loaded_datetime=EXCLUDED.loaded_datetime
+            ;
+            """
+        )
+        connection.commit()
+
+        cursor.execute(get_query("lcs_meas_ingest.sql"))
+        rows = cursor.rowcount
+        status = cursor.statusmessage
+        logger.debug(f"INGEST Rows: {rows} Status: {status}")
+        cursor.execute(
+            """
+            INSERT INTO fetchlogs(
+                key,
+                last_modified,
+                completed_datetime
+            ) SELECT *, clock_timestamp()
+            FROM keys
+            ON CONFLICT (key) DO
+            UPDATE
+                SET
+                last_modified=EXCLUDED.last_modified,
+                completed_datetime=EXCLUDED.completed_datetime
+            ;
+            """
+        )
+        rows = cursor.rowcount
+        status = cursor.statusmessage
+        logger.info("load_measurements: keys: %s; rows: %s; time: %0.4f", len(keys), mrows, time() - start_time)
+        connection.commit()
+
+        for notice in connection.notices:
+            logger.debug(notice)
