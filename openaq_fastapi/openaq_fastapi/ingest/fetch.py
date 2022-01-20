@@ -265,18 +265,19 @@ def load_range(
 
 
 @app.command()
-def load_db(limit: int = 50):
+def load_db(limit: int = 50, ascending: bool = False):
+    order = 'ASC' if ascending else 'DESC'
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
         connection.set_session(autocommit=True)
         with connection.cursor() as cursor:
             cursor.execute(
-                """
-                    SELECT key,last_modified FROM fetchlogs
-                    WHERE key~E'^realtime-gzipped/.*\\.ndjson.gz$' AND
-                    completed_datetime is null
-                    ORDER BY last_modified desc nulls last
-                    LIMIT %s
-                    ;
+                f"""
+                SELECT key,last_modified FROM fetchlogs
+                WHERE key~E'^realtime-gzipped/.*\\.ndjson.gz$' AND
+                completed_datetime is null
+                ORDER BY last_modified {order} nulls last
+                LIMIT %s
+                ;
                 """,
                 (limit,),
             )
