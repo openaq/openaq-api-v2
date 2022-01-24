@@ -45,6 +45,7 @@ WHERE
 ON CONFLICT DO NOTHING
 ;
 
+
 DO $$
 BEGIN
   -- Update the export queue/logs to export these records
@@ -61,7 +62,6 @@ BEGIN
   JOIN measurands p ON (s.measurands_id = p.measurands_id)
   JOIN sensor_systems ss ON (s.sensor_systems_id = ss.sensor_systems_id)
   JOIN sensor_nodes sn ON (ss.sensor_nodes_id = sn.sensor_nodes_id)
-  WHERE m.datetime IS NOT NULL
   GROUP BY sn.sensor_nodes_id
   , ((m.datetime - '1sec'::interval) AT TIME ZONE (COALESCE(sn.metadata->>'timezone', 'UTC'))::text)::date
   ON CONFLICT (sensor_nodes_id, day) DO UPDATE
