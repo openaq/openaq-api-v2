@@ -332,6 +332,7 @@ def load_metadata_db(count=250, ascending: bool = False):
 
 
 def get_measurements(key):
+    start = time()
     key = unquote_plus(key)
     if str.endswith(key, ".gz"):
         compression = "GZIP"
@@ -358,11 +359,14 @@ def get_measurements(key):
             if "Records" in event:
                 content += event["Records"]["Payload"].decode("utf-8")
 
+        fetch_time = time() - start;
+
         ret = []
+        start = time()
         for row in csv.reader(content.split("\n")):
             if len(row) not in [3, 5]:
                 continue
-            if len(row) == 5:
+            if len(row) == 8:
                 try:
                     lon = float(row[3])
                     lat = float(row[4])
@@ -401,6 +405,7 @@ def get_measurements(key):
                     logger.warning(f"Exception in parsing date for {dt} {Exception}")
             row[2] = dt.isoformat()
             ret.append(row)
+        logger.info("get_measurements:csv: %s; size: %s; rows: %s; fetching: %0.4f; reading: %0.4f", key, len(content)/1000, len(ret), fetch_time, time() - start)
         return ret
     except Exception as e:
         submit_file_error(key, e)
@@ -447,7 +452,7 @@ def load_measurements_file(fetchlogs_id: int):
             rows = cursor.fetchall()
             print(rows)
             keys = [r[0] for r in rows]
-            load_measurements_key(keys, connection, cursor)
+            load_measurements_key(keys)
 
 def load_measurements_db(limit=250, ascending: bool = False):
     order = 'ASC' if ascending else 'DESC'
@@ -470,11 +475,11 @@ def load_measurements_db(limit=250, ascending: bool = False):
             )
             rows = cursor.fetchall()
             keys = [r[0] for r in rows]
-            load_measurements(keys, connection, cursor)
+            load_measurements(keys)
             return len(keys)
 
 
-def load_measurements(keys, connection, cursor):
+def load_measurements(keys):
     logger.debug(f"loading {len(keys)} measurements")
     start_time = time()
     data = []
@@ -485,65 +490,72 @@ def load_measurements(keys, connection, cursor):
         if newdata is not None:
             data.extend(newdata)
 
+    logger.info("load_measurements:get: %s keys; %s rows; %0.4f seconds", len(keys), len(data), time() - start_time)
     if len(data) > 0:
-        cursor.execute(get_query("lcs_meas_staging.sql"))
-        write_csv(
-            cursor, new, "keys", ["key",],
-        )
 
-        iterator = StringIteratorIO(
-            (to_tsv(line) for line in data)
-        )
-        cursor.copy_expert(
-            """
-            COPY meas (ingest_id, value, datetime, lon, lat)
-            FROM stdin;
-            """,
-            iterator,
-        )
-        mrows = cursor.rowcount
-        status = cursor.statusmessage
-        logger.debug(f"COPY Rows: {mrows} Status: {status}")
-        cursor.execute(
-            """
-            INSERT INTO fetchlogs(
-                key,
-                loaded_datetime
-            ) SELECT key, clock_timestamp()
-            FROM keys
-            ON CONFLICT (key) DO
-            UPDATE
-                SET
-                loaded_datetime=EXCLUDED.loaded_datetime
-            ;
-            """
-        )
-        connection.commit()
+        with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+            connection.set_session(autocommit=True)
+            with connection.cursor() as cursor:
 
-        cursor.execute(get_query("lcs_meas_ingest.sql"))
-        rows = cursor.rowcount
-        status = cursor.statusmessage
-        logger.debug(f"INGEST Rows: {rows} Status: {status}")
-        cursor.execute(
-            """
-            INSERT INTO fetchlogs(
-                key,
-                last_modified,
-                completed_datetime
-            ) SELECT *, clock_timestamp()
-            FROM keys
-            ON CONFLICT (key) DO
-            UPDATE
-                SET
-                last_modified=EXCLUDED.last_modified,
-                completed_datetime=EXCLUDED.completed_datetime
-            ;
-            """
-        )
-        rows = cursor.rowcount
-        status = cursor.statusmessage
-        logger.info("load_measurements: keys: %s; rows: %s; time: %0.4f", len(keys), mrows, time() - start_time)
-        connection.commit()
+                cursor.execute(get_query("lcs_meas_staging.sql"))
+                start = time()
+                write_csv(
+                    cursor, new, "keys", ["key",],
+                )
 
-        for notice in connection.notices:
-            logger.debug(notice)
+                iterator = StringIteratorIO(
+                    (to_tsv(line) for line in data)
+                )
+                cursor.copy_expert(
+                    """
+                    COPY meas (ingest_id, value, datetime, lon, lat)
+                    FROM stdin;
+                    """,
+                    iterator,
+                )
+                mrows = cursor.rowcount
+                status = cursor.statusmessage
+                logger.debug(f"COPY Rows: {mrows} Status: {status}")
+                cursor.execute(
+                    """
+                    INSERT INTO fetchlogs(
+                        key,
+                        loaded_datetime
+                    ) SELECT key, clock_timestamp()
+                    FROM keys
+                    ON CONFLICT (key) DO
+                    UPDATE
+                        SET
+                        loaded_datetime=EXCLUDED.loaded_datetime
+                    ;
+                    """
+                )
+                connection.commit()
+                cursor.execute(get_query("lcs_meas_ingest.sql"))
+                rows = cursor.rowcount
+                logger.info("load_measurements:insert: %s rows; %0.4f seconds", mrows, time() - start)
+                status = cursor.statusmessage
+                logger.debug(f"INGEST Rows: {rows} Status: {status}")
+                cursor.execute(
+                    """
+                    INSERT INTO fetchlogs(
+                        key,
+                        last_modified,
+                        completed_datetime
+                    ) SELECT *, clock_timestamp()
+                    FROM keys
+                    ON CONFLICT (key) DO
+                    UPDATE
+                        SET
+                        last_modified=EXCLUDED.last_modified,
+                        completed_datetime=EXCLUDED.completed_datetime
+                    ;
+                    """
+                )
+                rows = cursor.rowcount
+                status = cursor.statusmessage
+                logger.info("load_measurements: keys: %s; rows: %s; time: %0.4f", len(keys), mrows, time() - start_time)
+                connection.commit()
+
+                for notice in connection.notices:
+                    logger.debug(notice)

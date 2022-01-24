@@ -65,7 +65,7 @@ def handler(event, context):
 
 def cronhandler(event, context):
     start_time = time()
-    timeout = 4.75 * 60
+    timeout = 15 * 60 ## manual timeout for testing
     ## some basic settings
     ascending = False if 'ascending' not in event else event['ascending']
     pipeline_limit = 10 if 'pipeline_limit' not in event else event['pipeline_limit']
@@ -106,27 +106,26 @@ def cronhandler(event, context):
             for notice in connection.notices:
                 logger.debug(notice)
 
-    logger.info(f"Pending {metadata[0]} metadata, {realtime[0]} openaq, {pipeline[0]} pipeline records")
+    logger.info(f"{metadata[0]} metadata, {realtime[0]} openaq, {pipeline[0]} pipeline records pending")
 
     if metadata is not None and metadata_limit > 0:
         val = int(metadata[0])
         cnt = 0
-        while cnt <= val and (time() - start_time) < timeout:
+        while cnt < val and (time() - start_time) < timeout:
             cnt += load_metadata_db(metadata_limit, ascending)
             logger.info(f"loaded %s of %s metadata records, timer: %0.4f", cnt, val, time() - start_time)
 
     if realtime is not None and realtime_limit > 0:
         val = int(realtime[0])
         cnt = 0
-        while cnt <= val and (time() - start_time) < timeout:
+        while cnt < val and (time() - start_time) < timeout:
             cnt += load_db(realtime_limit, ascending)
             logger.info(f"loaded %s of %s fetch records, timer: %0.4f", cnt, val, time() - start_time)
 
     if pipeline is not None and pipeline_limit > 0:
         val = int(pipeline[0])
         cnt = 0
-        while cnt <= val and (time() - start_time) < timeout:
-            logger.info(f"seconds: {time() - start_time}, {timeout}, {(time() - start_time) < timeout}")
+        while cnt < val and (time() - start_time) < timeout:
             cnt += load_measurements_db(pipeline_limit, ascending)
             logger.info(f"loaded %s of %s pipeline records, timer: %0.4f", cnt, val, time() - start_time)
 
