@@ -12,6 +12,11 @@ class Settings(BaseSettings):
     OPENAQ_FETCH_BUCKET: str
     OPENAQ_ETL_BUCKET: str
     OPENAQ_CACHE_TIMEOUT: int = 900
+    FETCH_ASCENDING: bool = False
+    INGEST_TIMEOUT: int = 900
+    PIPELINE_LIMIT: int = 10
+    METADATA_LIMIT: int = 10
+    REALTIME_LIMIT: int = 10
     LOG_LEVEL: str = 'INFO'
 
     class Config:

@@ -331,14 +331,14 @@ def load_metadata_db(count=250, ascending: bool = False):
     return rowcount
 
 
-def get_measurements(key):
-    start = time()
+def get_object(key):
     key = unquote_plus(key)
     if str.endswith(key, ".gz"):
         compression = "GZIP"
     else:
         compression = "NONE"
     try:
+        content = ""
         resp = s3c.select_object_content(
             Bucket=settings.OPENAQ_ETL_BUCKET,
             Key=key,
@@ -354,62 +354,66 @@ def get_measurements(key):
             },
             OutputSerialization={"CSV": {}},
         )
-        content = ""
         for event in resp["Payload"]:
             if "Records" in event:
                 content += event["Records"]["Payload"].decode("utf-8")
-
-        fetch_time = time() - start;
-
-        ret = []
-        start = time()
-        for row in csv.reader(content.split("\n")):
-            if len(row) not in [3, 5]:
-                continue
-            if len(row) == 8:
-                try:
-                    lon = float(row[3])
-                    lat = float(row[4])
-                    if not (
-                        lon is None
-                        or lat is None
-                        or lat == ""
-                        or lon == ""
-                        or lon == 0
-                        or lat == 0
-                        or lon < -180
-                        or lon > 180
-                        or lat < -90
-                        or lat > 90
-                    ):
-                        row[3] = lon
-                        row[4] = lat
-                    else:
-                        row[3] = None
-                        row[4] = None
-                except Exception:
-                    row[3] = None
-                    row[4] = None
-            else:
-                row.insert(3, None)
-                row.insert(4, None)
-            if row[0] == "" or row[0] is None:
-                continue
-            dt = row[2]
-            try:
-                dt = datetime.fromtimestamp(int(dt), timezone.utc)
-            except Exception:
-                try:
-                    dt = dateparser.parse(dt).replace(tzinfo=timezone.utc)
-                except Exception:
-                    logger.warning(f"Exception in parsing date for {dt} {Exception}")
-            row[2] = dt.isoformat()
-            ret.append(row)
-        logger.info("get_measurements:csv: %s; size: %s; rows: %s; fetching: %0.4f; reading: %0.4f", key, len(content)/1000, len(ret), fetch_time, time() - start)
-        return ret
     except Exception as e:
         submit_file_error(key, e)
-    return None
+    return content
+
+def get_measurements(key):
+    start = time()
+    content = get_object(key)
+    fetch_time = time() - start;
+
+    ret = []
+    start = time()
+    for row in csv.reader(content.split("\n")):
+        if len(row) not in [3, 5]:
+            continue
+        if len(row) == 5:
+            try:
+                lon = float(row[3])
+                lat = float(row[4])
+                if not (
+                    lon is None
+                    or lat is None
+                    or lat == ""
+                    or lon == ""
+                    or lon == 0
+                    or lat == 0
+                    or lon < -180
+                    or lon > 180
+                    or lat < -90
+                    or lat > 90
+                ):
+                    row[3] = lon
+                    row[4] = lat
+                else:
+                    row[3] = None
+                    row[4] = None
+            except Exception:
+                row[3] = None
+                row[4] = None
+        else:
+            row.insert(3, None)
+            row.insert(4, None)
+        if row[0] == "" or row[0] is None:
+            continue
+        dt = row[2]
+
+        try:
+            dt = datetime.fromtimestamp(int(dt), timezone.utc)
+        except Exception:
+            try:
+                dt = dateparser.parse(dt).replace(tzinfo=timezone.utc)
+            except Exception:
+                logger.warning(f"Exception in parsing date for {dt} {Exception}")
+        row[2] = dt.isoformat()
+        ret.append(row)
+    logger.info("get_measurements:csv: %s; size: %s; rows: %s; fetching: %0.4f; reading: %0.4f", key, len(content)/1000, len(ret), fetch_time, time() - start)
+    return ret
+
 
 def submit_file_error(key, e):
     """Update the log to reflect the error and prevent a retry"""
@@ -452,31 +456,33 @@ def load_measurements_file(fetchlogs_id: int):
             rows = cursor.fetchall()
             print(rows)
             keys = [r[0] for r in rows]
-            load_measurements_key(keys)
+            load_measurements(keys)
 
 def load_measurements_db(limit=250, ascending: bool = False):
     order = 'ASC' if ascending else 'DESC'
-    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
-        connection.set_session(autocommit=True)
-        with connection.cursor() as cursor:
-            cursor.execute(
-                f"""
-                SELECT key
-                , last_modified
-                , fetchlogs_id
-                FROM fetchlogs
-                WHERE key~E'^lcs-etl-pipeline/measures/.*\\.csv'
-                AND completed_datetime is null
-                ORDER BY last_modified {order} nulls last
-                LIMIT %s
-                ;
-                """,
-                (limit,),
-            )
-            rows = cursor.fetchall()
-            keys = [r[0] for r in rows]
-            load_measurements(keys)
-            return len(keys)
+    conn = psycopg2.connect(settings.DATABASE_WRITE_URL)
+    cur = conn.cursor();
+    cur.execute(
+        f"""
+        SELECT key
+        , last_modified
+        , fetchlogs_id
+        FROM fetchlogs
+        WHERE key~E'^lcs-etl-pipeline/measures/.*\\.csv'
+        AND completed_datetime is null
+        ORDER BY last_modified {order} nulls last
+        LIMIT %s
+        ;
+        """,
+        (limit,),
+    )
+    rows = cur.fetchall()
+    keys = [r[0] for r in rows]
+    conn.commit()
+    cur.close()
+    conn.close()
+    load_measurements(keys)
+    return len(keys)
 
 
 def load_measurements(keys):

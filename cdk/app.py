@@ -2,32 +2,32 @@ import pathlib
 from pathlib import Path
 
 import docker
-from aws_cdk import aws_lambda, aws_s3, core
-from aws_cdk.aws_apigatewayv2 import HttpApi, HttpMethod
-from aws_cdk.aws_apigatewayv2_integrations import LambdaProxyIntegration
-from pydantic import BaseSettings
+import aws_cdk
+from aws_cdk import (
+    aws_lambda,
+    aws_s3,
+    Stack,
+    Duration,
+    CfnOutput,
+    Tags,
+    aws_events,
+    aws_events_targets,
+)
+from aws_cdk.aws_apigatewayv2_alpha import HttpApi, HttpMethod
+from aws_cdk.aws_apigatewayv2_integrations_alpha import HttpLambdaIntegration
+from constructs import Construct
+
+# this is the only way that I can see to allow us to have
+# one settings file and import it from there. I would recommend
+# a better package structure in the future.
+import os
+import sys
+p = os.path.abspath('../openaq_fastapi/openaq_fastapi')
+sys.path.insert(1, p)
+from settings import settings
 
 code_dir = pathlib.Path(__file__).parent.absolute()
 parent = code_dir.parent.absolute()
-env_file = Path.joinpath(parent, ".env")
-
-
-class Settings(BaseSettings):
-    DATABASE_URL: str
-    DATABASE_WRITE_URL: str
-    OPENAQ_ENV: str = "staging"
-    OPENAQ_FASTAPI_URL: str
-    TESTLOCAL: bool = True
-    OPENAQ_FETCH_BUCKET: str
-    OPENAQ_ETL_BUCKET: str
-
-    class Config:
-        env_file = env_file
-
-
-settings = Settings()
-OPENAQ_FETCH_BUCKET = "openaq-fetches"
-
 
 code_dir = pathlib.Path(__file__).parent.absolute()
 docker_dir = code_dir.parent.absolute()
@@ -56,27 +56,30 @@ client.containers.run(
     user=0,
 )
 
-stagingpackage = aws_lambda.Code.asset(
-    str(pathlib.Path.joinpath(code_dir, "package.zip"))
-)
-prodpackage = aws_lambda.Code.asset(
-    str(pathlib.Path.joinpath(code_dir, "package.zip"))
-)
-ingestpackage = aws_lambda.Code.asset(
-    str(pathlib.Path.joinpath(code_dir, "package.zip"))
-)
+# stagingpackage = aws_lambda.Code.from_asset(
+#     str(pathlib.Path.joinpath(code_dir, "package.zip"))
+# )
+# prodpackage = aws_lambda.Code.from_asset(
+#     str(pathlib.Path.joinpath(code_dir, "package.zip"))
+# )
+# ingestpackage = aws_lambda.Code.asset(
+#     str(pathlib.Path.joinpath(code_dir, "package.zip"))
+# )
 
 
-class LambdaApiStack(core.Stack):
+class LambdaApiStack(Stack):
     def __init__(
         self,
-        scope: core.Construct,
+        scope: Construct,
         id: str,
-        package,
         **kwargs,
     ) -> None:
         """Define stack."""
         super().__init__(scope, id, *kwargs)
+
+        package = aws_lambda.Code.from_asset(
+            str(pathlib.Path.joinpath(code_dir, "package.zip"))
+        )
 
         openaq_api = aws_lambda.Function(
             self,
@@ -86,14 +89,17 @@ class LambdaApiStack(core.Stack):
             runtime=aws_lambda.Runtime.PYTHON_3_8,
             allow_public_subnet=True,
             memory_size=1512,
-            timeout=core.Duration.seconds(30),
+            timeout=Duration.seconds(30),
             environment=env,
         )
 
         api = HttpApi(
             self,
             f"{id}-endpoint",
-            default_integration=LambdaProxyIntegration(handler=openaq_api),
+            default_integration=HttpLambdaIntegration(
+                "ApiIntegration",
+                openaq_api,
+            ),
             cors_preflight={
                 "allow_headers": [
                     "Authorization",
@@ -106,23 +112,26 @@ class LambdaApiStack(core.Stack):
                     HttpMethod.POST,
                 ],
                 "allow_origins": ["*"],
-                "max_age": core.Duration.days(10),
+                "max_age": Duration.days(10),
             },
         )
 
-        core.CfnOutput(self, "Endpoint", value=api.url)
+        CfnOutput(self, "Endpoint", value=api.url)
 
 
-class LambdaIngestStack(core.Stack):
+class LambdaIngestStack(Stack):
     def __init__(
         self,
-        scope: core.Construct,
+        scope: Construct,
         id: str,
-        package,
         **kwargs,
     ) -> None:
-        """Define stack."""
+        """Lambda plus cronjob to ingest metadata, realtime and pipeline data"""
         super().__init__(scope, id, *kwargs)
+
+        package = aws_lambda.Code.from_asset(
+            str(pathlib.Path.joinpath(code_dir, "package.zip"))
+        )
 
         ingest_function = aws_lambda.Function(
             self,
@@ -132,28 +141,39 @@ class LambdaIngestStack(core.Stack):
             runtime=aws_lambda.Runtime.PYTHON_3_8,
             allow_public_subnet=True,
             memory_size=1512,
-            timeout=core.Duration.seconds(900),
+            timeout=Duration.seconds(settings.INGEST_TIMEOUT),
             environment=env,
         )
 
+        aws_events.Rule(
+            self,
+            f"{id}-ingest-event-rule",
+            schedule=aws_events.Schedule.cron(minute="0/15"),
+            targets=[
+                aws_events_targets.LambdaFunction(ingest_function),
+            ],
+        )
+
         openaq_fetch_bucket = aws_s3.Bucket.from_bucket_name(
-            self, "{id}-OPENAQ-FETCH-BUCKET", OPENAQ_FETCH_BUCKET
+            self, "{id}-OPENAQ-FETCH-BUCKET", settings.OPENAQ_FETCH_BUCKET
         )
 
         openaq_fetch_bucket.grant_read(ingest_function)
 
 
-app = core.App()
+app = aws_cdk.App()
 print(f"openaq-lcs-api{settings.OPENAQ_ENV}")
-staging = LambdaApiStack(app, "openaq-lcs-apistaging", package=stagingpackage)
-prod = LambdaApiStack(app, "openaq-lcs-api", package=prodpackage)
+staging = LambdaApiStack(app, "openaq-lcs-apistaging")
+prod = LambdaApiStack(app, "openaq-lcs-api")
+
 ingest = LambdaIngestStack(
-    app, f"openaq-lcs-ingest{settings.OPENAQ_ENV}", package=ingestpackage
+    app, f"openaq-lcs-ingest-{settings.OPENAQ_ENV}"
 )
-core.Tags.of(staging).add("devseed", "true")
-core.Tags.of(staging).add("lcs", "true")
-core.Tags.of(ingest).add("devseed", "true")
-core.Tags.of(ingest).add("lcs", "true")
-core.Tags.of(prod).add("devseed", "true")
-core.Tags.of(prod).add("lcs", "true")
+
+Tags.of(staging).add("devseed", "true")
+Tags.of(staging).add("lcs", "true")
+Tags.of(ingest).add("devseed", "true")
+Tags.of(ingest).add("lcs", "true")
+Tags.of(prod).add("devseed", "true")
+Tags.of(prod).add("lcs", "true")
 app.synth()

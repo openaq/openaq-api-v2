@@ -45,10 +45,11 @@ ON CONFLICT DO NOTHING;
 SELECT count(*) from measurands;
 */
 
-UPDATE ms_sensors SET measurands_id =
-measurands.measurands_id from measurands WHERE
-ms_sensors.measurand=measurands.measurand and
-ms_sensors.units=measurands.units;
+UPDATE ms_sensors
+SET measurands_id = measurands.measurands_id
+from measurands
+WHERE ms_sensors.measurand=measurands.measurand
+and ms_sensors.units=measurands.units;
 
 UPDATE ms_sensors
 SET measurands_id = 10

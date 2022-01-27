@@ -65,12 +65,11 @@ def handler(event, context):
 
 def cronhandler(event, context):
     start_time = time()
-    timeout = 15 * 60 ## manual timeout for testing
-    ## some basic settings
-    ascending = False if 'ascending' not in event else event['ascending']
-    pipeline_limit = 10 if 'pipeline_limit' not in event else event['pipeline_limit']
-    realtime_limit = 10 if 'realtime_limit' not in event else event['realtime_limit']
-    metadata_limit = 10 if 'metadata_limit' not in event else event['metadata_limit']
+    timeout = settings.INGEST_TIMEOUT  # manual timeout for testing
+    ascending = settings.FETCH_ASCENDING if 'ascending' not in event else event['ascending']
+    pipeline_limit = settings.PIPELINE_LIMIT if 'pipeline_limit' not in event else event['pipeline_limit']
+    realtime_limit = settings.REALTIME_LIMIT if 'realtime_limit' not in event else event['realtime_limit']
+    metadata_limit = settings.METADATA_LIMIT if 'metadata_limit' not in event else event['metadata_limit']
 
     logger.info(f"Running cron job: {event['source']}, ascending: {ascending}")
     with psycopg2.connect(settings.DATABASE_URL) as connection:
@@ -106,27 +105,27 @@ def cronhandler(event, context):
             for notice in connection.notices:
                 logger.debug(notice)
 
-    logger.info(f"{metadata[0]} metadata, {realtime[0]} openaq, {pipeline[0]} pipeline records pending")
+    metadata = 0 if metadata is None else metadata[0]
+    realtime = 0 if realtime is None else realtime[0]
+    pipeline = 0 if pipeline is None else pipeline[0]
+    logger.info(f"{metadata_limit}/{metadata} metadata, {realtime_limit}/{realtime} openaq, {pipeline_limit}/{pipeline} pipeline records pending")
 
-    if metadata is not None and metadata_limit > 0:
-        val = int(metadata[0])
+    if metadata > 0 and metadata_limit > 0:
         cnt = 0
-        while cnt < val and (time() - start_time) < timeout:
+        while cnt < metadata and (time() - start_time) < timeout:
             cnt += load_metadata_db(metadata_limit, ascending)
-            logger.info(f"loaded %s of %s metadata records, timer: %0.4f", cnt, val, time() - start_time)
+            logger.info("loaded %s of %s metadata records, timer: %0.4f", cnt, metadata, time() - start_time)
 
-    if realtime is not None and realtime_limit > 0:
-        val = int(realtime[0])
+    if realtime > 0 and realtime_limit > 0:
         cnt = 0
-        while cnt < val and (time() - start_time) < timeout:
+        while cnt < realtime and (time() - start_time) < timeout:
             cnt += load_db(realtime_limit, ascending)
-            logger.info(f"loaded %s of %s fetch records, timer: %0.4f", cnt, val, time() - start_time)
+            logger.info("loaded %s of %s fetch records, timer: %0.4f", cnt, realtime, time() - start_time)
 
-    if pipeline is not None and pipeline_limit > 0:
-        val = int(pipeline[0])
+    if pipeline > 0 and pipeline_limit > 0:
         cnt = 0
-        while cnt < val and (time() - start_time) < timeout:
+        while cnt < pipeline and (time() - start_time) < timeout:
             cnt += load_measurements_db(pipeline_limit, ascending)
-            logger.info(f"loaded %s of %s pipeline records, timer: %0.4f", cnt, val, time() - start_time)
+            logger.info("loaded %s of %s pipeline records, timer: %0.4f", cnt, pipeline, time() - start_time)
 
     logger.info("done processing: %0.4f seconds", time() - start_time)
