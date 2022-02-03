@@ -2,6 +2,7 @@ import gzip
 import io
 import json
 import os
+import logging
 import time
 from datetime import datetime, timedelta
 
@@ -23,6 +24,7 @@ app = typer.Typer()
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
+logger = logging.getLogger(__name__)
 
 FETCH_BUCKET = settings.OPENAQ_FETCH_BUCKET
 s3 = boto3.resource("s3")
@@ -264,6 +266,22 @@ def load_range(
         start += step
 
 
+def submit_file_error(ids, e):
+    """Update the log to reflect the error and prevent a retry"""
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE fetchlogs
+                SET completed_datetime = clock_timestamp()
+                , last_message = %s
+                WHERE fetchlogs_id = ANY(%s)
+                """,
+                (f"ERROR: {e}", ids,),
+            )
+
+
 @app.command()
 def load_db(limit: int = 50, ascending: bool = False):
     order = 'ASC' if ascending else 'DESC'
@@ -272,7 +290,7 @@ def load_db(limit: int = 50, ascending: bool = False):
         with connection.cursor() as cursor:
             cursor.execute(
                 f"""
-                SELECT key,last_modified FROM fetchlogs
+                SELECT key,last_modified,fetchlogs_id FROM fetchlogs
                 WHERE key~E'^realtime-gzipped/.*\\.ndjson.gz$' AND
                 completed_datetime is null
                 ORDER BY last_modified {order} nulls last
@@ -284,16 +302,26 @@ def load_db(limit: int = 50, ascending: bool = False):
             rows = cursor.fetchall()
             keys = [r[0] for r in rows]
             if len(keys) > 0:
-                create_staging_table(cursor)
-                for key in keys:
-                    copy_data(cursor, key)
-                    connection.commit()
-                    print("All data copied")
-                filter_data(cursor)
-                print('data filtered')
-                process_data(cursor)
-                print('data processed')
+                try:
+                    create_staging_table(cursor)
+                    for key in keys:
+                        copy_data(cursor, key)
+                        connection.commit()
+                        print("All data copied")
+                        filter_data(cursor)
+                        print('data filtered')
+                        process_data(cursor)
+                        print('data processed')
+                except Exception as e:
+                    # catch and continue to next page
+                    ids = [r[2] for r in rows]
+                    logger.error(f"""
+                    Error processing realtime files: {e}, {ids}
+                    """)
+                    submit_file_error(ids, e)
+
             connection.commit()
+            return len(keys)
 
 
 if __name__ == "__main__":
