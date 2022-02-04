@@ -73,15 +73,27 @@ INSERT INTO rejects (t, tbl,r) SELECT
     to_jsonb(ms_sensors)
 FROM ms_sensors WHERE measurands_id IS NULL;
 
-INSERT INTO sensors (source_id, sensor_systems_id, measurands_id, metadata)
-SELECT ingest_id, sensor_systems_id, measurands_id, metadata
+INSERT INTO sensors (
+  source_id
+, sensor_systems_id
+, measurands_id
+, metadata)
+SELECT ingest_id
+, sensor_systems_id
+, measurands_id
+, metadata
 FROM ms_sensors
 WHERE measurands_id is not null
 AND sensor_systems_id is not null
+GROUP BY ingest_id
+, sensor_systems_id
+, measurands_id
+, metadata
 ON CONFLICT (sensor_systems_id, measurands_id, source_id) DO
 UPDATE SET
     metadata=sensors.metadata || EXCLUDED.metadata
 ;
+
 
 SELECT notify('After sensors');
 
