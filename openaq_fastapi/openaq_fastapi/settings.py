@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     METADATA_LIMIT: int = 10
     REALTIME_LIMIT: int = 10
     LOG_LEVEL: str = 'INFO'
+    LOCAL_SAVE_DIRECTORY: str = './openaq_files'
 
     class Config:
         parent = Path(__file__).resolve().parent.parent.parent

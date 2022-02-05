@@ -6,7 +6,7 @@ import pytz
 import orjson
 import csv
 from time import time
-from urllib.parse import unquote, unquote_plus
+from urllib.parse import unquote_plus
 import warnings
 
 import boto3
@@ -126,7 +126,8 @@ class LCSData:
             compression = "NONE"
         # Removed the try block because getting the data is the whole
         # purpose of this function and we should not continue without it
-        # if we want to check for specific errors we could do that, but than rethrow
+        # if we want to check for specific errors we could do that,
+        # but than rethrow
         resp = s3c.select_object_content(
             Bucket=FETCH_BUCKET,
             Key=key,
@@ -331,7 +332,7 @@ def load_metadata_db(count=250, ascending: bool = False):
     return rowcount
 
 
-def get_object(key):
+def select_object(key):
     key = unquote_plus(key)
     if str.endswith(key, ".gz"):
         compression = "GZIP"
@@ -363,7 +364,7 @@ def get_object(key):
 
 def get_measurements(key):
     start = time()
-    content = get_object(key)
+    content = select_object(key)
     fetch_time = time() - start;
 
     ret = []

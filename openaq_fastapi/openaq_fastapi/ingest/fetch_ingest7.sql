@@ -69,22 +69,27 @@ GROUP BY 1,2,3,4;
 
 
 -- get sensor id
-UPDATE tempfetchdata_sensors_clean t SET sensors_id = s.sensors_id
-FROM
-sensors s
-WHERE
-    t.sensor_systems_id = s.sensor_systems_id
-    and
-    t.measurands_id = s.measurands_id
+UPDATE tempfetchdata_sensors_clean t
+SET sensors_id = s.sensors_id
+FROM sensors s
+WHERE t.sensor_systems_id = s.sensor_systems_id
+AND t.measurands_id = s.measurands_id
 ;
+
 -- Add any rows that did not get an id
 -- into the rejects table and then delete
 INSERT INTO rejects
-SELECT clock_timestamp(), 'sensors', to_jsonb(tf) FROM
-tempfetchdata_sensors_clean tf
-    WHERE sensor_systems_id IS NULL or measurands_id is null;
-DELETE FROM tempfetchdata_sensors_clean
-WHERE sensor_systems_id IS NULL or measurands_id is null;
+SELECT clock_timestamp()
+, 'sensors'
+, to_jsonb(tf)
+FROM tempfetchdata_sensors_clean tf
+WHERE sensor_systems_id IS NULL
+OR measurands_id IS NULL;
+
+DELETE
+FROM tempfetchdata_sensors_clean
+WHERE sensor_systems_id IS NULL
+OR measurands_id IS NULL;
 
 -- add any sensors that don't exist
 WITH s AS (
@@ -114,16 +119,23 @@ WITH s AS (
         s.measurands_id = tfc.measurands_id
 ;
 
-UPDATE tempfetchdata t SET sensors_id = ts.sensors_id FROM
-tempfetchdata_sensors_clean ts WHERE
-t.tfdid = ANY(ts.tfdids);
+UPDATE tempfetchdata t
+SET sensors_id = ts.sensors_id
+FROM tempfetchdata_sensors_clean ts
+WHERE t.tfdid = ANY(ts.tfdids);
 
 -- Add any rows that did not get an id into
 -- the rejects table and then delete
 INSERT INTO rejects
-SELECT clock_timestamp(), 'sensors', to_jsonb(tf) FROM
-tempfetchdata tf WHERE sensors_id IS NULL;
-DELETE FROM tempfetchdata WHERE sensors_id IS NULL;
+SELECT clock_timestamp()
+, 'sensors'
+, to_jsonb(tf)
+FROM tempfetchdata tf
+WHERE sensors_id IS NULL;
+
+DELETE
+FROM tempfetchdata
+WHERE sensors_id IS NULL;
 
 INSERT INTO measurements (sensors_id, datetime, value)
 SELECT sensors_id, datetime, value
@@ -133,6 +145,7 @@ ON CONFLICT DO NOTHING;
 
 UPDATE fetchlogs
 SET completed_datetime=clock_timestamp()
+, last_message = NULL -- reset any previous error
 WHERE key IN (SELECT key FROM ingestfiles);
 
 SELECT min(datetime), max(datetime) FROM tempfetchdata;

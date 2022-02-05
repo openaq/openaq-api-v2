@@ -2,6 +2,8 @@ import io
 import os
 from pathlib import Path
 import logging
+from urllib.parse import unquote_plus
+import gzip
 
 import boto3
 from io import StringIO
@@ -14,10 +16,7 @@ app = typer.Typer()
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
-
-FETCH_BUCKET = settings.OPENAQ_FETCH_BUCKET
-s3 = boto3.resource("s3")
-s3c = boto3.client("s3")
+s3 = boto3.client("s3")
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +106,94 @@ def check_if_done(cursor, key):
     return False
 
 
+def get_object(
+        key: str,
+        bucket: str = settings.OPENAQ_ETL_BUCKET
+):
+    key = unquote_plus(key)
+    text = ''
+    obj = s3.get_object(
+        Bucket=bucket,
+        Key=key,
+    )
+    body = obj['Body']
+    if str.endswith(key, ".gz"):
+        text = gzip.decompress(body.read()).decode('utf-8')
+    else:
+        text = body
+
+    return text
+
+
+def select_object(key: str):
+    key = unquote_plus(key)
+    output_serialization = None
+    input_serialization = None
+
+    if str.endswith(key, ".gz"):
+        compression = "GZIP"
+    else:
+        compression = "NONE"
+
+    if '.csv' in key:
+        output_serialization = {
+            'CSV': {}
+        }
+        input_serialization = {
+            "CSV": {"FieldDelimiter": ","},
+            "CompressionType": compression,
+        }
+    elif 'json' in key:
+        output_serialization = {
+            'JSON': {}
+        }
+        input_serialization = {
+            "JSON": {"Type": "Document"},
+            "CompressionType": compression,
+        }
+
+    content = ""
+    logger.debug(f"Getting object: {key}, {output_serialization}")
+    resp = s3.select_object_content(
+        Bucket=settings.OPENAQ_ETL_BUCKET,
+        Key=key,
+        ExpressionType="SQL",
+        Expression="""
+            SELECT
+            *
+            FROM s3object
+            """,
+        InputSerialization=input_serialization,
+        OutputSerialization=output_serialization,
+    )
+    for event in resp["Payload"]:
+        if "Records" in event:
+            content += event["Records"]["Payload"].decode("utf-8")
+    return content
+
+
+def load_errors(limit: int = 250):
+    """Fetch any possible file errors"""
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT init_datetime
+                , loaded_datetime
+                , completed_datetime
+                , key
+                , last_message
+                FROM fetchlogs
+                WHERE last_message~*'^error'
+                LIMIT %s
+                """,
+                (limit,),
+            )
+            rows = cursor.fetchall()
+            return rows
+
+
 def load_fail(cursor, key, e):
     print("full copy failed", key, e)
     cursor.execute(
@@ -124,25 +211,41 @@ def load_fail(cursor, key, e):
     )
 
 
-def load_success(cursor, key):
+# def load_success(cursor, key):
+#     cursor.execute(
+#         """
+#         UPDATE fetchlogs
+#         SET
+#         last_message=%s,
+#         loaded_datetime=clock_timestamp()
+#         WHERE
+#         key=%s
+#         """,
+#         (
+#             str(cursor.statusmessage),
+#             key,
+#         ),
+#     )
+
+
+def load_success(cursor, keys, message: str = 'success'):
     cursor.execute(
         """
         UPDATE fetchlogs
         SET
-        last_message=%s,
-        loaded_datetime=clock_timestamp()
-        WHERE
-        key=%s
+        last_message=%s
+        , completed_datetime=clock_timestamp()
+        WHERE key=ANY(%s)
         """,
         (
-            str(cursor.statusmessage),
-            key,
+            message,
+            keys,
         ),
     )
 
 
 def crawl(bucket, prefix):
-    paginator = s3c.get_paginator("list_objects_v2")
+    paginator = s3.get_paginator("list_objects_v2")
     print(settings.DATABASE_WRITE_URL)
     f = StringIO()
     cnt = 0
