@@ -100,36 +100,33 @@ def copy_data(cursor, key):
     # mark the file as checked out when we pull the key down
     # if check_if_done(cursor, key):
     #    return None
+    # we are also removing the try/catch
+    # if it fails we want to deal with it elsewhere
     logger.debug(f"Copying data for {key}")
     with gzip.GzipFile(fileobj=obj.get()["Body"]) as gz:
         f = io.BufferedReader(gz)
         iterator = StringIteratorIO(
             (parse_json(json.loads(line)) for line in f)
         )
-        try:
-            # query = get_query("fetch_copy.sql")
-            query = """
-            COPY tempfetchdata (
-            location,
-            value,
-            unit,
-            parameter,
-            country,
-            city,
-            data,
-            source_name,
-            datetime,
-            coords,
-            source_type,
-            mobile,
-            avpd_unit,
-            avpd_value
-            ) FROM STDIN;
-            """
-            cursor.copy_expert(query, iterator)
-            # load_success(cursor, key)
-        except Exception as e:
-            load_fail(cursor, key, e)
+        query = """
+        COPY tempfetchdata (
+        location,
+        value,
+        unit,
+        parameter,
+        country,
+        city,
+        data,
+        source_name,
+        datetime,
+        coords,
+        source_type,
+        mobile,
+        avpd_unit,
+        avpd_value
+        ) FROM STDIN;
+        """
+        cursor.copy_expert(query, iterator)
 
 
 def copy_file(cursor, file):
@@ -364,43 +361,6 @@ def load_realtime(keys):
             load_success(cursor, keys)
             # close and commit
             connection.commit()
-
-
-def load_db_key(keys):
-    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
-        connection.set_session(autocommit=True)
-        with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT key,last_modified,fetchlogs_id FROM fetchlogs
-                WHERE key=ANY(%s)
-                ;
-                """,
-                (keys,),
-            )
-            rows = cursor.fetchall()
-            keys = [r[0] for r in rows]
-            if len(keys) > 0:
-                try:
-                    create_staging_table(cursor)
-                    for key in keys:
-                        copy_data(cursor, key)
-                        connection.commit()
-                        print("All data copied")
-                        #filter_data(cursor)
-                        print('data filtered')
-                        process_data(cursor)
-                        print('data processed')
-                except Exception as e:
-                    # catch and continue to next page
-                    ids = [r[2] for r in rows]
-                    logger.error(f"""
-                    Error processing realtime files: {e}, {ids}
-                    """)
-                    submit_file_error(ids, e)
-
-            connection.commit()
-            return len(keys)
 
 
 if __name__ == "__main__":
