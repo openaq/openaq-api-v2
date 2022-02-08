@@ -14,7 +14,7 @@ import psycopg2
 import typer
 from io import StringIO
 from ..settings import settings
-from .utils import get_query, clean_csv_value, StringIteratorIO
+from .utils import get_query, clean_csv_value, StringIteratorIO, fix_units
 
 s3 = boto3.resource("s3")
 s3c = boto3.client("s3")
@@ -61,7 +61,7 @@ class LCSData:
                 elif key == "measurand_parameter":
                     sensor["measurand"] = value
                 elif key == "measurand_unit":
-                    sensor["units"] = value
+                    sensor["units"] = fix_units(value)
                 else:
                     metadata[key] = value
             sensor["metadata"] = orjson.dumps(metadata).decode()
@@ -200,11 +200,14 @@ class LCSData:
                 connection.commit()
 
                 self.process_data(cursor)
+                for notice in connection.notices:
+                    print(notice)
 
                 cursor.execute(
                     """
                     UPDATE fetchlogs
                     SET completed_datetime = clock_timestamp()
+                    , last_message = NULL
                     WHERE fetchlogs_id IN (SELECT fetchlogs_id FROM keys)
                     """
                 )
@@ -215,14 +218,16 @@ class LCSData:
                     logger.debug(notice)
 
     def process_data(self, cursor):
-        query = get_query("lcs_ingest_nodes.sql")
+        query = get_query("lcs_ingest_full.sql")
         cursor.execute(query)
+        # query = get_query("lcs_ingest_nodes.sql")
+        # cursor.execute(query)
 
-        query = get_query("lcs_ingest_systems.sql")
-        cursor.execute(query)
+        # query = get_query("lcs_ingest_systems.sql")
+        # cursor.execute(query)
 
-        query = get_query("lcs_ingest_sensors.sql")
-        cursor.execute(query)
+        # query = get_query("lcs_ingest_sensors.sql")
+        # cursor.execute(query)
 
     def create_staging_table(self, cursor):
         cursor.execute(get_query("lcs_staging.sql"))
@@ -238,29 +243,33 @@ class LCSData:
                     key = obj["Key"]
                     id = obj["id"]
                     last_modified = obj["LastModified"]
-                    logger.debug(f"checking fetchlog again: {key} {last_modified}")
-                    # if last_modified > self.st:
-                    cursor.execute(
-                        """
-                        SELECT 1
-                        FROM fetchlogs
-                        WHERE fetchlogs_id=%s
-                        AND completed_datetime IS NOT NULL
-                        """,
-                        (id,),
-                    )
-                    rows = cursor.rowcount
-                    logger.debug(f"get_metadata:rows - {rows}")
-                    if rows < 1:
-                        try:
-                            self.get_station(key)
-                            self.keys.append(
-                                {"key": key, "last_modified": last_modified, "fetchlogs_id": id}
-                            )
-                            hasnew = True
-                        except Exception as e:
-                            # catch and continue to next page
-                            logger.error(f"Could not process file: {id}: {key}")
+                    # logger.debug(f"checking fetchlog again: {key} {last_modified}")
+                    # # if last_modified > self.st:
+                    # cursor.execute(
+                    #     """
+                    #     SELECT 1
+                    #     FROM fetchlogs
+                    #     WHERE fetchlogs_id=%s
+                    #     AND completed_datetime IS NOT NULL
+                    #     """,
+                    #     (id,),
+                    # )
+                    # rows = cursor.rowcount
+                    # logger.debug(f"get_metadata:rows - {rows}")
+                    # if rows < 1:
+                    try:
+                        self.get_station(key)
+                        self.keys.append(
+                            {
+                                "key": key,
+                                "last_modified": last_modified,
+                                "fetchlogs_id": id
+                            }
+                        )
+                        hasnew = True
+                    except Exception as e:
+                        # catch and continue to next page
+                        logger.error(f"Could not process file: {id}: {key}: {e}")
 
                 if hasnew:
                     logger.debug(f"get_metadata:hasnew - {self.keys}")

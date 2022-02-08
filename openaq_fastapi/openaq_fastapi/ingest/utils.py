@@ -71,6 +71,64 @@ def get_query(file, **params):
     return query
 
 
+def get_logs_from_ids(ids):
+    """Fetch any possible file errors"""
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT fetchlogs_id
+                , key
+                , init_datetime
+                , loaded_datetime
+                , completed_datetime
+                , last_message
+                FROM fetchlogs
+                WHERE fetchlogs_id = ANY(%s)
+                """,
+                (ids,),
+            )
+            rows = cursor.fetchall()
+            return rows
+
+def get_logs_from_pattern(pattern: str, limit: int = 250):
+    """Fetch all logs matching a pattern"""
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT fetchlogs_id
+                , key
+                , init_datetime
+                , loaded_datetime
+                , completed_datetime
+                , last_message
+                , last_modified
+                FROM fetchlogs
+                WHERE key~*%s
+                LIMIT %s
+                """,
+                (pattern, limit,),
+            )
+            rows = cursor.fetchall()
+            return rows
+
+
+def fix_units(value: str):
+    """Clean up the units field. This was created to deal with mu vs micro issue in the current units list"""
+    units = {
+        "μg/m3": "µg/m³",
+        "µg/m3": "µg/m³",
+        "μg/m³": "µg/m³",
+    }
+    if value in units.keys():
+        return units[value]
+    else:
+        return value
+
+
 def check_if_done(cursor, key):
     cursor.execute(
         """
@@ -179,10 +237,11 @@ def load_errors(limit: int = 250):
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT init_datetime
+                SELECT fetchlogs_id
+                , key
+                , init_datetime
                 , loaded_datetime
                 , completed_datetime
-                , key
                 , last_message
                 FROM fetchlogs
                 WHERE last_message~*'^error'
