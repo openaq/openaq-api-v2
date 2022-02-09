@@ -1,20 +1,28 @@
 DELETE FROM meas WHERE ingest_id IS NULL OR datetime is NULL or value IS NULL;
 DELETE FROM meas WHERE datetime < '2018-01-01'::timestamptz or datetime>now();
+
+
 UPDATE meas
-    SET
-    sensors_id=s.sensors_id
-    FROM sensors s
-    WHERE
-    s.source_id=ingest_id;
-
-INSERT INTO rejects (tbl,r) SELECT
-    'meas',
-    to_jsonb(meas)
-FROM meas WHERE sensors_id IS NULL;
+SET sensors_id=s.sensors_id
+FROM sensors s
+WHERE s.source_id=ingest_id;
 
 
+INSERT INTO rejects (t,tbl,r,fetchlogs_id)
+SELECT
+    current_timestamp
+    , 'meas-missing-sensors-id'
+    , to_jsonb(meas)
+    , fetchlogs_id
+FROM meas
+WHERE sensors_id IS NULL
+;
 
-DELETE FROM meas WHERE sensors_id IS NULL;
+
+
+DELETE
+FROM meas
+WHERE sensors_id IS NULL;
 
 -- --Some fake data to make it easier to test this section
 -- TRUNCATE meas;

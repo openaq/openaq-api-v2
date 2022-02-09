@@ -4,6 +4,7 @@ CREATE TEMP TABLE meas (
     value float,
     datetime timestamptz,
     lon float,
-    lat float
+    lat float,
+    fetchlogs_id int
 );
 CREATE TEMP TABLE keys (key text, last_modified timestamptz);

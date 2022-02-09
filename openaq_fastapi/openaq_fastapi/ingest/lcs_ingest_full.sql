@@ -204,7 +204,6 @@ and ms_sensors.units=measurands.units;
 -- AND measurands_id is null                                                                               --
 -- AND measurand in ('um003','um050','um005');                                                             --
 -------------------------------------------------------------------------------------------------------------
-
 WITH r AS (
 INSERT INTO rejects (t, tbl,r,fetchlogs_id)
 SELECT

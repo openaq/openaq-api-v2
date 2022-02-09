@@ -396,10 +396,11 @@ def select_object(key):
         submit_file_error(key, e)
     return content
 
-def get_measurements(key):
+
+def get_measurements(key, fetchlogsId):
     start = time()
     content = select_object(key)
-    fetch_time = time() - start;
+    fetch_time = time() - start
 
     ret = []
     start = time()
@@ -445,6 +446,8 @@ def get_measurements(key):
             except Exception:
                 logger.warning(f"Exception in parsing date for {dt} {Exception}")
         row[2] = dt.isoformat()
+        # addd the log id for tracing purposes
+        row.insert(5, fetchlogsId)
         ret.append(row)
     logger.info("get_measurements:csv: %s; size: %s; rows: %s; fetching: %0.4f; reading: %0.4f", key, len(content)/1000, len(ret), fetch_time, time() - start)
     return ret
@@ -493,10 +496,11 @@ def load_measurements_file(fetchlogs_id: int):
             keys = [r[0] for r in rows]
             load_measurements(keys)
 
+
 def load_measurements_db(limit=250, ascending: bool = False):
     order = 'ASC' if ascending else 'DESC'
     conn = psycopg2.connect(settings.DATABASE_WRITE_URL)
-    cur = conn.cursor();
+    cur = conn.cursor()
     cur.execute(
         f"""
         SELECT key
@@ -512,26 +516,29 @@ def load_measurements_db(limit=250, ascending: bool = False):
         (limit,),
     )
     rows = cur.fetchall()
-    keys = [r[0] for r in rows]
+    # keys = [r[0] for r in rows]
     conn.commit()
     cur.close()
     conn.close()
-    load_measurements(keys)
-    return len(keys)
+    load_measurements(rows)
+    return len(rows)
 
 
-def load_measurements(keys):
-    logger.debug(f"loading {len(keys)} measurements")
+def load_measurements(rows):
+    logger.debug(f"loading {len(rows)} measurements")
     start_time = time()
     data = []
     new = []
-    for key in keys:
+    for row in rows:
+        key = row[1]
+        fetchlogsId = row[0]
         new.append({"key": key})
-        newdata = get_measurements(key)
+        newdata = get_measurements(key, fetchlogsId)
         if newdata is not None:
             data.extend(newdata)
 
-    logger.info("load_measurements:get: %s keys; %s rows; %0.4f seconds", len(keys), len(data), time() - start_time)
+    logger.info("load_measurements:get: %s keys; %s rows; %0.4f seconds",
+                len(rows), len(data), time() - start_time)
     if len(data) > 0:
 
         with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
@@ -549,7 +556,7 @@ def load_measurements(keys):
                 )
                 cursor.copy_expert(
                     """
-                    COPY meas (ingest_id, value, datetime, lon, lat)
+                    COPY meas (ingest_id, value, datetime, lon, lat, fetchlogs_id)
                     FROM stdin;
                     """,
                     iterator,
@@ -573,10 +580,10 @@ def load_measurements(keys):
                 )
                 connection.commit()
                 cursor.execute(get_query("lcs_meas_ingest.sql"))
-                rows = cursor.rowcount
-                logger.info("load_measurements:insert: %s rows; %0.4f seconds", mrows, time() - start)
+                irows = cursor.rowcount
+                logger.info("load_measurements:insert: %s rows; %0.4f seconds", irows, time() - start)
                 status = cursor.statusmessage
-                logger.debug(f"INGEST Rows: {rows} Status: {status}")
+                logger.debug(f"INGEST Rows: {irows} Status: {status}")
                 cursor.execute(
                     """
                     INSERT INTO fetchlogs(
@@ -593,9 +600,9 @@ def load_measurements(keys):
                     ;
                     """
                 )
-                rows = cursor.rowcount
-                status = cursor.statusmessage
-                logger.info("load_measurements: keys: %s; rows: %s; time: %0.4f", len(keys), mrows, time() - start_time)
+                logger.info(
+                    "load_measurements: keys: %s; rows: %s; time: %0.4f",
+                    len(rows), mrows, time() - start_time)
                 connection.commit()
 
                 for notice in connection.notices:
