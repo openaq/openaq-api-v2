@@ -49,11 +49,12 @@ class LCSData:
                 }
             ]
 
-    def sensor(self, j, system_id):
+    def sensor(self, j, system_id, fetchlogsId):
         for s in j:
             sensor = {}
             metadata = {}
             sensor["ingest_sensor_systems_id"] = system_id
+            sensor["fetchlogs_id"] = fetchlogsId
             for key, value in s.items():
                 key = str.replace(key, "sensor_", "")
                 if key == "id":
@@ -67,7 +68,7 @@ class LCSData:
             sensor["metadata"] = orjson.dumps(metadata).decode()
             self.sensors.append(sensor)
 
-    def system(self, j, node_id):
+    def system(self, j, node_id, fetchlogsId):
         for s in j:
             system = {}
             metadata = {}
@@ -77,10 +78,11 @@ class LCSData:
                 id = node_id
             system["ingest_sensor_nodes_id"] = node_id
             system["ingest_id"] = id
+            system["fetchlogs_id"] = fetchlogsId
             for key, value in s.items():
                 key = str.replace(key, "sensor_system_", "")
                 if key == "sensors":
-                    self.sensor(value, id)
+                    self.sensor(value, id, fetchlogsId)
                 else:
                     metadata[key] = value
             system["metadata"] = orjson.dumps(metadata).decode()
@@ -93,6 +95,12 @@ class LCSData:
             id = j["sensor_node_id"]
         else:
             return None
+        # if we have passed the fetchlogs_id we should track it
+        if "fetchlogs_id" in j:
+            fetchlogsId = j["fetchlogs_id"]
+        else:
+            fetchlogsId = None
+
         for key, value in j.items():
             key = str.replace(key, "sensor_node_", "")
             if key == "id":
@@ -112,14 +120,14 @@ class LCSData:
                 except Exception:
                     node["geom"] = None
             elif key == "sensor_systems":
-                self.system(value, id)
+                self.system(value, id, fetchlogsId)
             else:
                 metadata[key] = value
         node["metadata"] = orjson.dumps(metadata).decode()
         self.nodes.append(node)
 
-    def get_station(self, key):
-        logger.debug(f"get_station - {key}")
+    def get_station(self, key, fetchlogsId):
+        logger.debug(f"get_station - {key} - {fetchlogsId}")
         if str.endswith(key, ".gz"):
             compression = "GZIP"
         else:
@@ -142,8 +150,11 @@ class LCSData:
         for event in resp["Payload"]:
             if "Records" in event:
                 records = event["Records"]["Payload"].decode("utf-8")
-                self.node(orjson.loads(records))
-
+                obj = orjson.loads(records)
+                obj['key'] = key
+                if fetchlogsId is not None:
+                    obj['fetchlogs_id'] = fetchlogsId
+                self.node(obj)
 
     def load_data(self):
         logger.debug(f"load_data: {self.keys}")
@@ -154,7 +165,14 @@ class LCSData:
                 self.create_staging_table(cursor)
 
                 write_csv(
-                    cursor, self.keys, "keys", ["key", "last_modified", "fetchlogs_id",],
+                    cursor,
+                    self.keys,
+                    "keys",
+                    [
+                        "key",
+                        "last_modified",
+                        "fetchlogs_id",
+                    ],
                 )
                 # update by id instead of key due to matching issue
                 cursor.execute(
@@ -177,13 +195,19 @@ class LCSData:
                         "ismobile",
                         "geom",
                         "metadata",
+                        "fetchlogs_id",
                     ],
                 )
                 write_csv(
                     cursor,
                     self.systems,
                     "ms_sensorsystems",
-                    ["ingest_id", "ingest_sensor_nodes_id", "metadata",],
+                    [
+                        "ingest_id",
+                        "ingest_sensor_nodes_id",
+                        "metadata",
+                        "fetchlogs_id",
+                    ],
                 )
                 write_csv(
                     cursor,
@@ -195,6 +219,7 @@ class LCSData:
                         "measurand",
                         "units",
                         "metadata",
+                        "fetchlogs_id",
                     ],
                 )
                 connection.commit()
@@ -258,7 +283,7 @@ class LCSData:
                     # logger.debug(f"get_metadata:rows - {rows}")
                     # if rows < 1:
                     try:
-                        self.get_station(key)
+                        self.get_station(key, id)
                         self.keys.append(
                             {
                                 "key": key,

@@ -5,7 +5,8 @@ CREATE TEMP TABLE IF NOT EXISTS ms_sensornodes (
     source_name text,
     ismobile boolean,
     geom geometry,
-    metadata jsonb
+    metadata jsonb,
+    fetchlogs_id int
 );
 
 CREATE TEMP TABLE IF NOT EXISTS ms_sensorsystems (
@@ -13,7 +14,8 @@ CREATE TEMP TABLE IF NOT EXISTS ms_sensorsystems (
     ingest_id text,
     ingest_sensor_nodes_id text,
     sensor_nodes_id int,
-    metadata jsonb
+    metadata jsonb,
+    fetchlogs_id int
 );
 
 
@@ -25,7 +27,8 @@ CREATE TEMP TABLE IF NOT EXISTS ms_sensors (
     measurand text,
     units text,
     measurands_id int,
-    metadata jsonb
+    metadata jsonb,
+    fetchlogs_id int
 );
 
 CREATE TEMP TABLE keys (fetchlogs_id int, key text, last_modified timestamptz);

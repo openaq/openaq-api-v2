@@ -37,6 +37,7 @@ WHERE sensor_nodes.source_name = ms_sensornodes.source_name
 AND sensor_nodes.source_id = ms_sensornodes.ingest_id;
 
 -- And now we insert those into the sensor nodes table
+-- we are gouping to deal with any duplicates that currently exist
 WITH inserts AS (
 INSERT INTO sensor_nodes (
   site_name
@@ -53,6 +54,7 @@ SELECT site_name
 , metadata
 , ingest_id
 FROM ms_sensornodes
+GROUP BY site_name, source_name, ismobile, geom, metadata, ingest_id
 ON CONFLICT (source_name, source_id) DO UPDATE
 SET
     site_name=coalesce(EXCLUDED.site_name,sensor_nodes.site_name),
@@ -67,7 +69,6 @@ FROM inserts;
 -- lcs_ingest_systems.sql --
 ----------------------------
 
-
 -- fill in any new sensor_nodes_id
 UPDATE ms_sensornodes
 SET sensor_nodes_id = sensor_nodes.sensor_nodes_id
@@ -78,10 +79,11 @@ AND sensor_nodes.source_id = ms_sensornodes.ingest_id;
 
 -- log anything we were not able to get an id for
 WITH r AS (
-INSERT INTO rejects (t, tbl,r)
+INSERT INTO rejects (t, tbl,r,fetchlogs_id)
 SELECT now()
-, 'ms_sensornodes'
+, 'ms_sensornodes-missing-nodes-id'
 , to_jsonb(ms_sensornodes)
+, fetchlogs_id
 FROM ms_sensornodes
 WHERE sensor_nodes_id IS NULL
 RETURNING 1)
@@ -103,10 +105,11 @@ AND sensor_systems.source_id = ms_sensorsystems.ingest_id;
 
 -- log anything we were not able to get an id for
 WITH r AS (
-INSERT INTO rejects (t, tbl,r)
+INSERT INTO rejects (t,tbl,r,fetchlogs_id)
 SELECT now()
-, 'ms_sensorsystems'
+, 'ms_sensorsystems-missing-nodes-id'
 ,  to_jsonb(ms_sensorsystems)
+,  fetchlogs_id
 FROM ms_sensorsystems
 WHERE sensor_nodes_id IS NULL
 RETURNING 1)
@@ -119,6 +122,7 @@ SELECT sensor_nodes_id
 , metadata
 FROM ms_sensorsystems
 WHERE sensor_nodes_id IS NOT NULL
+GROUP BY sensor_nodes_id, ingest_id, metadata
 ON CONFLICT (sensor_nodes_id, source_id) DO UPDATE SET
     metadata=COALESCE(sensor_systems.metadata, '{}') || COALESCE(EXCLUDED.metadata, '{}');
 
@@ -136,11 +140,14 @@ AND ms_sensorsystems.ingest_id=sensor_systems.source_id
 ;
 
 WITH r AS (
-INSERT INTO rejects (t, tbl,r) SELECT
-    now(),
-    'ms_sensorsystems',
-    to_jsonb(ms_sensorsystems)
-FROM ms_sensorsystems WHERE sensor_systems_id IS NULL
+INSERT INTO rejects (t, tbl,r,fetchlogs_id)
+SELECT
+  now()
+, 'ms_sensorsystems-missing-systems-id'
+, to_jsonb(ms_sensorsystems)
+, fetchlogs_id
+FROM ms_sensorsystems
+WHERE sensor_systems_id IS NULL
 RETURNING 1)
 SELECT COUNT(1) INTO __rejected_systems
 FROM r;
@@ -151,11 +158,14 @@ FROM ms_sensorsystems
 WHERE ms_sensors.ingest_sensor_systems_id = ms_sensorsystems.ingest_id;
 
 WITH r AS (
-INSERT INTO rejects (t, tbl,r) SELECT
-    now(),
-    'ms_sensors',
-    to_jsonb(ms_sensors)
-FROM ms_sensors WHERE sensor_systems_id IS NULL
+INSERT INTO rejects (t,tbl,r,fetchlogs_id)
+SELECT
+  now()
+, 'ms_sensors-missing-systems-id'
+, to_jsonb(ms_sensors)
+, fetchlogs_id
+FROM ms_sensors
+WHERE sensor_systems_id IS NULL
 RETURNING 1)
 SELECT COUNT(1) INTO __rejected_sensors
 FROM r;
@@ -196,10 +206,12 @@ and ms_sensors.units=measurands.units;
 -------------------------------------------------------------------------------------------------------------
 
 WITH r AS (
-INSERT INTO rejects (t, tbl,r) SELECT
-    now(),
-    'ms_sensors no measurand',
-    to_jsonb(ms_sensors)
+INSERT INTO rejects (t, tbl,r,fetchlogs_id)
+SELECT
+ now()
+, 'ms_sensors-missing-measurands-id'
+, to_jsonb(ms_sensors)
+, fetchlogs_id
 FROM ms_sensors
 WHERE measurands_id IS NULL
 RETURNING 1)
@@ -237,11 +249,12 @@ WHERE sensors.sensor_systems_id=ms_sensors.sensor_systems_id
 AND sensors.source_id = ms_sensors.ingest_id;
 
 WITH r AS (
-INSERT INTO rejects (t, tbl,r)
+INSERT INTO rejects (t,tbl,r,fetchlogs_id)
 SELECT
   now()
-  , 'ms_sensors'
+  , 'ms_sensors-missing-sensors-id'
   , to_jsonb(ms_sensors)
+  , fetchlogs_id
 FROM ms_sensors
 WHERE sensors_id IS NULL
 RETURNING 1)
