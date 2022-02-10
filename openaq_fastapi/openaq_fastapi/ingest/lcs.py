@@ -503,9 +503,9 @@ def load_measurements_db(limit=250, ascending: bool = False):
     cur = conn.cursor()
     cur.execute(
         f"""
-        SELECT key
+        SELECT fetchlogs_id
+        , key
         , last_modified
-        , fetchlogs_id
         FROM fetchlogs
         WHERE key~E'^lcs-etl-pipeline/measures/.*\\.csv'
         AND completed_datetime is null
@@ -580,10 +580,13 @@ def load_measurements(rows):
                 )
                 connection.commit()
                 cursor.execute(get_query("lcs_meas_ingest.sql"))
-                irows = cursor.rowcount
-                logger.info("load_measurements:insert: %s rows; %0.4f seconds", irows, time() - start)
-                status = cursor.statusmessage
-                logger.debug(f"INGEST Rows: {irows} Status: {status}")
+                for notice in connection.notices:
+                    print(notice)
+
+                #irows = cursor.rowcount
+                #logger.info("load_measurements:insert: %s rows; %0.4f seconds", irows, time() - start)
+                #status = cursor.statusmessage
+                #logger.debug(f"INGEST Rows: {irows} Status: {status}")
                 cursor.execute(
                     """
                     INSERT INTO fetchlogs(

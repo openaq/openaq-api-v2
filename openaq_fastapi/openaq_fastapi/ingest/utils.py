@@ -84,6 +84,7 @@ def get_logs_from_ids(ids):
                 , loaded_datetime
                 , completed_datetime
                 , last_message
+                , last_modified
                 FROM fetchlogs
                 WHERE fetchlogs_id = ANY(%s)
                 """,
@@ -91,6 +92,7 @@ def get_logs_from_ids(ids):
             )
             rows = cursor.fetchall()
             return rows
+
 
 def get_logs_from_pattern(pattern: str, limit: int = 250):
     """Fetch all logs matching a pattern"""
