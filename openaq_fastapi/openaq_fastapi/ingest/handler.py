@@ -110,22 +110,44 @@ def cronhandler(event, context):
     pipeline = 0 if pipeline is None else pipeline[0]
     logger.info(f"{metadata_limit}/{metadata} metadata, {realtime_limit}/{realtime} openaq, {pipeline_limit}/{pipeline} pipeline records pending")
 
-    if metadata > 0 and metadata_limit > 0:
-        cnt = 0
-        while cnt < metadata and (time() - start_time) < timeout:
-            cnt += load_metadata_db(metadata_limit, ascending)
-            logger.info("loaded %s of %s metadata records, timer: %0.4f", cnt, metadata, time() - start_time)
+    # these exceptions are just a failsafe so that if something
+    # unaccounted for happens we can still move on to the next
+    # process. In case of this type of exception we will need to
+    # fix it asap
+    try:
+        if metadata > 0 and metadata_limit > 0:
+            cnt = 0
+            while cnt < metadata and (time() - start_time) < timeout:
+                cnt += load_metadata_db(metadata_limit, ascending)
+                logger.info(
+                    "loaded %s of %s metadata records, timer: %0.4f",
+                    cnt, metadata, time() - start_time
+                )
+    except Exception as e:
+        logger.error(f"load metadata failed: {e}")
 
-    if realtime > 0 and realtime_limit > 0:
-        cnt = 0
-        while cnt < realtime and (time() - start_time) < timeout:
-            cnt += load_db(realtime_limit, ascending)
-            logger.info("loaded %s of %s fetch records, timer: %0.4f", cnt, realtime, time() - start_time)
+    try:
+        if realtime > 0 and realtime_limit > 0:
+            cnt = 0
+            while cnt < realtime and (time() - start_time) < timeout:
+                cnt += load_db(realtime_limit, ascending)
+                logger.info(
+                    "loaded %s of %s fetch records, timer: %0.4f",
+                    cnt, realtime, time() - start_time
+                )
+    except Exception as e:
+        logger.error(f"load realtime failed: {e}")
 
-    if pipeline > 0 and pipeline_limit > 0:
-        cnt = 0
-        while cnt < pipeline and (time() - start_time) < timeout:
-            cnt += load_measurements_db(pipeline_limit, ascending)
-            logger.info("loaded %s of %s pipeline records, timer: %0.4f", cnt, pipeline, time() - start_time)
+    try:
+        if pipeline > 0 and pipeline_limit > 0:
+            cnt = 0
+            while cnt < pipeline and (time() - start_time) < timeout:
+                cnt += load_measurements_db(pipeline_limit, ascending)
+                logger.info(
+                    "loaded %s of %s pipeline records, timer: %0.4f",
+                    cnt, pipeline, time() - start_time
+                )
+    except Exception as e:
+        logger.error(f"load pipeline failed: {e}")
 
     logger.info("done processing: %0.4f seconds", time() - start_time)
