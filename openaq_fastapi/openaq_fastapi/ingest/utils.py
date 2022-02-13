@@ -184,6 +184,30 @@ def get_object(
 
     return text
 
+def put_object(
+        data: str,
+        key: str,
+        bucket: str = settings.OPENAQ_ETL_BUCKET
+):
+    out = io.BytesIO()
+    with gzip.GzipFile(fileobj=out, mode='wb') as gz:
+        with io.TextIOWrapper(gz, encoding='utf-8') as wrapper:
+            wrapper.write(data)
+    if settings.DRYRUN:
+        filepath = os.path.join(bucket, key)
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        logger.debug(f"Dry Run: Writing file to local file in {filepath}")
+        txt = open(f"{filepath}", "wb")
+        txt.write(out.getvalue())
+        txt.close()            
+    else:
+        logger.info(f"Uploading file to {bucket}/{key}")        
+        s3.put_object(
+            Bucket=bucket,
+            Key=key,
+            Body=out.getvalue(),
+        )
+    
 
 def select_object(key: str):
     key = unquote_plus(key)
@@ -302,6 +326,53 @@ def load_success(cursor, keys, message: str = 'success'):
             message,
             keys,
         ),
+    )
+
+
+def mark_success(
+        id: int = None,
+        key: str = None,
+        keys: list = None,
+        ids: list = None, 
+        message: str = 'success',
+        reset: bool = False,
+):
+    if id is not None:
+        where = "fetchlogs_id = %s"
+        param = id
+    elif key is not None:
+        where = "key=%s"
+        param = key
+    elif keys is not None:
+        where = "key=ANY(%s)"
+        param = keys
+    elif ids is not None:
+        where = "fetchlogs_id=ANY(%s)"
+        param = ids
+    else:
+        logger.error('Failed to pass identifier')
+
+    if reset:
+        completed = 'NULL'
+    else:
+        completed = 'clock_timestamp'
+        
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            logger.info(f"Marking {where} / {param} as done, completed: {complated}")
+            cursor.execute(
+                f"""
+                UPDATE fetchlogs
+                SET
+                last_message=%s
+                , completed_datetime={completed}
+                WHERE {where}
+                """,
+                (
+                    message,
+                    param,
+                ),
     )
 
 

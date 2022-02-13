@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     DATABASE_WRITE_URL: str
     OPENAQ_ENV: str = "staging"
     OPENAQ_FASTAPI_URL: str
-    TESTLOCAL: bool = True
+    DRYRUN: bool = False
     OPENAQ_FETCH_BUCKET: str
     OPENAQ_ETL_BUCKET: str
     OPENAQ_CACHE_TIMEOUT: int = 900
