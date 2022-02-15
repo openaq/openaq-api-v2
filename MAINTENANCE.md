@@ -2,62 +2,49 @@
 
 There are two places to check for errors, the rejects table and the fetchlogs. You can refer to the openaq-db schema for details on both tables and ways to query them but generally you can do the following.
 
+
+## Tools
+Tools to make error checking and fixing easier
+
+### check.py
+List, summarize, evaluate and fix errors related to file ingestion. The tool has the following options:
+* --env: (string) provide the name of the .env file to load. If no value is provided we default to `.env`
+* --profile: (string) the name of the AWS profile to use. If no value is provided the default profile is used, if set.
+* --summary: Provide a summary of errors instead of a list
+* --fix: Attempt to fix the errors after listing
+* --dryrun: Echo out the updated file instead of saving it back to the s3 bucket
+* --debug: Debug level logging
+* --id: (int) check a specific log record based on the fetchlogs_id value
+* --n: (int) limit the list to n records or the summary to the past n days
+
+
+
 ## Ingestion errors
 
-Whenever we catch an error during ingestion we register that error in the fetchlogs in the `last_message` field. The error should always take the format of `ERROR: message` and should be as specific as possible. To get an overview of the current errors you can run the following query, which will tell you the number of file errors in the last 30 days. 
+Whenever we catch an error during ingestion we register that error in the fetchlogs in the `last_message` field. The error should always take the format of `ERROR: message` and should be as specific as possible. Right now the predominant error is a writing error that results in a truncated JSON object that leads to a parsing error during ingestion. The current approach to fixing such an error is to remove the truncated lines and resubmit the file.
 
-```sql
-WITH logs AS (
-SELECT init_datetime
-, CASE
-  WHEN key~E'^realtime' THEN 'realtime'
-  WHEN key~E'^lcs-etl-pipeline/measures' THEN 'pipeline'
-  WHEN key~E'^lcs-etl-pipeline/station' THEN 'metadata'
-  ELSE key
-  END AS type
-, fetchlogs_id
-FROM fetchlogs
-WHERE last_message~*'^error'
-AND init_datetime > current_date - 30)
-SELECT type
-, init_datetime::date as day
-, COUNT(1) as n
-, AGE(now(), MAX(init_datetime)) as min_age
-, AGE(now(), MIN(init_datetime)) as max_age
-, MIN(fetchlogs_id) as fetchlogs_id
-FROM logs
-GROUP BY init_datetime::date, type
-ORDER BY init_datetime::date;
+To see a summary of the last 30 days use the following
+```shell
+python3 check.py --summary --n 30
 ```
 
-This gives you at least one fetchlogs_id so that you can look at a specific file error with the following
+Or see a more detailed list of the last 10 errors. The list method will also download the file and check it for errors.
 
-```sql
-SELECT *
-FROM fetchlogs
-WHERE fetchlogs_id = :fetchlogs_id
+```shell
+python3 check.py --n 10
 ```
 
-
-## Fixing errors
-Start out by getting a list of the errors. This could be done in a summary or a long list.
-
-```python
-# Get the last 10 errors printed out as a list
-python3 openaq_fastapi/check.py --profile openaq-user --n 10
-# Or get the last 10 days of errors summarized by day
-python3 openaq_fastapi/check.py --profile openaq-user --n 10 --summary
+Or you can check on a specific file by using the `--id` argument. This will also download the file and check it.
+```shell
+python3 check.py --id 5555555
 ```
 
-An example of an error entry from the list method
-```
-KEY: realtime-gzipped/2022-02-10/1644524233.ndjson.gz
-ID:5624476
-ERROR:ERROR: COPY from stdin failed: error in .read() call: JSONDecodeError Expecting value: line 1 column 16 (char 15)
-CONTEXT:  COPY tempfetchdata, line 22671
+And then if you want to try and fix the file you can use
+```shell
+python3 check.py --id 5555555 --fix
 ```
 
-
-```python
-python3 openaq_fastapi/check.py --profile openaq-user --id 5634328 --fix
+Or you can batch fix files by skipping the `--id` argument. The following will check the last 10 errors and fix them if possible.
+```shell
+python3 check.py --n 10 --fix
 ```

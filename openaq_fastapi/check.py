@@ -7,14 +7,14 @@ import json
 logger = logging.getLogger(__name__)
 
 parser = argparse.ArgumentParser();
-parser.add_argument('--id', type=int, required=False);
-parser.add_argument('--env', type=str, required=False);
-parser.add_argument('--profile', type=str, required=False);
-parser.add_argument('--n', type=int, required=False);
-parser.add_argument('--fix', action="store_true");
-parser.add_argument('--dryrun', action="store_true");
-parser.add_argument('--debug', action="store_true");
-parser.add_argument('--summary', action="store_true");
+parser.add_argument('--id', type=int, required=False)
+parser.add_argument('--env', type=str, required=False)
+parser.add_argument('--profile', type=str, required=False)
+parser.add_argument('--n', type=int, required=False, default=30)
+parser.add_argument('--fix', action="store_true")
+parser.add_argument('--dryrun', action="store_true")
+parser.add_argument('--debug', action="store_true")
+parser.add_argument('--summary', action="store_true")
 args = parser.parse_args();
 
 if 'DOTENV' not in os.environ.keys() and args.env is not None:
@@ -28,7 +28,7 @@ if args.dryrun:
 
 if args.debug:
     os.environ['LOG_LEVEL'] = 'DEBUG'
-    
+
 from botocore.exceptions import ClientError
 from openaq_fastapi.ingest.handler import cronhandler, logger
 from openaq_fastapi.settings import settings
@@ -57,9 +57,9 @@ from openaq_fastapi.ingest.utils import (
 )
 
 def check_realtime_key(key: str, fix: bool = False):
-    """Check realtime file for common errors"""    
+    """Check realtime file for common errors"""
     logger.debug(f"\n## Checking realtime for issues: {key}")
-    # get text of object    
+    # get text of object
     try:
         txt = get_object(key)
     except Exception as e:
@@ -99,7 +99,7 @@ def check_realtime_key(key: str, fix: bool = False):
     elif len(errors)==0 and fix:
         mark_success(key=key, reset=True)
 
-# If we have passed an id than we check taht        
+# If we have passed an id than we check taht
 if args.id is not None:
     # get the details for that id
     logs = get_logs_from_ids(ids=[args.id])
@@ -113,21 +113,15 @@ if args.id is not None:
         if 'realtime' in key:
             check_realtime_key(key, args.fix)
 # Otherwise if we set the summary flag return a daily summary of errors
-elif args.summary: 
+elif args.summary:
     rows = load_errors_summary(args.n)
     print("Type\t\tDay\t\tCount\tMin\t\tMax\t\tID")
-    for row in rows:        
+    for row in rows:
         print(f"{row[0]}\t{row[1]}\t{row[2]}\t{row[3]}\t{row[4]}\t{row[5]}")
 # otherwise fetch a list of errors
 else:
     errors = load_errors_list(args.n)
-    for error in errors:        
+    for error in errors:
         print(f"------------------\nDATE: {error[2]}\nKEY: {error[1]}\nID:{error[0]}\nERROR:{error[5]}")
         if 'realtime' in error[1]:
             check_realtime_key(error[1], args.fix)
-        
-        
-            
-    
-
-            
