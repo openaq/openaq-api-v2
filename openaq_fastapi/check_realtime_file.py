@@ -9,7 +9,6 @@ if 'DOTENV' not in os.environ.keys():
 if 'AWS_PROFILE' not in os.environ.keys():
     os.environ['AWS_PROFILE'] = 'python-user'
 
-from pandas import DataFrame
 from botocore.exceptions import ClientError
 from openaq_fastapi.ingest.handler import cronhandler, logger
 from openaq_fastapi.settings import settings
@@ -37,7 +36,7 @@ from openaq_fastapi.ingest.utils import (
 
 # load_realtime('realtime-gzipped/2022-02-04/1643994434.ndjson.gz')
 
-logs = get_logs_from_ids(ids=[5544385])
+logs = get_logs_from_ids(ids=[5634328])
 
 # logs = load_errors()
 

@@ -72,7 +72,7 @@ def get_query(file, **params):
 
 
 def get_logs_from_ids(ids):
-    """Fetch any possible file errors"""
+    """Get the fetch logs based on fetchlogs_id"""
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
         connection.set_session(autocommit=True)
         with connection.cursor() as cursor:
@@ -256,7 +256,42 @@ def select_object(key: str):
     return content
 
 
-def load_errors(limit: int = 250):
+def load_errors_summary(days: int = 30):
+    """Fetch any possible file errors"""
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                WITH logs AS (
+                SELECT init_datetime
+                , CASE
+                WHEN key~E'^realtime' THEN 'realtime'
+                WHEN key~E'^lcs-etl-pipeline/measures' THEN 'pipeline'
+                WHEN key~E'^lcs-etl-pipeline/station' THEN 'metadata'
+                ELSE key
+                END AS type
+                , fetchlogs_id
+                FROM fetchlogs
+                WHERE last_message~*'^error'
+                AND init_datetime > current_date - %s)
+                SELECT type
+                , init_datetime::date as day
+                , COUNT(1) as n
+                , MIN(init_datetime)::time as min_time
+                , MAX(init_datetime)::time as max_time
+                , MIN(fetchlogs_id) as fetchlogs_id
+                FROM logs
+                GROUP BY init_datetime::date, type
+                ORDER BY init_datetime::date
+                """,
+                (days,),
+            )
+            rows = cursor.fetchall()
+            return rows
+
+    
+def load_errors_list(limit: int = 10):
     """Fetch any possible file errors"""
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
         connection.set_session(autocommit=True)
@@ -271,6 +306,7 @@ def load_errors(limit: int = 250):
                 , last_message
                 FROM fetchlogs
                 WHERE last_message~*'^error'
+                ORDER BY fetchlogs_id DESC
                 LIMIT %s
                 """,
                 (limit,),
@@ -360,7 +396,7 @@ def mark_success(
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
         connection.set_session(autocommit=True)
         with connection.cursor() as cursor:
-            logger.info(f"Marking {where} / {param} as done, completed: {complated}")
+            logger.info(f"Marking {where} / {param} as done, completed: {completed}")
             cursor.execute(
                 f"""
                 UPDATE fetchlogs
@@ -375,7 +411,7 @@ def mark_success(
                 ),
     )
 
-
+            
 def crawl(bucket, prefix):
     paginator = s3.get_paginator("list_objects_v2")
     print(settings.DATABASE_WRITE_URL)

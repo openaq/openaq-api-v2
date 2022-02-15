@@ -16,7 +16,7 @@ SELECT init_datetime
 , fetchlogs_id
 FROM fetchlogs
 WHERE last_message~*'^error'
-AND init_datetime > current_date - 100)
+AND init_datetime > current_date - 14)
 SELECT type
 , init_datetime::date as day
 , COUNT(1) as n
@@ -79,9 +79,17 @@ FROM rejects
 GROUP BY tbl, r->>'ingest_id'
 LIMIT 200;
 
-DELETE
-FROM
-
+-- how many rejects have we had
+SELECT t::date
+, tbl
+, COUNT(1)
+, MIN(t)
+, MAX(t)
+, COUNT(DISTINCT fetchlogs_id)
+, MIN(fetchlogs_id)
+FROM rejects
+GROUP BY tbl, t::date
+ORDER BY t::date DESC;
 
 
 
