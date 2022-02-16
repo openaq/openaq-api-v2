@@ -1,21 +1,23 @@
 import argparse
 import logging
-import sys
 import os
 import json
 
 logger = logging.getLogger(__name__)
 
-parser = argparse.ArgumentParser();
+parser = argparse.ArgumentParser()
 parser.add_argument('--id', type=int, required=False)
 parser.add_argument('--env', type=str, required=False)
 parser.add_argument('--profile', type=str, required=False)
 parser.add_argument('--n', type=int, required=False, default=30)
 parser.add_argument('--fix', action="store_true")
+parser.add_argument('--load', action="store_true")
 parser.add_argument('--dryrun', action="store_true")
 parser.add_argument('--debug', action="store_true")
 parser.add_argument('--summary', action="store_true")
-args = parser.parse_args();
+parser.add_argument('--rejects', action="store_true")
+parser.add_argument('--resubmit', action="store_true")
+args = parser.parse_args()
 
 if 'DOTENV' not in os.environ.keys() and args.env is not None:
     os.environ['DOTENV'] = args.env
@@ -49,12 +51,14 @@ from openaq_fastapi.ingest.fetch import (
 from openaq_fastapi.ingest.utils import (
     load_errors_list,
     load_errors_summary,
-    select_object,
+    load_rejects_summary,
     get_object,
     put_object,
     get_logs_from_ids,
+    get_logs_from_pattern,
     mark_success,
 )
+
 
 def check_realtime_key(key: str, fix: bool = False):
     """Check realtime file for common errors"""
@@ -80,12 +84,12 @@ def check_realtime_key(key: str, fix: bool = False):
             print(f"*** Loading error on line #{jdx} (of {n}): {e}\n{line}")
         try:
             # then we can try to parse it
-            row = parse_json(obj)
+            parse_json(obj)
         except Exception as e:
             errors.append(jdx)
             print(f"*** Parsing error on line #{jdx} (of {n}): {e}\n{line}")
 
-    if len(errors)>0 and fix:
+    if len(errors) > 0 and fix:
         # remove the bad rows and then replace the file
         nlines = [l for i, l in enumerate(lines) if i not in errors]
         message = f"Fixed: removed {len(errors)} and now have {len(nlines)} lines"
@@ -96,28 +100,46 @@ def check_realtime_key(key: str, fix: bool = False):
             key=key
         )
         mark_success(key=key, reset=True, message=message)
-    elif len(errors)==0 and fix:
+    elif len(errors) == 0 and fix:
         mark_success(key=key, reset=True)
 
-# If we have passed an id than we check taht
+
+# If we have passed an id than we check that
 if args.id is not None:
     # get the details for that id
     logs = get_logs_from_ids(ids=[args.id])
-
-    ## get just the keys
+    # get just the keys
     keys = [log[1] for log in logs]
-
-    ## loop through and check each
+    # loop through and check each
     for idx, key in enumerate(keys):
+        # if we are resubmiting we dont care
+        # what type of file it is
+        if args.resubmit:
+            mark_success(key, reset=True, message='resubmitting')
         # figure out what type of file it is
-        if 'realtime' in key:
-            check_realtime_key(key, args.fix)
+        elif 'realtime' in key:
+            if args.load:
+                load_realtime([key])
+            else:
+                check_realtime_key(key, args.fix)
+        else:
+            print(key)
 # Otherwise if we set the summary flag return a daily summary of errors
 elif args.summary:
     rows = load_errors_summary(args.n)
     print("Type\t\tDay\t\tCount\tMin\t\tMax\t\tID")
     for row in rows:
         print(f"{row[0]}\t{row[1]}\t{row[2]}\t{row[3]}\t{row[4]}\t{row[5]}")
+elif args.rejects:
+    rows = load_rejects_summary(args.n)
+    print("Provider\tSource\tLog\tNode\tRecords")
+    for row in rows:
+        print(f"{row[0]}\t{row[1]}\t{row[2]}\t{row[3]}\t{row[4]}")
+        if row[3] is None:
+            # check for a station file
+            station_keys = get_logs_from_pattern(f"{row[0]}/{row[1]}")
+            for station in station_keys:
+                print(f"station key: {station[1]}; log: {station[0]}")
 # otherwise fetch a list of errors
 else:
     errors = load_errors_list(args.n)
