@@ -591,14 +591,12 @@ def load_measurements(rows):
                     """
                     INSERT INTO fetchlogs(
                         key,
-                        last_modified,
                         completed_datetime
-                    ) SELECT *, clock_timestamp()
+                    ) SELECT key, clock_timestamp()
                     FROM keys
                     ON CONFLICT (key) DO
                     UPDATE
                         SET
-                        last_modified=EXCLUDED.last_modified,
                         completed_datetime=EXCLUDED.completed_datetime
                     ;
                     """
