@@ -5,13 +5,6 @@ import os
 # from pandas import DataFrame
 from pathlib import Path
 
-#from openaq_fastapi.ingest.lcs import (
-    # load_metadata_db,
-    # load_measurements_db,
-    # load_measurements_file,
-    # get_measurements,
-#)
-
 parser = argparse.ArgumentParser()
 parser.add_argument('--id', type=int, required=False)
 parser.add_argument('--env', type=str, required=False)
@@ -53,7 +46,6 @@ if args.dir is not None:
         if e.is_file():
             row = add_fetchlog(str(e))
             logger.debug(f'{row[0]}: {row[1]}')
-
 
 cronhandler({
     "source": "manual",
