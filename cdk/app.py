@@ -126,7 +126,8 @@ class LambdaIngestStack(Stack):
         id: str,
         **kwargs,
     ) -> None:
-        """Lambda plus cronjob to ingest metadata, realtime and pipeline data"""
+        """Lambda plus cronjob to ingest metadata,
+        realtime and pipeline data"""
         super().__init__(scope, id, *kwargs)
 
         package = aws_lambda.Code.from_asset(
@@ -167,7 +168,8 @@ staging = LambdaApiStack(app, "openaq-lcs-apistaging")
 prod = LambdaApiStack(app, "openaq-lcs-api")
 
 ingest = LambdaIngestStack(
-    app, f"openaq-lcs-ingest-{settings.OPENAQ_ENV}"
+    app,
+    f"openaq-lcs-ingest-{settings.OPENAQ_ENV}",
 )
 
 Tags.of(staging).add("devseed", "true")

@@ -13,7 +13,6 @@ import typer
 from ..settings import settings
 from .utils import (
     StringIteratorIO,
-    check_if_done,
     clean_csv_value,
     get_query,
     load_fail,

@@ -79,6 +79,18 @@ FROM rejects
 GROUP BY tbl, r->>'ingest_id'
 LIMIT 200;
 
+SELECT r->>'ingest_id'
+, string_agg(DISTINCT tbl, ', ') as types
+, COUNT(1) as n
+, MIN(t::date) as first
+, MAX(t::date) as last
+FROM rejects
+WHERE t > current_date - 7
+GROUP BY r->>'ingest_id'
+ORDER BY MAX(t) DESC
+LIMIT 200;
+
+
 -- how many rejects have we had
 SELECT t::date
 , tbl
@@ -90,6 +102,59 @@ SELECT t::date
 FROM rejects
 GROUP BY tbl, t::date
 ORDER BY t::date DESC;
+
+SELECT *
+FROM rejects
+WHERE t IS NOT NULL
+ORDER BY t DESC
+LIMIT 1;
+
+
+INSERT INTO rejects (t, r, tbl, fetchlogs_id) VALUES
+( current_timestamp, json_build_object('ingest_id', 'PurpleAir-93537-pm2.5'), 'fake-reject', 5638819)
+, ( current_timestamp, json_build_object('ingest_id', 'PurpleAir-132231-pm10.0'), 'fake-reject', 5638819);
+
+-- by file
+-- get a list of all source_ids
+-- check to see if they exist
+-- if they dont find the key and resubmit
+-- once that is all done resubmit the whole file
+
+WITH r AS (
+SELECT split_part(r->>'ingest_id', '-', 2) as source_id
+, split_part(r->>'ingest_id', '-', 1) as provider_id
+, fetchlogs_id
+FROM rejects
+WHERE fetchlogs_id IS NOT NULL
+AND t > current_date - 50
+), g AS (
+SELECT provider_id
+, r.source_id
+, r.fetchlogs_id
+, sensor_nodes_id
+, COUNT(1) as records
+FROM r
+LEFT JOIN sensor_nodes sn ON (r.source_id = sn.source_id AND r.provider_id = sn.source_name)
+GROUP BY provider_id, r.source_id, sensor_nodes_id, r.fetchlogs_id)
+SELECT provider_id
+, source_id
+, sensor_nodes_id
+, records
+, (SELECT key FROM fetchlogs l WHERE l.key ~* (provider_id||'/'||source_id) LIMIT 1) AS key
+FROM g;
+
+
+
+SELECT *
+FROM sensor_nodes
+WHERE source_name ~* 'PurpleAir'
+AND source_id ~* '93537'
+LIMIT 1;
+
+SELECT *
+FROM fetchlogs
+WHERE key ~* 'PurpleAir/93537'
+LIMIT 1;
 
 
 
@@ -223,6 +288,34 @@ LEFT JOIN measurements_fastapi_base b USING (sensors_id, sensor_nodes_id)
 --LEFT JOIN groups_view b USING (groups_id, measurands_id)
 WHERE sensors_id IN (SELECT source_sensors_id('versioning'));
 
+
+SELECT day
+, COUNT(1) as stations
+FROM open_data_export_logs
+WHERE exported_on IS NULL
+AND day > current_date - 10
+GROUP BY day;
+
+SELECT day
+, COUNT(1) as stations
+FROM open_data_export_logs
+WHERE queued_on IS NULL
+AND day > current_date - 10
+GROUP BY day;
+
+
+SELECT *
+FROM open_data_export_logs
+WHERE queued_on IS NOT NULL
+AND exported_on IS NULL
+AND day > current_date - 10
+LIMIT 20;
+
+select state
+, count(*) from pg_stat_activity
+where pid <> pg_backend_pid()
+group by 1
+order by 1;
 
 
 \echo Measurements for those sensors

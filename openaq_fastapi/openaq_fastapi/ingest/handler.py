@@ -5,8 +5,6 @@ from ..settings import settings
 from .lcs import load_measurements_db, load_metadata_db
 from .fetch import load_db
 from time import time
-#import math
-import sys
 
 from datetime import datetime, timezone
 
@@ -14,10 +12,11 @@ s3c = boto3.client("s3")
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
-    format = '[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s',
-    level = settings.LOG_LEVEL.upper(),
-    force = True,
+    format='[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s',
+    level=settings.LOG_LEVEL.upper(),
+    force=True,
 )
+
 
 def handler(event, context):
     logger.debug(event)
@@ -37,7 +36,9 @@ def handler(event, context):
                         try:
                             last_modified = lov2["Contents"][0]["LastModified"]
                         except KeyError:
-                            logger.error("could not get last modified time from obj")
+                            logger.error("""
+                            could not get last modified time from obj
+                            """)
                         last_modified = datetime.now().replace(
                             tzinfo=timezone.utc
                         )

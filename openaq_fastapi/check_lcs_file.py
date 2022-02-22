@@ -54,6 +54,6 @@ from openaq_fastapi.ingest.utils import (
 
 
 # measurement data
-logs = get_logs_from_ids(ids=[5620672])
+logs = get_logs_from_ids(ids=[5609404])
 
 load_measurements(logs)
