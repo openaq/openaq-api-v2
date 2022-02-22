@@ -15,6 +15,8 @@ List, summarize, evaluate and fix errors related to file ingestion. The tool has
 * --debug: Debug level logging
 * --id: (int) check a specific log record based on the fetchlogs_id value
 * --n: (int) limit the list to n records or the summary to the past n days
+* --rejects: Echo out the list of rejects. If used with --summary it will show a summary of the rejects table
+* --resubmit: Update the fetchlogs table to force a reload of that id
 
 
 

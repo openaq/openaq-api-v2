@@ -1,19 +1,9 @@
 import argparse
-# import logging
+import logging
 import os
 # import json
 # from pandas import DataFrame
 from pathlib import Path
-
-#from openaq_fastapi.ingest.lcs import (
-    # load_metadata_db,
-    # load_measurements_db,
-    # load_measurements_file,
-    # get_measurements,
-#)
-
-# logger = logging.getLogger(__name__)
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--id', type=int, required=False)
@@ -43,21 +33,24 @@ from openaq_fastapi.ingest.utils import (
 )
 from openaq_fastapi.settings import settings
 
-print(f'Working with {settings.DATABASE_URL}')
+logger = logging.getLogger(__name__)
+
+logger.info(f'Working with {settings.DATABASE_URL}')
+logger.debug(settings)
 
 if args.dir is not None:
-    print(f'Adding files to fetchlogs from {args.dir}')
+    logger.info(f'Adding files to fetchlogs from {args.dir}')
     path = Path(args.dir)
     # Add everything from the local directory
     for e in path.rglob('**/*'):
         if e.is_file():
             row = add_fetchlog(str(e))
-            print(f'{row[0]}: {row[1]}')
-
+            logger.debug(f'{row[0]}: {row[1]}')
 
 cronhandler({
     "source": "manual",
-    "pipeline_limit": 0,
-    "realtime_limit": 0,
-    "metadata_limit": 0,
+    "pipeline_limit": 10,
+    "realtime_limit": 10,
+    "metadata_limit": 10,
+    "versions_limit": 10,
 }, {})
