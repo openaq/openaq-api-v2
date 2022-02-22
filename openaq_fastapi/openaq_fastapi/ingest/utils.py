@@ -199,15 +199,15 @@ def put_object(
         logger.debug(f"Dry Run: Writing file to local file in {filepath}")
         txt = open(f"{filepath}", "wb")
         txt.write(out.getvalue())
-        txt.close()            
+        txt.close()
     else:
-        logger.info(f"Uploading file to {bucket}/{key}")        
+        logger.info(f"Uploading file to {bucket}/{key}")
         s3.put_object(
             Bucket=bucket,
             Key=key,
             Body=out.getvalue(),
         )
-    
+
 
 def select_object(key: str):
     key = unquote_plus(key)
@@ -290,7 +290,41 @@ def load_errors_summary(days: int = 30):
             rows = cursor.fetchall()
             return rows
 
-    
+
+def load_rejects_summary(days: int = 30):
+    """Fetch any possible file errors"""
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                WITH r AS (
+                SELECT split_part(r->>'ingest_id', '-', 2) as source_id
+                , split_part(r->>'ingest_id', '-', 1) as provider_id
+                , fetchlogs_id
+                FROM rejects
+                WHERE fetchlogs_id IS NOT NULL
+                AND t > current_date - %s)
+                SELECT provider_id
+                , r.source_id
+                , fetchlogs_id
+                , sensor_nodes_id
+                , COUNT(1) as records
+                FROM r
+                LEFT JOIN sensor_nodes sn
+                ON (r.source_id = sn.source_id
+                AND r.provider_id = sn.source_name)
+                GROUP BY provider_id
+                , r.source_id
+                , sensor_nodes_id
+                , fetchlogs_id;
+                """,
+                (days,),
+            )
+            rows = cursor.fetchall()
+            return rows
+
+
 def load_errors_list(limit: int = 10):
     """Fetch any possible file errors"""
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
@@ -365,11 +399,31 @@ def load_success(cursor, keys, message: str = 'success'):
     )
 
 
+def add_fetchlog(key: str):
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        with connection.cursor() as cursor:
+            connection.set_session(autocommit=True)
+            print(key)
+            cursor.execute(
+                """
+                INSERT INTO fetchlogs (key, last_modified)
+                VALUES(%s, clock_timestamp())
+                ON CONFLICT (key) DO UPDATE
+                SET last_modified=EXCLUDED.last_modified,
+                completed_datetime=NULL RETURNING *;
+                """,
+                (key,),
+            )
+            row = cursor.fetchone()
+            connection.commit()
+            return row
+
+
 def mark_success(
         id: int = None,
         key: str = None,
         keys: list = None,
-        ids: list = None, 
+        ids: list = None,
         message: str = 'success',
         reset: bool = False,
 ):
@@ -392,7 +446,7 @@ def mark_success(
         completed = 'NULL'
     else:
         completed = 'clock_timestamp'
-        
+
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
         connection.set_session(autocommit=True)
         with connection.cursor() as cursor:
@@ -411,7 +465,7 @@ def mark_success(
                 ),
     )
 
-            
+
 def crawl(bucket, prefix):
     paginator = s3.get_paginator("list_objects_v2")
     print(settings.DATABASE_WRITE_URL)

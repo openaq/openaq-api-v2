@@ -30,6 +30,7 @@ warnings.filterwarnings(
     message="The localize method is no longer necessary, as this time zone supports the fold attribute",
 )
 
+
 class LCSData:
     def __init__(
         self, page=None, key=None, st=datetime.now().replace(tzinfo=pytz.UTC)
@@ -259,48 +260,29 @@ class LCSData:
 
     def get_metadata(self):
         hasnew = False
-        with psycopg2.connect(settings.DATABASE_URL) as connection:
-            connection.set_session(autocommit=True)
-            with connection.cursor() as cursor:
+        for obj in self.page:
+            key = obj["Key"]
+            id = obj["id"]
+            last_modified = obj["LastModified"]
+            try:
+                self.get_station(key, id)
+                self.keys.append(
+                    {
+                        "key": key,
+                        "last_modified": last_modified,
+                        "fetchlogs_id": id
+                    }
+                )
+                hasnew = True
+            except Exception as e:
+                # catch and continue to next page
+                logger.error(
+                    f"Could not process file: {id}: {key}: {e}"
+                )
 
-                for obj in self.page:
-
-                    key = obj["Key"]
-                    id = obj["id"]
-                    last_modified = obj["LastModified"]
-                    # logger.debug(f"checking fetchlog again: {key} {last_modified}")
-                    # # if last_modified > self.st:
-                    # cursor.execute(
-                    #     """
-                    #     SELECT 1
-                    #     FROM fetchlogs
-                    #     WHERE fetchlogs_id=%s
-                    #     AND completed_datetime IS NOT NULL
-                    #     """,
-                    #     (id,),
-                    # )
-                    # rows = cursor.rowcount
-                    # logger.debug(f"get_metadata:rows - {rows}")
-                    # if rows < 1:
-                    try:
-                        self.get_station(key, id)
-                        self.keys.append(
-                            {
-                                "key": key,
-                                "last_modified": last_modified,
-                                "fetchlogs_id": id
-                            }
-                        )
-                        hasnew = True
-                    except Exception as e:
-                        # catch and continue to next page
-                        logger.error(f"Could not process file: {id}: {key}: {e}")
-
-                if hasnew:
-                    logger.debug(f"get_metadata:hasnew - {self.keys}")
-                    self.load_data()
-                for notice in connection.notices:
-                    logger.debug(notice)
+        if hasnew:
+            logger.debug(f"get_metadata:hasnew - {self.keys}")
+            self.load_data()
 
 
 def write_csv(cursor, data, table, columns):
@@ -356,7 +338,11 @@ def load_metadata_db(count=250, ascending: bool = False):
             contents = []
             for row in rows:
                 contents.append(
-                    {"Key": unquote_plus(row[0]), "LastModified": row[1],"id": row[2],}
+                    {
+                        "Key": unquote_plus(row[0]),
+                        "LastModified": row[1],
+                        "id": row[2],
+                    }
                 )
             for notice in connection.notices:
                 logger.debug(notice)

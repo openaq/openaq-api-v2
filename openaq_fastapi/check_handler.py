@@ -1,39 +1,63 @@
-import logging
-import sys
-from pandas import DataFrame
+import argparse
+# import logging
+import os
+# import json
+# from pandas import DataFrame
+from pathlib import Path
 
-from openaq_fastapi.ingest.handler import cronhandler, logger
+#from openaq_fastapi.ingest.lcs import (
+    # load_metadata_db,
+    # load_measurements_db,
+    # load_measurements_file,
+    # get_measurements,
+#)
 
-# console_log_output = sys.stdout
-# console_handler = logging.StreamHandler(console_log_output)
-# logger.addHandler(console_handler)
+# logger = logging.getLogger(__name__)
 
-from openaq_fastapi.ingest.lcs import (
-    load_metadata_db,
-    load_measurements_db,
-    load_measurements_file,
-    get_measurements,
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--id', type=int, required=False)
+parser.add_argument('--env', type=str, required=False)
+parser.add_argument('--profile', type=str, required=False)
+parser.add_argument('--dir', type=str, required=False)
+parser.add_argument('--dryrun', action="store_true")
+parser.add_argument('--debug', action="store_true")
+args = parser.parse_args()
+
+if 'DOTENV' not in os.environ.keys() and args.env is not None:
+    os.environ['DOTENV'] = args.env
+
+if 'AWS_PROFILE' not in os.environ.keys() and args.profile is not None:
+    os.environ['AWS_PROFILE'] = args.profile
+
+if args.dryrun:
+    os.environ['DRYRUN'] = 'True'
+
+if args.debug:
+    os.environ['LOG_LEVEL'] = 'DEBUG'
+
+# needs to be done AFTER the parser
+from openaq_fastapi.ingest.handler import cronhandler
+from openaq_fastapi.ingest.utils import (
+    add_fetchlog,
 )
+from openaq_fastapi.settings import settings
 
+print(f'Working with {settings.DATABASE_URL}')
 
-keys = [
-   # 'lcs-etl-pipeline/measures/purpleair/1641551627-iipjk.csv.gz',
-   # 'lcs-etl-pipeline/measures/habitatmap/1641551627-v52y.csv.gz',
-  #  'lcs-etl-pipeline/measures/habitatmap/1641551687-lyk94.csv.gz',
-    ]
+if args.dir is not None:
+    print(f'Adding files to fetchlogs from {args.dir}')
+    path = Path(args.dir)
+    # Add everything from the local directory
+    for e in path.rglob('**/*'):
+        if e.is_file():
+            row = add_fetchlog(str(e))
+            print(f'{row[0]}: {row[1]}')
 
-for key in keys:
-    data = get_measurements(key)
-    df = DataFrame(data)
-    print(df)
-
-#load_metadata_db(2)
-#load_measurements_db(1, True)
-#load_measurements_file(5117654)
 
 cronhandler({
     "source": "manual",
-    "pipeline_limit": 2,
+    "pipeline_limit": 0,
     "realtime_limit": 0,
     "metadata_limit": 0,
 }, {})
