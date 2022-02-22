@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     INGEST_TIMEOUT: int = 900
     PIPELINE_LIMIT: int = 10
     METADATA_LIMIT: int = 10
+    VERSIONS_LIMIT: int = 10
     REALTIME_LIMIT: int = 10
     LOG_LEVEL: str = 'INFO'
     LOCAL_SAVE_DIRECTORY: str = './openaq_files'

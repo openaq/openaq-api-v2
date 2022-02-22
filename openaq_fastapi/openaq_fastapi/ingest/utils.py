@@ -168,21 +168,32 @@ def check_if_done(cursor, key):
 
 def get_object(
         key: str,
-        bucket: str = settings.OPENAQ_ETL_BUCKET
+        bucket: str = settings.OPENAQ_ETL_BUCKET,
 ):
     key = unquote_plus(key)
     text = ''
-    obj = s3.get_object(
-        Bucket=bucket,
-        Key=key,
-    )
-    body = obj['Body']
-    if str.endswith(key, ".gz"):
-        text = gzip.decompress(body.read()).decode('utf-8')
+    if bucket is not None and bucket != '':
+        obj = s3.get_object(
+            Bucket=bucket,
+            Key=key,
+        )
+        body = obj['Body']
+        if str.endswith(key, ".gz"):
+            text = gzip.decompress(body.read()).decode('utf-8')
+        else:
+            text = body
     else:
-        text = body
+        logger.info('attempting to load file locally {key}')
+        if str.endswith(key, ".gz"):
+            with gzip.open(key, 'rt') as f:
+                for line in f:
+                    text += line
+        else:
+            text = Path(key).read_text()
 
     return text
+
+
 
 def put_object(
         data: str,
@@ -403,7 +414,6 @@ def add_fetchlog(key: str):
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
         with connection.cursor() as cursor:
             connection.set_session(autocommit=True)
-            print(key)
             cursor.execute(
                 """
                 INSERT INTO fetchlogs (key, last_modified)

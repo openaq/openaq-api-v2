@@ -2,7 +2,11 @@ import boto3
 import logging
 import psycopg2
 from ..settings import settings
-from .lcs import load_measurements_db, load_metadata_db
+from .lcs import (
+    load_measurements_db,
+    load_metadata_db,
+    load_versions_db,
+)
 from .fetch import load_db
 from time import time
 
@@ -71,6 +75,7 @@ def cronhandler(event, context):
     pipeline_limit = settings.PIPELINE_LIMIT if 'pipeline_limit' not in event else event['pipeline_limit']
     realtime_limit = settings.REALTIME_LIMIT if 'realtime_limit' not in event else event['realtime_limit']
     metadata_limit = settings.METADATA_LIMIT if 'metadata_limit' not in event else event['metadata_limit']
+    versions_limit = settings.VERSIONS_LIMIT if 'versions_limit' not in event else event['versions_limit']
 
     logger.info(f"Running cron job: {event['source']}, ascending: {ascending}")
     with psycopg2.connect(settings.DATABASE_URL) as connection:
@@ -103,13 +108,23 @@ def cronhandler(event, context):
                 """,
             )
             realtime = cursor.fetchone()
+            cursor.execute(
+                """
+                SELECT count(*)
+                FROM fetchlogs
+                WHERE completed_datetime is null
+                AND key ~*'versions';
+                """,
+            )
+            versions = cursor.fetchone()
             for notice in connection.notices:
                 logger.debug(notice)
 
     metadata = 0 if metadata is None else metadata[0]
+    versions = 0 if versions is None else versions[0]
     realtime = 0 if realtime is None else realtime[0]
     pipeline = 0 if pipeline is None else pipeline[0]
-    logger.info(f"{metadata_limit}/{metadata} metadata, {realtime_limit}/{realtime} openaq, {pipeline_limit}/{pipeline} pipeline records pending")
+    logger.info(f"{metadata_limit}/{metadata} metadata, {realtime_limit}/{realtime} openaq, {pipeline_limit}/{pipeline} pipeline, {versions_limit}/{versions} versions records pending")
 
     # these exceptions are just a failsafe so that if something
     # unaccounted for happens we can still move on to the next
@@ -124,6 +139,8 @@ def cronhandler(event, context):
                     "loaded %s of %s metadata records, timer: %0.4f",
                     cnt, metadata, time() - start_time
                 )
+                if cnt == 0:
+                    raise Exception('count is still zero after iteration')
     except Exception as e:
         logger.error(f"load metadata failed: {e}")
 
@@ -136,8 +153,24 @@ def cronhandler(event, context):
                     "loaded %s of %s fetch records, timer: %0.4f",
                     cnt, realtime, time() - start_time
                 )
+                if cnt == 0:
+                    raise Exception('count is still zero after iteration')
     except Exception as e:
         logger.error(f"load realtime failed: {e}")
+
+    try:
+        if versions > 0 and versions_limit > 0:
+            cnt = 0
+            while cnt < versions and (time() - start_time) < timeout:
+                cnt += load_versions_db(versions_limit, ascending)
+                logger.info(
+                    "loaded %s of %s versions records, timer: %0.4f",
+                    cnt, versions, time() - start_time
+                )
+                if cnt == 0:
+                    raise Exception('count is still zero after iteration')
+    except Exception as e:
+        logger.error(f"load versions failed: {e}")
 
     try:
         if pipeline > 0 and pipeline_limit > 0:
@@ -148,6 +181,8 @@ def cronhandler(event, context):
                     "loaded %s of %s pipeline records, timer: %0.4f",
                     cnt, pipeline, time() - start_time
                 )
+                if cnt == 0:
+                    raise Exception('count is still zero after iteration')
     except Exception as e:
         logger.error(f"load pipeline failed: {e}")
 

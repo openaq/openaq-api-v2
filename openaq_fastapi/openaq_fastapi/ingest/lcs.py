@@ -5,6 +5,7 @@ import dateparser
 import pytz
 import orjson
 import csv
+import gzip
 from time import time
 from urllib.parse import unquote_plus
 import warnings
@@ -14,7 +15,7 @@ import psycopg2
 import typer
 from io import StringIO
 from ..settings import settings
-from .utils import get_query, clean_csv_value, StringIteratorIO, fix_units
+from .utils import get_query, clean_csv_value, StringIteratorIO, fix_units, get_object
 
 s3 = boto3.resource("s3")
 s3c = boto3.client("s3")
@@ -137,25 +138,39 @@ class LCSData:
         # purpose of this function and we should not continue without it
         # if we want to check for specific errors we could do that,
         # but than rethrow
-        resp = s3c.select_object_content(
-            Bucket=FETCH_BUCKET,
-            Key=key,
-            ExpressionType="SQL",
-            Expression="SELECT * FROM s3object",
-            InputSerialization={
-                "JSON": {"Type": "Document"},
-                "CompressionType": compression,
-            },
-            OutputSerialization={"JSON": {}},
-        )
-        for event in resp["Payload"]:
-            if "Records" in event:
-                records = event["Records"]["Payload"].decode("utf-8")
-                obj = orjson.loads(records)
-                obj['key'] = key
-                if fetchlogsId is not None:
-                    obj['fetchlogs_id'] = fetchlogsId
-                self.node(obj)
+        if FETCH_BUCKET is not None and FETCH_BUCKET != "":
+            logger.debug(
+                f'attempting to load station from bucket {FETCH_BUCKET}/{key}'
+            )
+            resp = s3c.select_object_content(
+                Bucket=FETCH_BUCKET,
+                Key=key,
+                ExpressionType="SQL",
+                Expression="SELECT * FROM s3object",
+                InputSerialization={
+                    "JSON": {"Type": "Document"},
+                    "CompressionType": compression,
+                },
+                OutputSerialization={"JSON": {}},
+            )
+            for event in resp["Payload"]:
+                if "Records" in event:
+                    records = event["Records"]["Payload"].decode("utf-8")
+                    obj = orjson.loads(records)
+                    obj['key'] = key
+                    if fetchlogsId is not None:
+                        obj['fetchlogs_id'] = fetchlogsId
+                    self.node(obj)
+        else:
+            logger.debug(f'attempting to load station locally {key}')
+            if compression == "GZIP":
+                with gzip.open(key, 'rt') as f:
+                    for line in f:
+                        obj = orjson.loads(line)
+                        obj['key'] = key
+                        if fetchlogsId is not None:
+                            obj['fetchlogs_id'] = fetchlogsId
+                        self.node(obj)
 
     def load_data(self):
         logger.debug(f"load_data: {self.keys}")
@@ -315,6 +330,91 @@ def load_metadata_bucketscan(count=100):
             break
 
 
+def load_versions_db(limit=250, ascending: bool = False):
+    bucket = settings.OPENAQ_FETCH_BUCKET
+    order = 'ASC' if ascending else 'DESC'
+    logger.debug(f"Checking for version files in {bucket}, {order}")
+    try:
+        with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+            with connection.cursor() as cursor:
+                connection.set_session(autocommit=True)
+                cursor.execute(
+                    """
+                    UPDATE fetchlogs
+                    SET loaded_datetime = clock_timestamp()
+                    WHERE key~*'/versions/.*\\.json'
+                    AND completed_datetime is null
+                    RETURNING key, last_modified
+                    """
+                )
+                rows = cursor.fetchall()
+                versions = []
+                for row in rows:
+                    logger.debug(f"{row}")
+                    raw = get_object(unquote_plus(row[0]))
+                    j = orjson.loads(raw)
+                    version = {}
+                    metadata = {}
+                    for key, value in j.items():
+                        if key in [
+                                "parent_sensor_id",
+                                "sensor_id",
+                                "parameter",
+                                "version_id",
+                                "life_cycle_id",
+                                "readme"
+                        ]:
+                            version[key] = value
+                        elif key not in ["merged"]:
+                            metadata[key] = value
+                    version["metadata"] = orjson.dumps(metadata).decode()
+                    versions.append(version)
+
+                # create a temporary table for matching
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS ms_versions (
+                    sensor_id text UNIQUE,
+                    parent_sensor_id text,
+                    life_cycle_id text,
+                    version_id text,
+                    parameter text,
+                    readme text,
+                    sensors_id int,
+                    parent_sensors_id int,
+                    life_cycles_id int,
+                    measurands_id int,
+                    metadata jsonb
+                    );
+                    DELETE FROM ms_versions;
+                    """
+                )
+                # add the version data into that table
+                write_csv(
+                    cursor,
+                    versions,
+                    "ms_versions",
+                    [
+                        "sensor_id",
+                        "parent_sensor_id",
+                        "version_id",
+                        "life_cycle_id",
+                        "parameter",
+                        "readme",
+                        "metadata",
+                    ],
+                )
+                # now process that version data as best we can
+                cursor.execute(get_query("lcs_ingest_versions.sql"))
+                # now add each of those to the database
+                for notice in connection.notices:
+                    logger.debug(notice)
+
+                return len(rows)
+    except Exception as e:
+        logger.debug(f"Failed to ingest versions: {e}")
+
+
 def load_metadata_db(count=250, ascending: bool = False):
     order = 'ASC' if ascending else 'DESC'
     with psycopg2.connect(settings.DATABASE_URL) as connection:
@@ -326,7 +426,7 @@ def load_metadata_db(count=250, ascending: bool = False):
                 , last_modified
                 , fetchlogs_id
                 FROM fetchlogs
-                WHERE key~'lcs-etl-pipeline/stations/'
+                WHERE key~'/stations/'
                 AND completed_datetime is null
                 ORDER BY last_modified {order} nulls last
                 LIMIT %s;
@@ -335,6 +435,7 @@ def load_metadata_db(count=250, ascending: bool = False):
             )
             rows = cursor.fetchall()
             rowcount = cursor.rowcount
+            logger.debug(f'Found {rowcount} metadata files to proccess')
             contents = []
             for row in rows:
                 contents.append(
@@ -360,24 +461,35 @@ def select_object(key):
         compression = "NONE"
     try:
         content = ""
-        resp = s3c.select_object_content(
-            Bucket=settings.OPENAQ_ETL_BUCKET,
-            Key=key,
-            ExpressionType="SQL",
-            Expression="""
-                SELECT
-                *
-                FROM s3object
-                """,
-            InputSerialization={
-                "CSV": {"FieldDelimiter": ","},
-                "CompressionType": compression,
-            },
-            OutputSerialization={"CSV": {}},
-        )
-        for event in resp["Payload"]:
-            if "Records" in event:
-                content += event["Records"]["Payload"].decode("utf-8")
+        if FETCH_BUCKET is not None and FETCH_BUCKET != "":
+            logger.debug(
+                f'attempting to load station from bucket {FETCH_BUCKET}/{key}'
+            )
+            resp = s3c.select_object_content(
+                Bucket=settings.OPENAQ_ETL_BUCKET,
+                Key=key,
+                ExpressionType="SQL",
+                Expression="""
+                    SELECT
+                    *
+                    FROM s3object
+                    """,
+                InputSerialization={
+                    "CSV": {"FieldDelimiter": ","},
+                    "CompressionType": compression,
+                },
+                OutputSerialization={"CSV": {}},
+            )
+            for event in resp["Payload"]:
+                if "Records" in event:
+                    content += event["Records"]["Payload"].decode("utf-8")
+        else:
+            logger.debug(f'attempting to load measurements locally {key}')
+            if compression == "GZIP":
+                with gzip.open(key, 'rt') as f:
+                    for line in f:
+                        content += line
+
     except Exception as e:
         submit_file_error(key, e)
     return content
@@ -454,10 +566,12 @@ def submit_file_error(key, e):
             ),
             (f"ERROR: {e}", key),
 
+
 def to_tsv(row):
     tsv = "\t".join(map(clean_csv_value, row)) + "\n"
     return tsv
     return ""
+
 
 def load_measurements_file(fetchlogs_id: int):
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
@@ -493,7 +607,7 @@ def load_measurements_db(limit=250, ascending: bool = False):
         , key
         , last_modified
         FROM fetchlogs
-        WHERE key~E'^lcs-etl-pipeline/measures/.*\\.csv'
+        WHERE key~*'/measures/.*\\.csv'
         AND completed_datetime is null
         ORDER BY last_modified {order} nulls last
         LIMIT %s
@@ -532,9 +646,8 @@ def load_measurements(rows):
             with connection.cursor() as cursor:
 
                 cursor.execute(get_query("lcs_meas_staging.sql"))
-                start = time()
                 write_csv(
-                    cursor, new, "keys", ["key",],
+                    cursor, new, "keys", ["key"],
                 )
 
                 iterator = StringIteratorIO(
@@ -569,10 +682,6 @@ def load_measurements(rows):
                 for notice in connection.notices:
                     print(notice)
 
-                #irows = cursor.rowcount
-                #logger.info("load_measurements:insert: %s rows; %0.4f seconds", irows, time() - start)
-                #status = cursor.statusmessage
-                #logger.debug(f"INGEST Rows: {irows} Status: {status}")
                 cursor.execute(
                     """
                     INSERT INTO fetchlogs(
