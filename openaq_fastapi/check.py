@@ -5,18 +5,36 @@ import json
 
 logger = logging.getLogger(__name__)
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--id', type=int, required=False)
-parser.add_argument('--env', type=str, required=False)
-parser.add_argument('--profile', type=str, required=False)
-parser.add_argument('--n', type=int, required=False, default=30)
-parser.add_argument('--fix', action="store_true")
-parser.add_argument('--load', action="store_true")
-parser.add_argument('--dryrun', action="store_true")
-parser.add_argument('--debug', action="store_true")
-parser.add_argument('--summary', action="store_true")
-parser.add_argument('--rejects', action="store_true")
-parser.add_argument('--resubmit', action="store_true")
+parser = argparse.ArgumentParser(
+    description="""
+    Do some basic checking against the database.
+    Requires an env file with the basic database variables,
+    the same that you would need to deploy.
+    """)
+parser.add_argument('--id', type=int, required=False,
+                    help='The fetchlogs_id value')
+parser.add_argument('--env', type=str, required=False,
+                    help='The dot env file to use')
+parser.add_argument('--profile', type=str, required=False,
+                    help='The AWS profile to use')
+parser.add_argument('--n', type=int, required=False, default=30,
+                    help="""Either the number of entries to list
+                    (sorted by date) or the number of days to go
+                    back if using the summary or rejects arguments""")
+parser.add_argument('--fix', action="store_true",
+                    help='Automatically attempt to fix the problem')
+parser.add_argument('--load', action="store_true",
+                    help='Attempt to load the file manually, outside the queue')
+parser.add_argument('--dryrun', action="store_true",
+                    help='Check to see if its fixable but dont actually save it')
+parser.add_argument('--debug', action="store_true",
+                    help='Output at DEBUG level')
+parser.add_argument('--summary', action="store_true",
+                    help='Summarize the fetchlog errors by type')
+parser.add_argument('--rejects', action="store_true",
+                    help='Show summary of the rejects errors')
+parser.add_argument('--resubmit', action="store_true",
+                    help='Mark the fetchlogs file for resubmittal')
 args = parser.parse_args()
 
 if 'DOTENV' not in os.environ.keys() and args.env is not None:
