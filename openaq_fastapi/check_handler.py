@@ -12,6 +12,7 @@ parser.add_argument('--profile', type=str, required=False)
 parser.add_argument('--dir', type=str, required=False)
 parser.add_argument('--dryrun', action="store_true")
 parser.add_argument('--debug', action="store_true")
+parser.add_argument('--local', action="store_true")
 args = parser.parse_args()
 
 if 'DOTENV' not in os.environ.keys() and args.env is not None:
@@ -26,6 +27,11 @@ if args.dryrun:
 if args.debug:
     os.environ['LOG_LEVEL'] = 'DEBUG'
 
+# if the local flag is on remove the fetch bucket reference
+if args.local:
+    os.environ['OPENAQ_ETL_BUCKET'] = ''
+    os.environ['OPENAQ_FETCH_BUCKET'] = ''
+
 # needs to be done AFTER the parser
 from openaq_fastapi.ingest.handler import cronhandler
 from openaq_fastapi.ingest.utils import (
@@ -36,7 +42,7 @@ from openaq_fastapi.settings import settings
 logger = logging.getLogger(__name__)
 
 logger.info(f'Working with {settings.DATABASE_URL}')
-logger.debug(settings)
+
 
 if args.dir is not None:
     logger.info(f'Adding files to fetchlogs from {args.dir}')

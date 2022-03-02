@@ -82,7 +82,7 @@ WITH r AS (
 INSERT INTO rejects (t, tbl,r,fetchlogs_id)
 SELECT now()
 , 'ms_sensornodes-missing-nodes-id'
-, to_jsonb(ms_sensornodes)
+, jsonb_build_object('source_name', source_name, 'ingest_id', ingest_id)
 , fetchlogs_id
 FROM ms_sensornodes
 WHERE sensor_nodes_id IS NULL
@@ -108,7 +108,7 @@ WITH r AS (
 INSERT INTO rejects (t,tbl,r,fetchlogs_id)
 SELECT now()
 , 'ms_sensorsystems-missing-nodes-id'
-,  to_jsonb(ms_sensorsystems)
+, jsonb_build_object('sensor_nodes_id', sensor_nodes_id, 'ingest_id', ingest_id)
 ,  fetchlogs_id
 FROM ms_sensorsystems
 WHERE sensor_nodes_id IS NULL
@@ -144,7 +144,7 @@ INSERT INTO rejects (t, tbl,r,fetchlogs_id)
 SELECT
   now()
 , 'ms_sensorsystems-missing-systems-id'
-, to_jsonb(ms_sensorsystems)
+, jsonb_build_object('sensor_nodes_id', sensor_nodes_id, 'ingest_id', ingest_id)
 , fetchlogs_id
 FROM ms_sensorsystems
 WHERE sensor_systems_id IS NULL
@@ -162,7 +162,7 @@ INSERT INTO rejects (t,tbl,r,fetchlogs_id)
 SELECT
   now()
 , 'ms_sensors-missing-systems-id'
-, to_jsonb(ms_sensors)
+, jsonb_build_object('ingest_sensor_systems_id', ingest_sensor_systems_id)
 , fetchlogs_id
 FROM ms_sensors
 WHERE sensor_systems_id IS NULL
@@ -209,7 +209,7 @@ INSERT INTO rejects (t, tbl,r,fetchlogs_id)
 SELECT
  now()
 , 'ms_sensors-missing-measurands-id'
-, to_jsonb(ms_sensors)
+, jsonb_build_object('measurand', measurand, 'units', units)
 , fetchlogs_id
 FROM ms_sensors
 WHERE measurands_id IS NULL
@@ -252,7 +252,7 @@ INSERT INTO rejects (t,tbl,r,fetchlogs_id)
 SELECT
   now()
   , 'ms_sensors-missing-sensors-id'
-  , to_jsonb(ms_sensors)
+  , jsonb_build_object('sensor_systems_id', sensor_systems_id, 'ingest_id', ingest_id)
   , fetchlogs_id
 FROM ms_sensors
 WHERE sensors_id IS NULL

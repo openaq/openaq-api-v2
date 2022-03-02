@@ -25,6 +25,8 @@ class Settings(BaseSettings):
         parent = Path(__file__).resolve().parent.parent.parent
         if 'DOTENV' in environ:
             env_file = Path.joinpath(parent, environ['DOTENV'])
+        elif 'ENV' in environ:
+            env_file = Path.joinpath(parent, f".env.{environ['ENV']}")
         else:
             env_file = Path.joinpath(parent, ".env")
 

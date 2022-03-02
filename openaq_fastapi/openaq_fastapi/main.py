@@ -1,5 +1,6 @@
 import datetime
 import logging
+
 import time
 from typing import Any, List
 
@@ -28,10 +29,19 @@ from openaq_fastapi.routers.parameters import router as parameters_router
 from openaq_fastapi.routers.projects import router as projects_router
 from openaq_fastapi.routers.sources import router as sources_router
 from openaq_fastapi.routers.summary import router as summary_router
+from openaq_fastapi.routers.versions import router as versions_router
+
 from openaq_fastapi.settings import settings
 
-logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
+logging.basicConfig(
+    format='[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s',
+    level=settings.LOG_LEVEL.upper(),
+    force=True,
+)
+
+print(settings.LOG_LEVEL)
+
+logger = logging.getLogger(__name__)
 
 
 def default(obj):
@@ -114,17 +124,18 @@ async def startup_event():
     Application startup:
     register the database
     """
-    logger.info(f"Connecting to {settings.DATABASE_URL}")
+    logger.debug(f"Connecting to {settings.DATABASE_URL}")
     app.state.pool = await db_pool(None)
-    logger.info("Connection established")
+    logger.debug("Connection established")
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Application shutdown: de-register the database connection."""
-    logger.info("Closing connection to database")
+    logger.debug("Closing connection to database")
     await app.state.pool.close()
-    logger.info("Connection closed")
+    app.state.pool = None
+    logger.debug("Connection closed")
 
 
 @app.get("/ping")
@@ -157,6 +168,7 @@ app.include_router(sources_router)
 app.include_router(parameters_router)
 app.include_router(manufacturers_router)
 app.include_router(summary_router)
+app.include_router(versions_router)
 
 handler = Mangum(app)
 

@@ -199,6 +199,15 @@ class LCSData:
                     WHERE fetchlogs_id IN (SELECT fetchlogs_id FROM keys)
                     """
                 )
+
+                cursor.execute(
+                    """
+                    DELETE
+                    FROM rejects
+                    WHERE fetchlogs_id IN (SELECT fetchlogs_id FROM keys)
+                    """
+                )
+
                 connection.commit()
                 write_csv(
                     cursor,
@@ -254,7 +263,11 @@ class LCSData:
                 )
 
                 connection.commit()
-                logger.info("load_data: files: %s; time: %0.4f", len(self.keys), time() - start_time)
+                logger.info(
+                    "load_data: files: %s; time: %0.4f",
+                    len(self.keys),
+                    time() - start_time
+                )
                 for notice in connection.notices:
                     logger.debug(notice)
 
@@ -342,12 +355,14 @@ def load_versions_db(limit=250, ascending: bool = False):
                     """
                     UPDATE fetchlogs
                     SET loaded_datetime = clock_timestamp()
+                    , last_message = null
                     WHERE key~*'/versions/.*\\.json'
                     AND completed_datetime is null
-                    RETURNING key, last_modified
+                    RETURNING key, last_modified, fetchlogs_id
                     """
                 )
                 rows = cursor.fetchall()
+                n = len(rows)
                 versions = []
                 for row in rows:
                     logger.debug(f"{row}")
@@ -368,12 +383,14 @@ def load_versions_db(limit=250, ascending: bool = False):
                         elif key not in ["merged"]:
                             metadata[key] = value
                     version["metadata"] = orjson.dumps(metadata).decode()
+                    version["fetchlogs_id"] = row[2]
                     versions.append(version)
 
                 # create a temporary table for matching
                 cursor.execute(
                     """
-                    CREATE TABLE IF NOT EXISTS ms_versions (
+                    CREATE TEMP TABLE IF NOT EXISTS ms_versions (
+                    fetchlogs_id int,
                     sensor_id text UNIQUE,
                     parent_sensor_id text,
                     life_cycle_id text,
@@ -395,6 +412,7 @@ def load_versions_db(limit=250, ascending: bool = False):
                     versions,
                     "ms_versions",
                     [
+                        "fetchlogs_id",
                         "sensor_id",
                         "parent_sensor_id",
                         "version_id",
@@ -404,13 +422,18 @@ def load_versions_db(limit=250, ascending: bool = False):
                         "metadata",
                     ],
                 )
+
                 # now process that version data as best we can
-                cursor.execute(get_query("lcs_ingest_versions.sql"))
+                try:
+                    cursor.execute(get_query("lcs_ingest_versions.sql"))
+                except Exception as e:
+                    print(e)
+
                 # now add each of those to the database
                 for notice in connection.notices:
                     logger.debug(notice)
 
-                return len(rows)
+                return n
     except Exception as e:
         logger.debug(f"Failed to ingest versions: {e}")
 

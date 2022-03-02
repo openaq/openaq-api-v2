@@ -143,8 +143,7 @@ async def projects_get(
                 --rollups
                 sensor_stats
                 LEFT JOIN groups_sensors using (sensors_id)
-                LEFT JOIN groups_view g
-                USING (groups_id, measurands_id)
+                LEFT JOIN groups_view g USING (groups_id, measurands_id)
             WHERE
                 g.type='source'
                 AND {projects.where()}

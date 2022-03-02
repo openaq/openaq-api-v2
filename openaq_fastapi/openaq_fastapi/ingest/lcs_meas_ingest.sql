@@ -33,7 +33,7 @@ INSERT INTO rejects (t,tbl,r,fetchlogs_id)
 SELECT
     current_timestamp
     , 'meas-missing-sensors-id'
-    , to_jsonb(meas)
+    , jsonb_build_object('sensors_id', sensors_id, 'ingest_id', ingest_id)
     , fetchlogs_id
 FROM meas
 WHERE sensors_id IS NULL
@@ -78,27 +78,27 @@ FROM m;
 -- Update the export queue/logs to export these records
 -- wrap it in a block just in case the database does not have this module installed
 -- we subtract the second because the data is assumed to be time ending
-WITH e AS (
-INSERT INTO open_data_export_logs (sensor_nodes_id, day, records, measurands, modified_on)
-SELECT sn.sensor_nodes_id
-, ((m.datetime - '1sec'::interval) AT TIME ZONE (COALESCE(sn.metadata->>'timezone', 'UTC'))::text)::date as day
-, COUNT(1)
-, COUNT(DISTINCT p.measurands_id)
-, MAX(now())
-FROM meas m
-JOIN sensors s ON (m.sensors_id = s.sensors_id)
-JOIN measurands p ON (s.measurands_id = p.measurands_id)
-JOIN sensor_systems ss ON (s.sensor_systems_id = ss.sensor_systems_id)
-JOIN sensor_nodes sn ON (ss.sensor_nodes_id = sn.sensor_nodes_id)
-GROUP BY sn.sensor_nodes_id
-, ((m.datetime - '1sec'::interval) AT TIME ZONE (COALESCE(sn.metadata->>'timezone', 'UTC'))::text)::date
-ON CONFLICT (sensor_nodes_id, day) DO UPDATE
-SET records = EXCLUDED.records
-, measurands = EXCLUDED.measurands
-, modified_on = EXCLUDED.modified_on
-RETURNING 1)
-SELECT COUNT(1) INTO __exported_days
-FROM e;
+-- WITH e AS (
+-- INSERT INTO open_data_export_logs (sensor_nodes_id, day, records, measurands, modified_on)
+-- SELECT sn.sensor_nodes_id
+-- , ((m.datetime - '1sec'::interval) AT TIME ZONE (COALESCE(sn.metadata->>'timezone', 'UTC'))::text)::date as day
+-- , COUNT(1)
+-- , COUNT(DISTINCT p.measurands_id)
+-- , MAX(now())
+-- FROM meas m
+-- JOIN sensors s ON (m.sensors_id = s.sensors_id)
+-- JOIN measurands p ON (s.measurands_id = p.measurands_id)
+-- JOIN sensor_systems ss ON (s.sensor_systems_id = ss.sensor_systems_id)
+-- JOIN sensor_nodes sn ON (ss.sensor_nodes_id = sn.sensor_nodes_id)
+-- GROUP BY sn.sensor_nodes_id
+-- , ((m.datetime - '1sec'::interval) AT TIME ZONE (COALESCE(sn.metadata->>'timezone', 'UTC'))::text)::date
+-- ON CONFLICT (sensor_nodes_id, day) DO UPDATE
+-- SET records = EXCLUDED.records
+-- , measurands = EXCLUDED.measurands
+-- , modified_on = EXCLUDED.modified_on
+-- RETURNING 1)
+-- SELECT COUNT(1) INTO __exported_days
+-- FROM e;
 
 RAISE NOTICE 'inserted-measurements: %, rejected-measurements: %, exported-sensor-days: %, process-time-ms: %, source: lcs'
       , __inserted_measurements

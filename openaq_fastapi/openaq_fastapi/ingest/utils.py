@@ -183,7 +183,7 @@ def get_object(
         else:
             text = body
     else:
-        logger.info('attempting to load file locally {key}')
+        logger.debug('attempting to load file locally {key}')
         if str.endswith(key, ".gz"):
             with gzip.open(key, 'rt') as f:
                 for line in f:

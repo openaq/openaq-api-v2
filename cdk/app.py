@@ -12,7 +12,9 @@ from aws_cdk import (
     Tags,
     aws_events,
     aws_events_targets,
+    aws_logs as _logs,
 )
+from aws_cdk.aws_apigatewayv2 import CfnStage
 from aws_cdk.aws_apigatewayv2_alpha import HttpApi, HttpMethod
 from aws_cdk.aws_apigatewayv2_integrations_alpha import HttpLambdaIntegration
 from constructs import Construct
@@ -38,7 +40,6 @@ def dictstr(item):
 
 
 env = dict(map(dictstr, settings.dict().items()))
-print(env)
 
 # create package using docker
 client = docker.from_env()
@@ -55,16 +56,6 @@ client.containers.run(
     volumes={str(code_dir): {"bind": "/local/", "mode": "rw"}},
     user=0,
 )
-
-# stagingpackage = aws_lambda.Code.from_asset(
-#     str(pathlib.Path.joinpath(code_dir, "package.zip"))
-# )
-# prodpackage = aws_lambda.Code.from_asset(
-#     str(pathlib.Path.joinpath(code_dir, "package.zip"))
-# )
-# ingestpackage = aws_lambda.Code.asset(
-#     str(pathlib.Path.joinpath(code_dir, "package.zip"))
-# )
 
 
 class LambdaApiStack(Stack):
@@ -96,6 +87,7 @@ class LambdaApiStack(Stack):
         api = HttpApi(
             self,
             f"{id}-endpoint",
+            create_default_stage=False,
             default_integration=HttpLambdaIntegration(
                 "ApiIntegration",
                 openaq_api,
@@ -116,7 +108,25 @@ class LambdaApiStack(Stack):
             },
         )
 
-        CfnOutput(self, "Endpoint", value=api.url)
+        log = _logs.LogGroup(
+            self,
+            f"{id}-http-gateway-log",
+        )
+
+        CfnStage(
+            self,
+            f"{id}-stage",
+            api_id=api.http_api_id,
+            stage_name="$default",
+            auto_deploy=True,
+            access_log_settings=CfnStage.AccessLogSettingsProperty(
+                destination_arn=log.log_group_arn,
+                format='{ "requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","routeKey":"$context.routeKey", "status":"$context.status","protocol":"$context.protocol", "responseLength":"$context.responseLength", "responseLatency": $context.responseLatency, "path": "$context.path"}',
+            )
+        )
+
+        print(api)
+        #CfnOutput(self, "Endpoint", value=api.url)
 
 
 class LambdaIngestStack(Stack):
@@ -163,19 +173,20 @@ class LambdaIngestStack(Stack):
 
 
 app = aws_cdk.App()
-print(f"openaq-lcs-api{settings.OPENAQ_ENV}")
+
 staging = LambdaApiStack(app, "openaq-lcs-apistaging")
 prod = LambdaApiStack(app, "openaq-lcs-api")
 
+api = LambdaApiStack(
+    app,
+    f"openaq-api-{settings.OPENAQ_ENV}",
+)
+Tags.of(api).add("Project", settings.OPENAQ_ENV)
+
 ingest = LambdaIngestStack(
     app,
-    f"openaq-lcs-ingest-{settings.OPENAQ_ENV}",
+    f"openaq-ingest-{settings.OPENAQ_ENV}",
 )
+Tags.of(ingest).add("Project", settings.OPENAQ_ENV)
 
-Tags.of(staging).add("devseed", "true")
-Tags.of(staging).add("lcs", "true")
-Tags.of(ingest).add("devseed", "true")
-Tags.of(ingest).add("lcs", "true")
-Tags.of(prod).add("devseed", "true")
-Tags.of(prod).add("lcs", "true")
 app.synth()
