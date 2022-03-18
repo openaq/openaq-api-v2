@@ -1,5 +1,4 @@
 import pathlib
-from pathlib import Path
 
 import docker
 import aws_cdk
@@ -8,7 +7,6 @@ from aws_cdk import (
     aws_s3,
     Stack,
     Duration,
-    CfnOutput,
     Tags,
     aws_events,
     aws_events_targets,
@@ -18,6 +16,9 @@ from aws_cdk.aws_apigatewayv2 import CfnStage
 from aws_cdk.aws_apigatewayv2_alpha import HttpApi, HttpMethod
 from aws_cdk.aws_apigatewayv2_integrations_alpha import HttpLambdaIntegration
 from constructs import Construct
+
+# Stacks
+from rollup_stack import RollupStack
 
 # this is the only way that I can see to allow us to have
 # one settings file and import it from there. I would recommend
@@ -172,6 +173,8 @@ class LambdaIngestStack(Stack):
         openaq_fetch_bucket.grant_read(ingest_function)
 
 
+
+
 app = aws_cdk.App()
 
 staging = LambdaApiStack(app, "openaq-lcs-apistaging")
@@ -186,6 +189,16 @@ Tags.of(api).add("Project", settings.OPENAQ_ENV)
 ingest = LambdaIngestStack(
     app,
     f"openaq-ingest-{settings.OPENAQ_ENV}",
+)
+Tags.of(ingest).add("Project", settings.OPENAQ_ENV)
+
+
+rollup = RollupStack(
+    app,
+    f"openaq-rollup-{settings.OPENAQ_ENV}",
+    package_directory=code_dir,
+    env_variables=env,
+    lambda_timeout=900,
 )
 Tags.of(ingest).add("Project", settings.OPENAQ_ENV)
 

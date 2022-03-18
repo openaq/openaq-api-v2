@@ -7,10 +7,22 @@ from .lcs import (
     load_metadata_db,
     load_versions_db,
 )
+from .utils import (
+    calculate_hourly_rollup_day,
+    calculate_hourly_rollup_hour,
+    calculate_hourly_rollup_stale,
+    calculate_rollup_daily_stats,
+    get_pending_rollup_days,
+)
 from .fetch import load_db
 from time import time
 
-from datetime import datetime, timezone
+from datetime import (
+    date,
+    datetime,
+    timezone,
+    timedelta,
+)
 
 s3c = boto3.client("s3")
 
@@ -62,10 +74,79 @@ def handler(event, context):
                         logger.info(f"ingest-handler: {row}")
         except Exception as e:
             logger.warning(f"Exception: {e}")
+    elif event.get("method"):
+        method_handler(event, context)
     elif event.get("source") and event["source"] == "aws.events":
         cronhandler(event, context)
     else:
         logger.warning(f"ingest-handler: nothing to do: {event}")
+
+
+def rollup_handler(event, context):
+    """
+    This method is in place of custom events
+    """
+    minutes = 6  # could also be pulled from context
+    # now = datetime.strptime(event.get('hour'), '%Y-%m-%d %H:%M:%S')
+    now = datetime.now()
+    # run the hourly method at around the 30 min mark
+    hourly_time = now.replace(minute=30, second=0)
+    # run the daily at around 45 minutes after midnight
+    daily_time = now.replace(hour=0, minute=45, second=0)
+    # how many pending days to do
+    n_days = 1
+    # should we run our hourly method
+    if hourly_time >= (now - timedelta(minutes=minutes)) and hourly_time < now:
+        method_handler({
+            "method": "hourly_rollup",
+            "hour": hourly_time,
+        })
+    # is it time to run our daily rollup?
+    if daily_time >= (now - timedelta(minutes=minutes)) and daily_time < now:
+        n_days = 0
+        method_handler({
+            "method": "daily_rollup",
+            "day": daily_time,
+        })
+    # now run the cleanup method with the time left
+    if n_days > 0:
+        days = get_pending_rollup_days(n_days)
+        for row in days:
+            start_time = time()
+            day = row[0]
+            n = calculate_hourly_rollup_day(day)
+            calculate_rollup_daily_stats(day)
+            logger.info('Updated %s with %s sensor hours in %0.4f seconds',
+                        day.strftime("%Y-%m-%d"), n, time() - start_time)
+
+
+def method_handler(event, context=None):
+    method = event.get("method")
+    start_time = time()
+    if method == "hourly_rollup":
+        hour = event.get('hour')
+        if hour is None:
+            # sql function will truncate to hour
+            # and hour ending would make it the last hour
+            hour = datetime.now()
+        n = calculate_hourly_rollup_hour(hour)
+    elif method == "daily_rollup":
+        day = event.get('day')
+        if day is None:
+            day = date.today() - timedelta(days=1)
+        n = calculate_hourly_rollup_day(day)
+        # update the stats/tracking table
+        print(n)
+        if n >= 23:
+            calculate_rollup_daily_stats(day)
+    elif method == "stale_rollup":
+        n = calculate_hourly_rollup_stale()
+    else:
+        logger.warn(f'No method provided: {event}')
+        return
+
+    logger.info('Updated %s sensor hours with %s in %0.4f seconds',
+                n, method, time() - start_time)
 
 
 def cronhandler(event, context):

@@ -713,3 +713,223 @@ WITH t AS (
     jsonb_strip_nulls(to_jsonb(t)) as json FROM t
     LIMIT 100
     OFFSET 0;
+
+
+
+-- testing the rollups
+
+
+\timing
+
+
+
+DROP TABLE IF EXISTS hourly_by_sensor;
+CREATE TEMP TABLE hourly_by_sensor AS
+ SELECT
+ sensors_id
+ , date_trunc('hour', datetime) as datetime
+ , MIN(datetime) as first_datetime
+ , MAX(datetime) as last_datetime
+ , AVG(value) as value_avg
+ , COUNT(1) as value_count
+ , MIN(value) as value_min
+ , MAX(value) as value_max
+ , STDDEV(value) as value_sd
+ , PERCENTILE_CONT(0.05) WITHIN GROUP(ORDER BY value) as value_p05
+ , PERCENTILE_CONT(0.5) WITHIN GROUP(ORDER BY value) as value_p50
+ , PERCENTILE_CONT(0.95) WITHIN GROUP(ORDER BY value) as value_p95
+ , current_timestamp as updated_on
+ , current_timestamp as calculated_on
+ FROM measurements
+ WHERE datetime >= (current_date - '5days'::interval)::timestamptz
+ AND datetime <= (current_date  - '4days'::interval)::timestamptz
+ GROUP BY 1,2
+ ;
+
+
+SELECT sensors_id
+, datetime
+, value_count
+, value_avg
+, value_min
+, value_max
+, value_p05
+, value_p50
+, value_p95
+FROM hourly_by_sensor
+WHERE value_count > 10
+ORDER BY value_count DESC
+LIMIT 10;
+
+SELECT COUNT(1) as n
+, pg_size_pretty(pg_total_relation_size('hourly_rollups')) as size
+, pg_size_pretty(pg_total_relation_size('hourly_rollups')/COUNT(1)) as size_row
+FROM hourly_rollups;
+
+SELECT COUNT(DISTINCT sensors_id)
+FROM hourly_by_sensor;
+
+
+SELECT calculate_hourly_rollup('2021-10-10'::timestamptz);
+
+
+SELECT calculate_hourly_rollup(current_date - '5days'::interval);
+SELECT calculate_hourly_rollup(current_date - '5days'::interval, current_date - '4days'::interval);
+SELECT calculate_hourly_rollup(current_date - 10);
+
+SELECT *
+FROM hourly_rollups
+--WHERE value_avg IS NULL
+LIMIT 10;
+
+SELECT AVG(value)
+FROM measurements
+WHERE sensors_id = 40
+AND datetime > '2022-02-26'::date
+AND datetime <= '2022-02-27'::date
+LIMIT 2;
+
+
+SELECT pg_size_pretty(sum(pg_total_relation_size(nmsp_child.nspname::text||'.'||child.relname::text)))
+FROM pg_inherits
+    JOIN pg_class parent            ON pg_inherits.inhparent = parent.oid
+    JOIN pg_class child             ON pg_inherits.inhrelid   = child.oid
+    JOIN pg_namespace nmsp_parent   ON nmsp_parent.oid  = parent.relnamespace
+    JOIN pg_namespace nmsp_child    ON nmsp_child.oid   = child.relnamespace
+WHERE parent.relname='rollups';
+
+
+
+select
+  (total_time / 1000 / 3600) as total_hours,
+  (total_time / 1000) as total_seconds,
+  (total_time / calls) as avg_millis,
+  calls num_calls,
+  query
+from pg_stat_statements
+order by 1 desc limit 10;
+
+
+select
+  (total_time / 1000 / 3600) as total_hours,
+  (total_time / 1000) as total_seconds,
+  (total_time / calls) as avg_millis,
+  calls num_calls,
+  query
+from pg_stat_statements
+order by 3 desc limit 10;
+
+
+select state
+, count(*)
+from pg_stat_activity
+where pid <> pg_backend_pid()
+group by 1
+order by 1;
+
+SELECT pid
+, state
+, user
+, client_addr
+--, query_start
+--, backend_start
+, age(current_timestamp, query_start) as query_age
+, age(current_timestamp, backend_start) as backend_age
+, regexp_replace(substring(query from 0 for 100), E'\n', '', 'g')
+FROM pg_stat_activity
+WHERE state IN ('idle','active')
+AND query_start < current_timestamp
+AND query ~* 'calculate_hourly_rollup'
+ORDER BY query DESC, backend_start
+;
+
+
+SELECT day
+, measurements_count
+, initiated_on
+, age(now(), initiated_on) as age
+, metadata
+FROM daily_stats
+WHERE metadata IS NOT NULL
+AND calculated_on IS NULL
+ORDER BY day DESC
+LIMIT 10;
+
+
+SELECT *
+, age(now(), calculated_on)
+, age(calculated_on, initiated_on)
+FROM daily_stats
+WHERE calculated_on
+IS NOT NULL ORDER BY day DESC;
+
+
+
+
+SELECT pg_terminate_backend(1644);
+SELECT pg_terminate_backend(pid)
+FROM pg_stat_activity
+WHERE query ~* 'calculate_hourly_rollup'
+AND backend_start > current_date;
+
+
+
+
+
+SET statement_timeout = '20min';
+
+
+EXPLAIN (ANALYZE, BUFFERS, SETTINGS)
+WITH data AS (
+SELECT
+  m.sensors_id
+, date_trunc('hour', datetime - '1sec'::interval) + '1hour'::interval as datetime
+, MIN(datetime) as first_datetime
+, MAX(datetime) as last_datetime
+, COUNT(1) as value_count
+, AVG(value) as value_avg
+, STDDEV(value) as value_sd
+, MIN(value) as value_min
+, MAX(value) as value_max
+, PERCENTILE_CONT(0.05) WITHIN GROUP(ORDER BY value) as value_p05
+, PERCENTILE_CONT(0.5) WITHIN GROUP(ORDER BY value) as value_p50
+, PERCENTILE_CONT(0.95) WITHIN GROUP(ORDER BY value) as value_p95
+, current_timestamp as calculated_on
+FROM measurements m
+WHERE datetime > date_trunc('hour', '2022-02-10 00:00'::timestamp)
+AND datetime <= date_trunc('hour', '2022-02-11'::timestamp)
+GROUP BY 1,2
+HAVING COUNT(1) > 0
+)
+SELECT m.*
+, s.measurands_id
+FROM data m
+JOIN sensors s ON (m.sensors_id = s.sensors_id)
+;
+
+
+
+SELECT MAX(datetime)
+, now()
+FROM hourly_rollups;
+
+SELECT COUNT(1)
+FROM hourly_rollups
+WHERE datetime>current_date;
+
+
+select pid,
+       usename,
+       pg_blocking_pids(pid) as blocked_by,
+       query as blocked_query
+from pg_stat_activity
+where cardinality(pg_blocking_pids(pid)) > 0;
+
+
+SELECT *
+FROM daily_stats
+WHERE initiated_on IS NULL
+OR (calculated_on IS NULL
+AND age(now(), initiated_on) > '20min'::interval)
+ORDER BY day DESC
+LIMIT 10;

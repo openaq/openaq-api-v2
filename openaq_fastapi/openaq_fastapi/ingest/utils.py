@@ -3,6 +3,9 @@ import os
 from pathlib import Path
 import logging
 from urllib.parse import unquote_plus
+from datetime import datetime, timedelta
+from time import time
+
 import gzip
 
 import boto3
@@ -69,6 +72,147 @@ def get_query(file, **params):
     if params is not None and len(params) >= 1:
         query = query.format(**params)
     return query
+
+
+def calculate_hourly_rollup_day(day: str):
+    """Calculate a full day of hourly values"""
+    if isinstance(day, str):
+        day = datetime.fromisoformat(day).date()
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SET LOCAL statement_timeout = '900s'"
+            )
+            cursor.execute(
+                """
+                SELECT COALESCE((metadata->'latestHour')::int, -1) + 1
+                FROM daily_stats
+                WHERE day = %s
+                """,
+                (day,),
+            )
+            last_hour = cursor.fetchone()[0]
+            for hr in range(last_hour, 24):
+                dt = datetime.fromisoformat(day.isoformat())
+                dt = dt.replace(hour=hr, minute=0, second=0)+timedelta(hours=1)
+                start_time = time()
+                cursor.execute(
+                    """
+                    SELECT calculate_hourly_rollup(%s) as n
+                    """,
+                    (dt,),
+                )
+                n = cursor.fetchone()[0]
+                logger.info('Updated %s with %s sensor hours in %0.4f seconds',
+                            dt.strftime("%Y-%m-%d %H"), n, time() - start_time)
+                cursor.execute(
+                    """
+                    UPDATE daily_stats
+                    SET metadata = COALESCE(metadata, '{}'::jsonb)
+                    || jsonb_build_object('latestHour', %s)
+                    , measurements_count = measurements_count + %s
+                    WHERE day = %s
+                    RETURNING measurements_count
+                    """,
+                    (hr, n, day,),
+                )
+                connection.commit()
+                n = cursor.fetchone()[0]
+                last_hour = hr
+            # return 23 or higher to mark as done
+            return last_hour
+
+
+def calculate_hourly_rollup_hour(hour: str):
+    """Get the fetch logs based on fetchlogs_id"""
+    if isinstance(hour, str):
+        hour = datetime.fromisoformat(hour)
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT calculate_hourly_rollup(%s) as n
+                """,
+                (hour,),
+            )
+            n = cursor.fetchone()
+            return n[0]
+
+
+def get_pending_rollup_days(limit: int = 1):
+    """Get the fetch logs based on fetchlogs_id"""
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                WITH days AS (
+                 SELECT day
+                 FROM daily_stats
+                 WHERE initiated_on IS NULL
+                 OR (calculated_on IS NULL
+                 AND age(now(), initiated_on) > '20min'::interval)
+                 ORDER BY day DESC
+                 LIMIT %s
+                ), updates AS (
+                UPDATE daily_stats
+                SET initiated_on = current_timestamp
+                FROM days
+                WHERE daily_stats.day = days.day)
+                SELECT day
+                FROM days
+                """,
+                (limit,),
+            )
+            days = cursor.fetchall()
+            return days
+
+
+def calculate_hourly_rollup_stale(limit: int = 500):
+    """Get the fetch logs based on fetchlogs_id"""
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SET LOCAL statement_timeout = '900s'"
+            )
+            cursor.execute(
+                """
+                WITH updates AS (
+                SELECT calculate_hourly_rollup(sensors_id, datetime) as n
+                FROM hourly_rollups
+                WHERE updated_on > calculated_on
+                LIMIT %s)
+                SELECT COALESCE(SUM(n), 0)::bigint as count
+                FROM updates;
+                """,
+                (limit,),
+            )
+            n = cursor.fetchone()
+            return n[0]
+
+
+def calculate_rollup_daily_stats(day: str):
+    """mark a day as finished"""
+    if isinstance(day, str):
+        day = datetime.fromisoformat(day).date()
+    with psycopg2.connect(
+            settings.DATABASE_WRITE_URL,
+            connect_timeout=15
+    ) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT calculate_rollup_daily_stats(%s) as n
+                """,
+                (day,),
+            )
+            n = cursor.fetchone()
+            print(n)
+            return n[0]
 
 
 def get_logs_from_ids(ids):
@@ -192,7 +336,6 @@ def get_object(
             text = Path(key).read_text()
 
     return text
-
 
 
 def put_object(
