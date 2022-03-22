@@ -844,6 +844,23 @@ ORDER BY query DESC, backend_start
 ;
 
 
+SELECT pid
+, state
+, user
+, client_addr
+--, query_start
+--, backend_start
+, age(current_timestamp, query_start) as query_age
+, age(current_timestamp, backend_start) as backend_age
+, regexp_replace(substring(query from 0 for 100), E'\n', '', 'g')
+FROM pg_stat_activity
+WHERE state IN ('idle','active')
+AND query_start < current_timestamp
+--AND query ~* 'calculate_hourly_rollup'
+ORDER BY query DESC, backend_start
+;
+
+
 SELECT day
 , measurements_count
 , initiated_on
