@@ -18,8 +18,7 @@ from pydantic import (
     root_validator,
 )
 
-logger = logging.getLogger("base")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger("models")
 
 maxint = 2147483647
 

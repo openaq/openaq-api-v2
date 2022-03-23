@@ -8,13 +8,13 @@ from aiocache import SimpleMemoryCache, cached
 from aiocache.plugins import HitMissRatioPlugin, TimingPlugin
 from buildpg import render
 from fastapi import HTTPException, Request
+from asyncio.exceptions import TimeoutError
 
 from openaq_fastapi.settings import settings
 
 from .models.responses import Meta, OpenAQResult
 
-logger = logging.getLogger("base")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger('db')
 
 
 def default(obj):
@@ -83,8 +83,13 @@ class DB:
                 raise ValueError(f"{e}")
             except asyncpg.exceptions.CharacterNotInRepertoireError as e:
                 raise ValueError(f"{e}")
+            except TimeoutError:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Connection timed out",
+                )
             except Exception as e:
-                logger.debug(f"Database Error: {e}")
+                logger.error(f"Database Error: {e}")
                 if str(e).startswith("ST_TileEnvelope"):
                     raise HTTPException(status_code=422, detail=f"{e}")
                 raise HTTPException(status_code=500, detail=f"{e}")

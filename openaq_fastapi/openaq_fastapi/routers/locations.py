@@ -2,7 +2,6 @@ import logging
 from typing import List
 
 import jq
-import orjson
 from fastapi import APIRouter, Depends, Query
 from pydantic.typing import Optional
 from enum import Enum
@@ -21,10 +20,8 @@ from ..models.queries import (
 )
 
 from openaq_fastapi.models.responses import OpenAQResult, converter
-from starlette.responses import JSONResponse
 
 logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
 
 router = APIRouter()
 
@@ -244,8 +241,6 @@ async def locations_get(
 
         ;
         """
-
-    logger.debug(f"**** {qparams}")
 
     output = await db.fetchOpenAQResult(q, qparams)
 

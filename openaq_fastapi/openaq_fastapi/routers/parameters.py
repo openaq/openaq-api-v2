@@ -13,8 +13,7 @@ from openaq_fastapi.models.responses import (
     OpenAQParametersResult, converter
 )
 import jq
-logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger("parameters")
 
 router = APIRouter()
 
