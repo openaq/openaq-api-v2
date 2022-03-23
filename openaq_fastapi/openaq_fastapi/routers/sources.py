@@ -16,8 +16,7 @@ from openaq_fastapi.models.responses import (
     OpenAQResult,
 )
 
-logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger("sources")
 
 router = APIRouter()
 

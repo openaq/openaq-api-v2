@@ -4,13 +4,11 @@ from typing import List, Optional, Union
 from pydantic import AnyUrl
 from pydantic.main import BaseModel
 from pydantic.typing import Any
-import jq
 import orjson
 from starlette.responses import JSONResponse
 import logging
 
-logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger("responses")
 
 
 def converter(meta, data, jq):

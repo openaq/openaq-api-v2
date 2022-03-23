@@ -8,8 +8,7 @@ import jq
 from ..db import DB
 from ..models.queries import APIBase, City, Country
 
-logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger("cities")
 
 router = APIRouter()
 
