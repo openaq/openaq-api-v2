@@ -39,8 +39,14 @@ The easiest way to run the API locally is to use uvicorn. Make sure that you hav
 ```
 # Run using the default .env file
 uvicorn main:app --reload
+```
+You can also specify which `.env` file to load by passing the `ENV` variable. This should not include the `.env.` prefix
+```
 # Run our production environment
 ENV=production uvicorn main:app --reload
+```
+And you can always override variables by setting them inline. This is handy for when you want to change something for the purpose of debugging.
+```
 # Run the staging environment and add verbose logging
 ENV=staging LOG_LEVEL=debug uvicorn main:app --reload
 ```
