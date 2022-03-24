@@ -224,7 +224,7 @@ async def measurements_get(
             {where}
         """
     rows = await db.fetch(q, params)
-    logger.debug(f"{rows}")
+
     if rows is None:
         return OpenAQResult()
     try:
