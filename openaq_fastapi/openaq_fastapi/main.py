@@ -56,28 +56,28 @@ app = FastAPI(
     description="API for OpenAQ LCS",
     default_response_class=ORJSONResponse,
     docs_url="/",
-    servers=[{"url": "/"}],
+    # servers=[{"url": "/"}],
 )
 
 
-def custom_openapi():
-    logger.debug(f"servers -- {app.state.servers}")
-    if app.state.servers is not None and app.openapi_schema:
-        return app.openapi_schema
-    logger.debug(f"Creating OpenApi Docs with server {app.state.servers}")
-    openapi_schema = get_openapi(
-        title=app.title,
-        description=app.description,
-        servers=app.state.servers,
-        version="2.0.0",
-        routes=app.routes,
-    )
-    # openapi_schema['info']['servers']=app.state.servers
-    app.openapi_schema = openapi_schema
-    return app.openapi_schema
+# def custom_openapi():
+#     logger.debug(f"servers -- {app.state.servers}")
+#     if app.state.servers is not None and app.openapi_schema:
+#         return app.openapi_schema
+#     logger.debug(f"Creating OpenApi Docs with server {app.state.servers}")
+#     openapi_schema = get_openapi(
+#         title=app.title,
+#         description=app.description,
+#         servers=app.state.servers,
+#         version="2.0.0",
+#         routes=app.routes,
+#     )
+#     # openapi_schema['info']['servers']=app.state.servers
+#     app.openapi_schema = openapi_schema
+#     return app.openapi_schema
 
 
-app.openapi = custom_openapi
+# app.openapi = custom_openapi
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
@@ -90,7 +90,7 @@ app.add_middleware(
 app.add_middleware(StripParametersMiddleware)
 app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
 app.add_middleware(TotalTimeMiddleware)
-app.add_middleware(GetHostMiddleware)
+# app.add_middleware(GetHostMiddleware)
 
 
 class OpenAQValidationResponseDetail(BaseModel):
