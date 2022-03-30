@@ -96,7 +96,6 @@ async def sources_get(
         to_jsonb(t) FROM t;
     """
 
-    print(q)
     output = await db.fetchOpenAQResult(q, qparams)
 
     return output
