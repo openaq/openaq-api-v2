@@ -105,30 +105,32 @@ app = FastAPI(
     description="OpenAQ API - https://docs.openaq.org",
     version="2.0.0",
     default_response_class=ORJSONResponse,
-    terms_of_service="https://github.com/openaq/openaq-info/blob/master/DATA-POLICY.md",
-    docs_url="/docs",
+    docs_url="/",
+    # servers=[{"url": "/"}],
 )
 
 redis_client = None  # initialize for generalize_schema.py
 
-if settings.RATE_LIMITING:
-    logger.debug("Connecting to redis")
-    import redis
+# def custom_openapi():
+#     logger.debug(f"servers -- {app.state.servers}")
+#     if app.state.servers is not None and app.openapi_schema:
+#         return app.openapi_schema
+#     logger.debug(f"Creating OpenApi Docs with server {app.state.servers}")
+#     openapi_schema = get_openapi(
+#         title=app.title,
+#         description=app.description,
+#         servers=app.state.servers,
+#         version="2.0.0",
+#         routes=app.routes,
+#     )
+#     # openapi_schema['info']['servers']=app.state.servers
+#     app.openapi_schema = openapi_schema
+#     return app.openapi_schema
 
-    try:
-        redis_client = redis.RedisCluster(
-            host=settings.REDIS_HOST,
-            port=settings.REDIS_PORT,
-            decode_responses=True,
-            skip_full_coverage_check=True,
-            socket_timeout=5,
-        )
-        app.state.redis_client = redis_client
-    except Exception as e:
-        logging.error(InfrastructureErrorLog(detail=f"failed to connect to redis: {e}"))
-    logger.debug("Redis connected")
 
+# app.openapi = custom_openapi
 
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -142,23 +144,7 @@ app.include_router(auth_router)
 # app.add_middleware(StripParametersMiddleware)
 app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
 app.add_middleware(TotalTimeMiddleware)
-app.add_middleware(LoggingMiddleware)
-
-if settings.RATE_LIMITING is True:
-    if redis_client:
-        app.add_middleware(
-            RateLimiterMiddleWare,
-            redis_client=redis_client,
-            rate_amount=settings.RATE_AMOUNT,
-            rate_amount_key=settings.RATE_AMOUNT_KEY,
-            rate_time=datetime.timedelta(minutes=settings.RATE_TIME),
-        )
-    else:
-        logger.warning(
-            WarnLog(
-                detail="valid redis client not provided but RATE_LIMITING set to TRUE"
-            )
-        )
+# app.add_middleware(GetHostMiddleware)
 
 
 class OpenAQValidationResponseDetail(BaseModel):
