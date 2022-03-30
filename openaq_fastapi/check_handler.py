@@ -77,8 +77,9 @@ if args.method is not None:
     }, {})
 else:
     handler({
-        "pipeline_limit": 10,
-        "realtime_limit": 10,
-        "metadata_limit": 10,
+        "source": "aws.events",
+        "pipeline_limit": 0,
+        "realtime_limit": 0,
+        "metadata_limit": 0,
         "versions_limit": 10,
     }, {})

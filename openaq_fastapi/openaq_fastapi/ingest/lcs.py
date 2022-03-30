@@ -365,7 +365,7 @@ def load_versions_db(limit=250, ascending: bool = False):
                 n = len(rows)
                 versions = []
                 for row in rows:
-                    logger.debug(f"{row}")
+                    logger.debug(f"Processing - {row[0]}")
                     raw = get_object(unquote_plus(row[0]))
                     j = orjson.loads(raw)
                     version = {}
@@ -403,7 +403,7 @@ def load_versions_db(limit=250, ascending: bool = False):
                     measurands_id int,
                     metadata jsonb
                     );
-                    DELETE FROM ms_versions;
+                    --DELETE FROM ms_versions;
                     """
                 )
                 # add the version data into that table

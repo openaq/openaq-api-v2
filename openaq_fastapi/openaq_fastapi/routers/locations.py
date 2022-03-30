@@ -22,7 +22,6 @@ from ..models.queries import (
 from openaq_fastapi.models.responses import OpenAQResult, converter
 
 logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
 
 router = APIRouter()
 

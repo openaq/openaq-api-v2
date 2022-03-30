@@ -2,6 +2,7 @@ import pathlib
 
 from aws_cdk import (
     aws_lambda,
+    aws_s3,
     Stack,
     Duration,
     aws_events,
@@ -10,29 +11,31 @@ from aws_cdk import (
 from constructs import Construct
 
 
-class RollupStack(Stack):
+class IngestStack(Stack):
     def __init__(
         self,
         scope: Construct,
         id: str,
+        fetch_bucket: str,
         package_directory: str,
         env_variables,
         lambda_timeout: int = 900,
         memory_size: int = 1512,
         **kwargs,
     ) -> None:
-        """Lambda plus cronjob to rollup data"""
+        """Lambda plus cronjob to ingest metadata,
+        realtime and pipeline data"""
         super().__init__(scope, id, *kwargs)
 
         package = aws_lambda.Code.from_asset(
             str(pathlib.Path.joinpath(package_directory, "package.zip"))
         )
 
-        rollup_function = aws_lambda.Function(
+        ingest_function = aws_lambda.Function(
             self,
-            f"{id}-rollup-lambda",
+            f"{id}-ingestlambda",
             code=package,
-            handler="openaq_fastapi.ingest.handler.rollup_handler",
+            handler="openaq_fastapi.ingest.handler.handler",
             runtime=aws_lambda.Runtime.PYTHON_3_8,
             allow_public_subnet=True,
             memory_size=memory_size,
@@ -42,9 +45,16 @@ class RollupStack(Stack):
 
         aws_events.Rule(
             self,
-            f"{id}-rollup-hourly-event-rule",
-            schedule=aws_events.Schedule.cron(minute="0/5"),
+            f"{id}-ingest-event-rule",
+            schedule=aws_events.Schedule.cron(minute="0/15"),
             targets=[
-                aws_events_targets.LambdaFunction(rollup_function),
+                aws_events_targets.LambdaFunction(ingest_function),
             ],
         )
+
+        openaq_fetch_bucket = aws_s3.Bucket.from_bucket_name(
+            self,
+            "{id}-OPENAQ-FETCH-BUCKET", fetch_bucket,
+        )
+
+        openaq_fetch_bucket.grant_read(ingest_function)

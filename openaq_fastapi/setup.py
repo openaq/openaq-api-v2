@@ -40,6 +40,7 @@ setup(
         "pytz",
         "dateparser",
         "pyhumps",
+        "ujson",
     ],
     extras_require={
         "dev": [
