@@ -53,6 +53,7 @@ async def sources_get(
 ):
     qparams = sources.params()
 
+    #
     q = f"""
     WITH t AS (
     SELECT
@@ -63,19 +64,19 @@ async def sources_get(
         case when readme is not null then
         '/v2/sources/readmes/' || slug
         else null end as readme,
-        sum(value_count) as count,
-        count(*) as locations,
-        to_char(min(first_datetime),'YYYY-MM-DD') as "firstUpdated",
-        to_char(max(last_datetime), 'YYYY-MM-DD') as "lastUpdated",
-        array_agg(DISTINCT measurand) as parameters
+        --sum(value_count) as count,
+        count(*) as locations
+        --to_char(min(first_datetime),'YYYY-MM-DD') as "firstUpdated",
+        --to_char(max(last_datetime), 'YYYY-MM-DD') as "lastUpdated",
+        --array_agg(DISTINCT measurand) as parameters
     FROM sources
     LEFT JOIN sensor_nodes_sources USING (sources_id)
     LEFT JOIN sensor_systems USING (sensor_nodes_id)
     LEFT JOIN sensors USING (sensor_systems_id)
-    LEFT JOIN rollups USING (sensors_id, measurands_id)
-    LEFT JOIN groups_view USING (groups_id, measurands_id)
-    WHERE rollup='total' AND groups_view.type='node'
-    AND {sources.where()}
+    --LEFT JOIN rollups USING (sensors_id, measurands_id)
+    --LEFT JOIN groups_view USING (groups_id, measurands_id)
+    --WHERE rollup='total' AND groups_view.type='node'
+    WHERE {sources.where()}
     GROUP BY
     1,2,3,4,5
     ORDER BY "{sources.order_by}" {sources.sort}
@@ -86,6 +87,7 @@ async def sources_get(
         to_jsonb(t) FROM t;
     """
 
+    print(q)
     output = await db.fetchOpenAQResult(q, qparams)
 
     return output
