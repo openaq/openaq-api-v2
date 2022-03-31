@@ -95,7 +95,8 @@ class GetHostMiddleware(BaseHTTPMiddleware):
 
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
-    """MiddleWare to set servers url on App with current url."""
+    """Very simple API key middleware. Requires at least one route
+    to include the securty method for the docs to show a form"""
 
     async def dispatch(self, request: Request, call_next):
         api_key = settings.API_KEY
