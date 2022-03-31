@@ -5,19 +5,33 @@ import time
 from typing import Any, List
 
 import orjson
-from fastapi import FastAPI
+from fastapi import (
+    FastAPI,
+    Security,
+    Depends,
+    HTTPException
+    )
+
+from fastapi.security import APIKeyHeader
+from starlette.status import HTTP_403_FORBIDDEN
+
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.openapi.utils import get_openapi
+# from fastapi.openapi.utils import get_openapi
 from mangum import Mangum
 from pydantic import BaseModel, ValidationError
 from starlette.responses import JSONResponse, RedirectResponse
 
 from openaq_fastapi.db import db_pool
-from openaq_fastapi.middleware import (CacheControlMiddleware, GetHostMiddleware,
-                         StripParametersMiddleware, TotalTimeMiddleware)
+from openaq_fastapi.middleware import (
+    CacheControlMiddleware,
+    # GetHostMiddleware,
+    StripParametersMiddleware,
+    TotalTimeMiddleware,
+    APIKeyMiddleware,
+)
 from openaq_fastapi.routers.averages import router as averages_router
 from openaq_fastapi.routers.cities import router as cities_router
 from openaq_fastapi.routers.countries import router as countries_router
@@ -39,9 +53,20 @@ logging.basicConfig(
     force=True,
 )
 
-print(settings.LOG_LEVEL)
-
 logger = logging.getLogger(__name__)
+
+API_KEY_NAME = "access_token"
+
+
+async def get_api_key(
+    api_key_header: str = Security(
+        APIKeyHeader(
+            name=API_KEY_NAME,
+            auto_error=False
+        )
+    ),
+):
+    return api_key_header
 
 
 def default(obj):
@@ -59,31 +84,11 @@ class ORJSONResponse(JSONResponse):
 
 app = FastAPI(
     title="OpenAQ",
-    description="API for OpenAQ LCS",
+    description="API for OpenAQ/CAC Project",
     default_response_class=ORJSONResponse,
     docs_url="/",
-    servers=[{"url": "/"}],
 )
 
-
-def custom_openapi():
-    logger.debug(f"servers -- {app.state.servers}")
-    if app.state.servers is not None and app.openapi_schema:
-        return app.openapi_schema
-    logger.debug(f"Creating OpenApi Docs with server {app.state.servers}")
-    openapi_schema = get_openapi(
-        title=app.title,
-        description=app.description,
-        servers=app.state.servers,
-        version="2.0.0",
-        routes=app.routes,
-    )
-    # openapi_schema['info']['servers']=app.state.servers
-    app.openapi_schema = openapi_schema
-    return app.openapi_schema
-
-
-app.openapi = custom_openapi
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
@@ -96,7 +101,7 @@ app.add_middleware(
 app.add_middleware(StripParametersMiddleware)
 app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
 app.add_middleware(TotalTimeMiddleware)
-app.add_middleware(GetHostMiddleware)
+app.add_middleware(APIKeyMiddleware)
 
 
 class OpenAQValidationResponseDetail(BaseModel):
@@ -139,14 +144,14 @@ async def shutdown_event():
 
 
 @app.get("/ping")
-def pong():
+def pong(api_key: str = Depends(get_api_key)):
     """
     Sanity check.
     This will let the user know that the service is operational.
     And this path operation will:
     * show a lifesign
     """
-    return {"ping": "pong!"}
+    return {"ping": f"pong! {api_key}"}
 
 
 @app.get("/favicon.ico")

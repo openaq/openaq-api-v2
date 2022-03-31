@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     REALTIME_LIMIT: int = 10
     LOG_LEVEL: str = 'INFO'
     LOCAL_SAVE_DIRECTORY: str = './openaq_files'
+    API_KEY: str = None
 
     class Config:
         parent = Path(__file__).resolve().parent.parent.parent
