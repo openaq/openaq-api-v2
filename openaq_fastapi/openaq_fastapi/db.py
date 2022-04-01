@@ -84,7 +84,7 @@ class DB:
                 ) from None
 
         start = time.time()
-        logger.debug("Start time: %s Query: %s Args:%s", start, query, kwargs)
+        logger.info("Start time: %s Query: %s Args:%s", start, query, kwargs)
         rquery, args = render(query, **kwargs)
         try:
             async with pool.acquire() as con:

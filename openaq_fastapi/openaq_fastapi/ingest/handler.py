@@ -1,3 +1,10 @@
+import logging
+
+logging.basicConfig(
+    format = '[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s',
+    level = logging.DEBUG,
+)
+
 import boto3
 import logging
 import psycopg2
@@ -14,6 +21,7 @@ from .utils import (
     calculate_rollup_daily_stats,
     get_pending_rollup_days,
 )
+
 from .fetch import load_db
 from time import time
 
@@ -55,6 +63,7 @@ def handler(event, context):
                             logger.error("""
                             could not get last modified time from obj
                             """)
+
                         last_modified = datetime.now().replace(
                             tzinfo=timezone.utc
                         )

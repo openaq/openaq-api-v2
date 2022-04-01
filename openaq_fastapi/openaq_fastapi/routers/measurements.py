@@ -23,6 +23,7 @@ from ..models.queries import (
     Sort,
     SensorTypes,
     EntityTypes,
+    Versions,
 )
 import csv
 import io
@@ -82,7 +83,7 @@ class MeasOrder(str, Enum):
 
 
 class Measurements(
-        Location, City, Country, Geo, Measurands, HasGeo, APIBase, DateRange
+        Location, City, Country, Geo, Measurands, HasGeo, APIBase, DateRange, Versions
 ):
     order_by: MeasOrder = Query("datetime")
     sort: Sort = "desc"

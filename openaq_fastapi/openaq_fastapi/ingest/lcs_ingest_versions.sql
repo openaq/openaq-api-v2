@@ -12,6 +12,7 @@ DELETE
 FROM rejects
 WHERE fetchlogs_id IN (SELECT fetchlogs_id FROM ms_versions);
 
+
 -- Do stuff
 
 -- First we try to find a matching sensor
@@ -71,14 +72,14 @@ RAISE NOTICE 'Matched % sensors, % parents, and % life cycles of % versions'
 , (SELECT COUNT(1) FROM ms_versions);
 
 INSERT INTO versions (
-   life_cycles_id
+ life_cycles_id
  , sensors_id
  , parent_sensors_id
  , readme
  , version_date
  , metadata
  ) SELECT
-   life_cycles_id
+ life_cycles_id
  , sensors_id
  , parent_sensors_id
  , readme
@@ -134,5 +135,6 @@ SELECT 'versions-missing-life-cylce'
 , fetchlogs_id
 FROM ms_versions v
 WHERE life_cycles_id IS NULL;
+
 
 END $$;

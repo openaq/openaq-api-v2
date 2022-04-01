@@ -17,6 +17,7 @@ from ..models.queries import (
     Sort,
     EntityTypes,
     SensorTypes,
+    Versions,
 )
 
 from openaq_fastapi.models.responses import OpenAQResult, converter

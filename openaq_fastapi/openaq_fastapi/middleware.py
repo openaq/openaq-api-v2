@@ -19,7 +19,6 @@ from fastapi import (
 logger = logging.getLogger(__name__)
 
 
-
 class CacheControlMiddleware(BaseHTTPMiddleware):
     """MiddleWare to add CacheControl in response headers."""
 

@@ -3,6 +3,8 @@ CREATE TEMP TABLE IF NOT EXISTS ms_sensornodes (
     ingest_id text,
     site_name text,
     source_name text,
+    city text,
+    country text,
     ismobile boolean,
     geom geometry,
     metadata jsonb,

@@ -1,1 +1,4 @@
--e .
+## Any version is ok
+pydantic
+python-dotenv
+pydantic[dotenv]

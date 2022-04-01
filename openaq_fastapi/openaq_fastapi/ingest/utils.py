@@ -285,9 +285,9 @@ def check_if_done(cursor, key):
         (key,),
     )
     rows = cursor.rowcount
-    print(f"Rows: {rows}")
+    # print(f"Rows: {rows}")
     if rows >= 1:
-        print("data file already loaded")
+        # print("data file already loaded")
         return True
 
     cursor.execute(
@@ -504,7 +504,7 @@ def load_errors_list(limit: int = 10):
 
 
 def load_fail(cursor, key, e):
-    print("full copy failed", key, e)
+    # print("full copy failed", key, e)
     cursor.execute(
         """
         UPDATE fetchlogs
@@ -621,7 +621,6 @@ def mark_success(
 
 def crawl(bucket, prefix):
     paginator = s3.get_paginator("list_objects_v2")
-    print(settings.DATABASE_WRITE_URL)
     f = StringIO()
     cnt = 0
     for page in paginator.paginate(
@@ -630,18 +629,18 @@ def crawl(bucket, prefix):
         PaginationConfig={"PageSize": 1000},
     ):
         cnt += 1
-        print(".", end="")
+        # print(".", end="")
         try:
             contents = page["Contents"]
         except KeyError:
-            print("Done")
+            # print("Done")
             break
         for obj in contents:
             key = obj["Key"]
             last_modified = obj["LastModified"]
             if key.endswith('.gz'):
                 f.write(f"{key}\t{last_modified}\n")
-                print(key)
+                # print(key)
     f.seek(0)
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
         connection.set_session(autocommit=True)

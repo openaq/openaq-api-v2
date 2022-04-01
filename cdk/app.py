@@ -28,17 +28,18 @@ docker_dir = code_dir.parent.absolute()
 def dictstr(item):
     return item[0], str(item[1])
 
-
 env = dict(map(dictstr, settings.dict().items()))
 
 # create package using docker
 client = docker.from_env()
+print("Building client image", docker_dir)
 client.images.build(
     path=str(docker_dir),
     dockerfile="Dockerfile",
     tag="openaqfastapi",
     nocache=False,
 )
+print("Running client image")
 client.containers.run(
     image="openaqfastapi",
     command="/bin/sh -c 'cp /tmp/package.zip /local/package.zip'",
