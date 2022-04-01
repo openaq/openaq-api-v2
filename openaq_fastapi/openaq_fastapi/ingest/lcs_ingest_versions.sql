@@ -8,6 +8,10 @@ parameter_match_count int;
 life_cycle_match_count int;
 BEGIN
 
+DELETE
+FROM rejects
+WHERE fetchlogs_id IN (SELECT fetchlogs_id FROM ms_versions);
+
 
 -- Do stuff
 
@@ -86,8 +90,51 @@ INSERT INTO versions (
  AND sensors_id IS NOT NULL
  AND parent_sensors_id IS NOT NULL
  AND version_id IS NOT NULL
+ ON CONFLICT DO NOTHING
   ;
 
+
+UPDATE fetchlogs
+SET completed_datetime = now()
+FROM ms_versions v
+WHERE v.fetchlogs_id = fetchlogs.fetchlogs_id
+AND life_cycles_id IS NOT NULL
+AND sensors_id IS NOT NULL
+AND parent_sensors_id IS NOT NULL
+AND version_id IS NOT NULL;
+
+
+UPDATE fetchlogs
+SET completed_datetime = now()
+, last_message = 'ERROR: could not match version'
+FROM ms_versions v
+WHERE v.fetchlogs_id = fetchlogs.fetchlogs_id
+AND (life_cycles_id IS NULL
+OR sensors_id IS NULL
+OR parent_sensors_id IS NULL
+OR version_id IS NULL);
+
+-- no need to load errors to rejects
+INSERT INTO rejects (tbl, r, fetchlogs_id)
+SELECT 'versions-missing-sensor'
+, jsonb_build_object('sensor_id', sensor_id)
+, fetchlogs_id
+FROM ms_versions v
+WHERE sensors_id IS NULL;
+
+INSERT INTO rejects (tbl, r, fetchlogs_id)
+SELECT 'versions-missing-parent'
+, jsonb_build_object('parent_sensor_id', parent_sensor_id, 'sensor_id', sensor_id)
+, fetchlogs_id
+FROM ms_versions v
+WHERE parent_sensors_id IS NULL;
+
+INSERT INTO rejects (tbl, r, fetchlogs_id)
+SELECT 'versions-missing-life-cylce'
+, jsonb_build_object('life_cycle_id', life_cycle_id)
+, fetchlogs_id
+FROM ms_versions v
+WHERE life_cycles_id IS NULL;
 
 
 END $$;

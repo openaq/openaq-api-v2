@@ -5,14 +5,17 @@ import dateparser
 import pytz
 import orjson
 import csv
-from urllib.parse import unquote, unquote_plus
+import gzip
+from time import time
+from urllib.parse import unquote_plus
+import warnings
 
 import boto3
 import psycopg2
 import typer
 from io import StringIO
 from ..settings import settings
-from .utils import get_query, clean_csv_value, StringIteratorIO
+from .utils import get_query, clean_csv_value, StringIteratorIO, fix_units, get_object
 
 s3 = boto3.resource("s3")
 s3c = boto3.client("s3")
@@ -21,15 +24,19 @@ app = typer.Typer()
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 FETCH_BUCKET = settings.OPENAQ_ETL_BUCKET
-
 logger = logging.getLogger(__name__)
-logger.setLevel("DEBUG");
+
+warnings.filterwarnings(
+    "ignore",
+    message="The localize method is no longer necessary, as this time zone supports the fold attribute",
+)
 
 
 class LCSData:
     def __init__(
-            self, page=None, key=None, st=datetime.now().replace(tzinfo=pytz.UTC)
+        self, page=None, key=None, st=datetime.now().replace(tzinfo=pytz.UTC)
     ):
+        logger.debug(f"Loading data with {len(page)} pages")
         self.sensors = []
         self.systems = []
         self.nodes = []
@@ -44,11 +51,12 @@ class LCSData:
                 }
             ]
 
-    def sensor(self, j, system_id):
+    def sensor(self, j, system_id, fetchlogsId):
         for s in j:
             sensor = {}
             metadata = {}
             sensor["ingest_sensor_systems_id"] = system_id
+            sensor["fetchlogs_id"] = fetchlogsId
             for key, value in s.items():
                 key = str.replace(key, "sensor_", "")
                 if key == "id":
@@ -56,13 +64,13 @@ class LCSData:
                 elif key == "measurand_parameter":
                     sensor["measurand"] = value
                 elif key == "measurand_unit":
-                    sensor["units"] = value
+                    sensor["units"] = fix_units(value)
                 else:
                     metadata[key] = value
             sensor["metadata"] = orjson.dumps(metadata).decode()
             self.sensors.append(sensor)
 
-    def system(self, j, node_id):
+    def system(self, j, node_id, fetchlogsId):
         for s in j:
             system = {}
             metadata = {}
@@ -72,10 +80,11 @@ class LCSData:
                 id = node_id
             system["ingest_sensor_nodes_id"] = node_id
             system["ingest_id"] = id
+            system["fetchlogs_id"] = fetchlogsId
             for key, value in s.items():
                 key = str.replace(key, "sensor_system_", "")
                 if key == "sensors":
-                    self.sensor(value, id)
+                    self.sensor(value, id, fetchlogsId)
                 else:
                     metadata[key] = value
             system["metadata"] = orjson.dumps(metadata).decode()
@@ -88,11 +97,17 @@ class LCSData:
             id = j["sensor_node_id"]
         else:
             return None
+        # if we have passed the fetchlogs_id we should track it
+        if "fetchlogs_id" in j:
+            fetchlogsId = j["fetchlogs_id"]
+        else:
+            fetchlogsId = None
+
         for key, value in j.items():
             key = str.replace(key, "sensor_node_", "")
             if key == "id":
                 node["ingest_id"] = value
-            elif key in ["site_name", "source_name", "ismobile", "country", "city"]:
+            elif key in ["site_name", "source_name", "ismobile"]:
                 node[key] = value
             elif key == "geometry":
                 try:
@@ -107,22 +122,28 @@ class LCSData:
                 except Exception:
                     node["geom"] = None
             elif key == "sensor_systems":
-                self.system(value, id)
+                self.system(value, id, fetchlogsId)
             else:
                 metadata[key] = value
         node["metadata"] = orjson.dumps(metadata).decode()
         self.nodes.append(node)
 
-
-    def get_station(self, key):
+    def get_station(self, key, fetchlogsId):
+        logger.debug(f"get_station - {key} - {fetchlogsId}")
         if str.endswith(key, ".gz"):
             compression = "GZIP"
         else:
             compression = "NONE"
-        try:
-            # logger.debug(f"key: {key}")
+        # Removed the try block because getting the data is the whole
+        # purpose of this function and we should not continue without it
+        # if we want to check for specific errors we could do that,
+        # but than rethrow
+        if FETCH_BUCKET is not None and FETCH_BUCKET != "":
+            logger.debug(
+                f'attempting to load station from bucket {FETCH_BUCKET}/{key}'
+            )
             resp = s3c.select_object_content(
-                Bucket=settings.OPENAQ_FETCH_BUCKET,
+                Bucket=FETCH_BUCKET,
                 Key=key,
                 ExpressionType="SQL",
                 Expression="SELECT * FROM s3object",
@@ -135,36 +156,58 @@ class LCSData:
             for event in resp["Payload"]:
                 if "Records" in event:
                     records = event["Records"]["Payload"].decode("utf-8")
-                    self.node(orjson.loads(records))
-
-        except Exception as e:
-            logger.debug(f"Could not load {key} {e}")
-
+                    obj = orjson.loads(records)
+                    obj['key'] = key
+                    if fetchlogsId is not None:
+                        obj['fetchlogs_id'] = fetchlogsId
+                    self.node(obj)
+        else:
+            logger.debug(f'attempting to load station locally {key}')
+            if compression == "GZIP":
+                with gzip.open(key, 'rt') as f:
+                    for line in f:
+                        obj = orjson.loads(line)
+                        obj['key'] = key
+                        if fetchlogsId is not None:
+                            obj['fetchlogs_id'] = fetchlogsId
+                        self.node(obj)
 
     def load_data(self):
+        logger.debug(f"load_data: {self.keys}")
         with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
             connection.set_session(autocommit=True)
             with connection.cursor() as cursor:
+                start_time = time()
                 self.create_staging_table(cursor)
+
                 write_csv(
-                    cursor, self.keys, "keys", ["key", "last_modified",],
+                    cursor,
+                    self.keys,
+                    "keys",
+                    [
+                        "key",
+                        "last_modified",
+                        "fetchlogs_id",
+                    ],
                 )
+                # update by id instead of key due to matching issue
                 cursor.execute(
                     """
-                    INSERT INTO fetchlogs(
-                        key,
-                        last_modified,
-                        loaded_datetime
-                    ) SELECT *, clock_timestamp()
-                    FROM keys
-                    ON CONFLICT (key) DO
-                    UPDATE
-                        SET
-                        last_modified=EXCLUDED.last_modified,
-                        loaded_datetime=EXCLUDED.completed_datetime
-                    ;;
+                    UPDATE fetchlogs
+                    SET loaded_datetime = clock_timestamp()
+                    , last_message = 'load_data'
+                    WHERE fetchlogs_id IN (SELECT fetchlogs_id FROM keys)
                     """
                 )
+
+                cursor.execute(
+                    """
+                    DELETE
+                    FROM rejects
+                    WHERE fetchlogs_id IN (SELECT fetchlogs_id FROM keys)
+                    """
+                )
+
                 connection.commit()
                 write_csv(
                     cursor,
@@ -174,11 +217,10 @@ class LCSData:
                         "ingest_id",
                         "site_name",
                         "source_name",
-                        "city",
-                        "country",
                         "ismobile",
                         "geom",
                         "metadata",
+                        "fetchlogs_id",
                     ],
                 )
                 write_csv(
@@ -189,6 +231,7 @@ class LCSData:
                         "ingest_id",
                         "ingest_sensor_nodes_id",
                         "metadata",
+                        "fetchlogs_id",
                     ],
                 )
                 write_csv(
@@ -201,148 +244,74 @@ class LCSData:
                         "measurand",
                         "units",
                         "metadata",
+                        "fetchlogs_id",
                     ],
                 )
                 connection.commit()
 
                 self.process_data(cursor)
+                for notice in connection.notices:
+                    print(notice)
 
                 cursor.execute(
                     """
-                    INSERT INTO fetchlogs(
-                        key,
-                        last_modified,
-                        completed_datetime
-                    ) SELECT *, clock_timestamp()
-                    FROM keys
-                    ON CONFLICT (key) DO
-                    UPDATE
-                        SET
-                        last_modified=EXCLUDED.last_modified,
-                        completed_datetime=EXCLUDED.completed_datetime
-                    ;
+                    UPDATE fetchlogs
+                    SET completed_datetime = clock_timestamp()
+                    , last_message = NULL
+                    WHERE fetchlogs_id IN (SELECT fetchlogs_id FROM keys)
                     """
                 )
-                connection.commit()
 
+                connection.commit()
+                logger.info(
+                    "load_data: files: %s; time: %0.4f",
+                    len(self.keys),
+                    time() - start_time
+                )
                 for notice in connection.notices:
-                    logger.debug(f"METADATA INGEST {notice}")
+                    logger.debug(notice)
 
     def process_data(self, cursor):
-        query = get_query("lcs_ingest_nodes.sql")
+        query = get_query("lcs_ingest_full.sql")
         cursor.execute(query)
+        # query = get_query("lcs_ingest_nodes.sql")
+        # cursor.execute(query)
 
-        query = get_query("lcs_ingest_systems.sql")
-        cursor.execute(query)
+        # query = get_query("lcs_ingest_systems.sql")
+        # cursor.execute(query)
 
-        query = get_query("lcs_ingest_sensors.sql")
-        cursor.execute(query)
+        # query = get_query("lcs_ingest_sensors.sql")
+        # cursor.execute(query)
 
     def create_staging_table(self, cursor):
         cursor.execute(get_query("lcs_staging.sql"))
 
     def get_metadata(self):
         hasnew = False
-        with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
-            connection.set_session(autocommit=True)
-            with connection.cursor() as cursor:
+        for obj in self.page:
+            key = obj["Key"]
+            id = obj["id"]
+            last_modified = obj["LastModified"]
+            try:
+                self.get_station(key, id)
+                self.keys.append(
+                    {
+                        "key": key,
+                        "last_modified": last_modified,
+                        "fetchlogs_id": id
+                    }
+                )
+                hasnew = True
+            except Exception as e:
+                # catch and continue to next page
+                logger.error(
+                    f"Could not process file: {id}: {key}: {e}"
+                )
 
-                for obj in self.page:
+        if hasnew:
+            logger.debug(f"get_metadata:hasnew - {self.keys}")
+            self.load_data()
 
-                    key = obj["Key"]
-                    last_modified = obj["LastModified"]
-                    logger.debug(f"{key} {last_modified}")
-                    # if last_modified > self.st:
-                    cursor.execute(
-                        """
-                        SELECT 1 FROM fetchlogs
-                        WHERE key=%s
-                        AND completed_datetime IS NOT NULL
-                        """,
-                        (key,),
-                    )
-                    rows = cursor.rowcount
-                    if rows < 1:
-                        logger.debug(f"{key} {last_modified}")
-                        self.keys.append(
-                            {"key": key, "last_modified": last_modified}
-                        )
-                        self.get_station(key)
-                        hasnew = True
-
-                if hasnew:
-                    self.load_data()
-                for notice in connection.notices:
-                    logger.debug(notice)
-
-
-def get_bucket_file(key):
-    """Get the file from the ETL bucket designated in settings"""
-    key = unquote_plus(key)
-
-    if str.endswith(key, ".gz"):
-        compression = "GZIP"
-    else:
-        compression = "NONE"
-
-    if "json" in key:
-        inputSerialization = {
-            "JSON": {"Type": "Document"},
-            "CompressionType": compression,
-        }
-        outputSerialization = {
-            "JSON": {},
-        }
-    else:
-        inputSerialization = {
-            "CSV": {"FieldDelimiter": ","},
-            "CompressionType": compression,
-        }
-        outputSerialization = {
-            "CSV": {},
-        }
-
-    try:
-        logger.debug(f"getting {key}")
-        resp = s3c.select_object_content(
-            Bucket=settings.OPENAQ_FETCH_BUCKET,
-            Key=key,
-            ExpressionType="SQL",
-            Expression="SELECT * FROM s3object",
-            InputSerialization = inputSerialization,
-            OutputSerialization = outputSerialization,
-        )
-        content = ""
-        for event in resp["Payload"]:
-            if "Records" in event:
-                content += event["Records"]["Payload"].decode("utf-8")
-        return content
-    except Exception as e:
-        logger.debug(f"Could not read {key} {e}")
-
-def get_local_file(key):
-    """Get the file from the local test data directory"""
-    key = unquote_plus(key)
-    try:
-        filepath = os.path.join(dir_path, key);
-        content = ""
-        if str.endswith(key, ".gz"):
-            with gzip.open(filepath,'rt') as f:
-                for line in f:
-                    content += line;
-        else:
-            content = Path(filepath).read_text()
-        return content
-    except Exception as e:
-        logger.debug(f"Could not find {key} {e}")
-
-def get_file(key):
-    """Get file handler that determines where the file is"""
-    logger.debug(f"get_file: {settings.OPENAQ_ENV}/{key}")
-    if settings.OPENAQ_ENV == "local":
-        return get_local_file(key)
-    else:
-        return get_bucket_file(key)
 
 def write_csv(cursor, data, table, columns):
     fields = ",".join(columns)
@@ -356,8 +325,7 @@ def write_csv(cursor, data, table, columns):
         """,
         sio,
     )
-    logger.debug("rowcount:", cursor.rowcount)
-    logger.debug("status:", cursor.statusmessage)
+    logger.debug(f"table: {table}; rowcount: {cursor.rowcount}")
 
 
 def load_metadata_bucketscan(count=100):
@@ -374,71 +342,55 @@ def load_metadata_bucketscan(count=100):
         except KeyError:
             break
 
-@app.command()
-def load_metadata_db(limit=250):
-    bucket = settings.OPENAQ_FETCH_BUCKET
-    logger.debug(f"Checking for metadata files in {settings.OPENAQ_FETCH_BUCKET}")
-    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
-        connection.set_session(autocommit=True)
-        with connection.cursor() as cursor:
-            cursor.execute(
-                f"""
-                    SELECT key,last_modified FROM fetchlogs
-                    WHERE key~*'stations/.*\\.json' AND
-                    completed_datetime is null order by
-                    last_modified asc nulls last
-                    limit %s;
-                    """,
-                (limit,),
-            )
-            rows = cursor.fetchall()
-            contents = []
-            for row in rows:
-                contents.append(
-                    {"Key": unquote_plus(row[0]), "LastModified": row[1],}
-                )
-            for notice in connection.notices:
-                logger.debug(f"Load Metadata Notice: {notice}")
-    if len(contents) > 0:
-        data = LCSData(contents)
-        data.get_metadata()
 
-def load_versions_db(limit=250):
+def load_versions_db(limit=250, ascending: bool = False):
     bucket = settings.OPENAQ_FETCH_BUCKET
-    logger.debug(f"Checking for version files in {bucket}")
+    order = 'ASC' if ascending else 'DESC'
+    logger.debug(f"Checking for version files in {bucket}, {order}")
     try:
         with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
             with connection.cursor() as cursor:
                 connection.set_session(autocommit=True)
                 cursor.execute(
-                    f"""
+                    """
                     UPDATE fetchlogs
                     SET loaded_datetime = clock_timestamp()
-                    WHERE key~*'versions/.*\\.json'
+                    , last_message = null
+                    WHERE key~*'/versions/.*\\.json'
                     AND completed_datetime is null
-                    RETURNING key, last_modified
+                    RETURNING key, last_modified, fetchlogs_id
                     """
                 )
                 rows = cursor.fetchall()
+                n = len(rows)
                 versions = []
                 for row in rows:
-                    logger.debug(f"{row}")
-                    raw = get_file(unquote_plus(row[0]))
+                    logger.debug(f"Processing - {row[0]}")
+                    raw = get_object(unquote_plus(row[0]))
                     j = orjson.loads(raw)
                     version = {}
                     metadata = {}
                     for key, value in j.items():
-                        if key in ["parent_sensor_id", "sensor_id", "parameter", "version_id", "life_cycle_id", "readme"]:
+                        if key in [
+                                "parent_sensor_id",
+                                "sensor_id",
+                                "parameter",
+                                "version_id",
+                                "life_cycle_id",
+                                "readme"
+                        ]:
                             version[key] = value
                         elif key not in ["merged"]:
                             metadata[key] = value
                     version["metadata"] = orjson.dumps(metadata).decode()
+                    version["fetchlogs_id"] = row[2]
                     versions.append(version)
 
                 # create a temporary table for matching
                 cursor.execute(
                     """
-                    CREATE TABLE IF NOT EXISTS ms_versions (
+                    CREATE TEMP TABLE IF NOT EXISTS ms_versions (
+                    fetchlogs_id int,
                     sensor_id text UNIQUE,
                     parent_sensor_id text,
                     life_cycle_id text,
@@ -451,7 +403,7 @@ def load_versions_db(limit=250):
                     measurands_id int,
                     metadata jsonb
                     );
-                    DELETE FROM ms_versions;
+                    --DELETE FROM ms_versions;
                     """
                 )
                 # add the version data into that table
@@ -460,6 +412,7 @@ def load_versions_db(limit=250):
                     versions,
                     "ms_versions",
                     [
+                        "fetchlogs_id",
                         "sensor_id",
                         "parent_sensor_id",
                         "version_id",
@@ -469,95 +422,172 @@ def load_versions_db(limit=250):
                         "metadata",
                     ],
                 )
+
                 # now process that version data as best we can
-                cursor.execute(get_query("lcs_ingest_versions.sql"))
+                try:
+                    cursor.execute(get_query("lcs_ingest_versions.sql"))
+                except Exception as e:
+                    print(e)
+
                 # now add each of those to the database
-                logger.debug(len(versions))
                 for notice in connection.notices:
-                   logger.debug(notice)
+                    logger.debug(notice)
 
-
+                return n
     except Exception as e:
         logger.debug(f"Failed to ingest versions: {e}")
 
 
-def load_measurements(key):
-    key = unquote_plus(key)
-    logger.debug(key)
+def load_metadata_db(count=250, ascending: bool = False):
+    order = 'ASC' if ascending else 'DESC'
+    with psycopg2.connect(settings.DATABASE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT key
+                , last_modified
+                , fetchlogs_id
+                FROM fetchlogs
+                WHERE key~'/stations/'
+                AND completed_datetime is null
+                ORDER BY last_modified {order} nulls last
+                LIMIT %s;
+                """,
+                (count,),
+            )
+            rows = cursor.fetchall()
+            rowcount = cursor.rowcount
+            logger.debug(f'Found {rowcount} metadata files to proccess')
+            contents = []
+            for row in rows:
+                contents.append(
+                    {
+                        "Key": unquote_plus(row[0]),
+                        "LastModified": row[1],
+                        "id": row[2],
+                    }
+                )
+            for notice in connection.notices:
+                logger.debug(notice)
+    if len(contents) > 0:
+        data = LCSData(contents)
+        data.get_metadata()
+    return rowcount
 
+
+def select_object(key):
+    key = unquote_plus(key)
     if str.endswith(key, ".gz"):
         compression = "GZIP"
     else:
         compression = "NONE"
     try:
-        resp = s3c.select_object_content(
-            Bucket=settings.OPENAQ_ETL_BUCKET,
-            Key=key,
-            ExpressionType="SQL",
-            Expression="""
-                SELECT
-                *
-                FROM s3object
-                """,
-            InputSerialization={
-                "CSV": {"FieldDelimiter": ","},
-                "CompressionType": compression,
-            },
-            OutputSerialization={"CSV": {}},
-        )
         content = ""
-        for event in resp["Payload"]:
-            if "Records" in event:
-                content += event["Records"]["Payload"].decode("utf-8")
+        if FETCH_BUCKET is not None and FETCH_BUCKET != "":
+            logger.debug(
+                f'attempting to load station from bucket {FETCH_BUCKET}/{key}'
+            )
+            resp = s3c.select_object_content(
+                Bucket=settings.OPENAQ_ETL_BUCKET,
+                Key=key,
+                ExpressionType="SQL",
+                Expression="""
+                    SELECT
+                    *
+                    FROM s3object
+                    """,
+                InputSerialization={
+                    "CSV": {"FieldDelimiter": ","},
+                    "CompressionType": compression,
+                },
+                OutputSerialization={"CSV": {}},
+            )
+            for event in resp["Payload"]:
+                if "Records" in event:
+                    content += event["Records"]["Payload"].decode("utf-8")
+        else:
+            logger.debug(f'attempting to load measurements locally {key}')
+            if compression == "GZIP":
+                with gzip.open(key, 'rt') as f:
+                    for line in f:
+                        content += line
 
-        ret = []
-        logger.debug(resp)
-        for row in csv.reader(content.split("\n")):
-            if len(row) not in [3, 5]:
-                continue
-            if len(row) == 5:
-                try:
-                    lon = float(row[3])
-                    lat = float(row[4])
-                    if not (
-                        lon is None
-                        or lat is None
-                        or lat == ""
-                        or lon == ""
-                        or lon == 0
-                        or lat == 0
-                        or lon < -180
-                        or lon > 180
-                        or lat < -90
-                        or lat > 90
-                    ):
-                        row[3] = lon
-                        row[4] = lat
-                    else:
-                        row[3] = None
-                        row[4] = None
-                except Exception:
+    except Exception as e:
+        submit_file_error(key, e)
+    return content
+
+
+def get_measurements(key, fetchlogsId):
+    start = time()
+    content = select_object(key)
+    fetch_time = time() - start
+
+    ret = []
+    start = time()
+    for row in csv.reader(content.split("\n")):
+        if len(row) not in [3, 5]:
+            continue
+        if len(row) == 5:
+            try:
+                lon = float(row[3])
+                lat = float(row[4])
+                if not (
+                    lon is None
+                    or lat is None
+                    or lat == ""
+                    or lon == ""
+                    or lon == 0
+                    or lat == 0
+                    or lon < -180
+                    or lon > 180
+                    or lat < -90
+                    or lat > 90
+                ):
+                    row[3] = lon
+                    row[4] = lat
+                else:
                     row[3] = None
                     row[4] = None
-            else:
-                row.insert(3, None)
-                row.insert(4, None)
-            if row[0] == "" or row[0] is None:
-                continue
-            dt = row[2]
-            try:
-                dt = datetime.fromtimestamp(int(dt), timezone.utc)
             except Exception:
-                try:
-                    dt = dateparser.parse(dt).replace(tzinfo=timezone.utc)
-                except Exception:
-                    logger.debug(f"Exception in parsing date for {dt} {Exception}")
-            row[2] = dt.isoformat()
-            ret.append(row)
-        return ret
-    except Exception as e:
-        logger.debug(f"Could not load {key} {e}")
-    return None
+                row[3] = None
+                row[4] = None
+        else:
+            row.insert(3, None)
+            row.insert(4, None)
+        if row[0] == "" or row[0] is None:
+            continue
+        dt = row[2]
+
+        try:
+            dt = datetime.fromtimestamp(int(dt), timezone.utc)
+        except Exception:
+            try:
+                dt = dateparser.parse(dt).replace(tzinfo=timezone.utc)
+            except Exception:
+                logger.warning(f"Exception in parsing date for {dt} {Exception}")
+        row[2] = dt.isoformat()
+        # addd the log id for tracing purposes
+        row.insert(5, fetchlogsId)
+        ret.append(row)
+    logger.info("get_measurements:csv: %s; size: %s; rows: %s; fetching: %0.4f; reading: %0.4f", key, len(content)/1000, len(ret), fetch_time, time() - start)
+    return ret
+
+
+def submit_file_error(key, e):
+    """Update the log to reflect the error and prevent a retry"""
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE fetchlogs
+                SET completed_datetime = clock_timestamp()
+                , last_message = %s
+                WHERE key = %s
+                """
+            ),
+            (f"ERROR: {e}", key),
 
 
 def to_tsv(row):
@@ -565,104 +595,134 @@ def to_tsv(row):
     return tsv
     return ""
 
-@app.command()
-def load_measurements_db(limit=250):
-    bucket = settings.OPENAQ_FETCH_BUCKET
-    logger.debug(f"Checking for measurement files in {bucket}")
-    try:
+
+def load_measurements_file(fetchlogs_id: int):
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT key
+                , init_datetime
+                , loaded_datetime
+                , completed_datetime
+                , last_message
+                FROM fetchlogs
+                WHERE fetchlogs_id = %s
+                LIMIT 1
+                ;
+                """,
+                (fetchlogs_id,),
+            )
+            rows = cursor.fetchall()
+            print(rows)
+            keys = [r[0] for r in rows]
+            load_measurements(keys)
+
+
+def load_measurements_db(limit=250, ascending: bool = False):
+    order = 'ASC' if ascending else 'DESC'
+    conn = psycopg2.connect(settings.DATABASE_WRITE_URL)
+    cur = conn.cursor()
+    cur.execute(
+        f"""
+        SELECT fetchlogs_id
+        , key
+        , last_modified
+        FROM fetchlogs
+        WHERE key~*'/measures/.*\\.csv'
+        AND completed_datetime is null
+        ORDER BY last_modified {order} nulls last
+        LIMIT %s
+        ;
+        """,
+        (limit,),
+    )
+    rows = cur.fetchall()
+    # keys = [r[0] for r in rows]
+    conn.commit()
+    cur.close()
+    conn.close()
+    load_measurements(rows)
+    return len(rows)
+
+
+def load_measurements(rows):
+    logger.debug(f"loading {len(rows)} measurements")
+    start_time = time()
+    data = []
+    new = []
+    for row in rows:
+        key = row[1]
+        fetchlogsId = row[0]
+        new.append({"key": key})
+        newdata = get_measurements(key, fetchlogsId)
+        if newdata is not None:
+            data.extend(newdata)
+
+    logger.info("load_measurements:get: %s keys; %s rows; %0.4f seconds",
+                len(rows), len(data), time() - start_time)
+    if len(data) > 0:
+
         with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+            connection.set_session(autocommit=True)
             with connection.cursor() as cursor:
-                connection.set_session(autocommit=True)
-                cursor.execute(
-                    f"""
-                    SELECT key,last_modified FROM fetchlogs
-                    WHERE key~E'measures/.*\\.csv' AND
-                    completed_datetime is null
-                    ORDER BY last_modified desc nulls last
-                    LIMIT %s
-                    """,
-                    (limit,),
-                )
-                rows = cursor.fetchall()
-                keys = [r[0] for r in rows]
 
-                logger.debug(f"Found {len(keys)} files to ingest")
-                # Start by setting up the measure staging table
                 cursor.execute(get_query("lcs_meas_staging.sql"))
+                write_csv(
+                    cursor, new, "keys", ["key"],
+                )
 
-                data = []
-                new = []
-                for key in keys:
-                    new.append({"key": key})
-                    newdata = load_measurements(key)
-                    if newdata is not None:
-                        data.extend(newdata)
-
-                # logger.debug(data)
-                if len(data) > 0:
-                    write_csv(
-                        cursor, new, "keys", ["key",],
-                    )
-
-                    iterator = StringIteratorIO(
-                        (to_tsv(line) for line in data)
-                    )
-                    cursor.copy_expert(
-                        """
-                        COPY meas (ingest_id, value, datetime, lon, lat)
-                        FROM stdin;
-                        """,
-                        iterator,
-                    )
-                    rows = cursor.rowcount
-                    status = cursor.statusmessage
-                    logger.debug(f"MEASUREMENTS COPIED: {rows} Status: {status}")
-                    cursor.execute(
-                        """
-                        INSERT INTO fetchlogs(
-                            key,
-                            loaded_datetime
-                        ) SELECT key, clock_timestamp()
-                        FROM keys
-                        ON CONFLICT (key) DO
-                        UPDATE
-                            SET
-                            loaded_datetime=EXCLUDED.loaded_datetime
-                        ;
-                        """
-                    )
-
-                connection.commit()
-                cursor.execute(get_query("lcs_meas_ingest.sql"))
-                rows = cursor.rowcount
+                iterator = StringIteratorIO(
+                    (to_tsv(line) for line in data)
+                )
+                cursor.copy_expert(
+                    """
+                    COPY meas (ingest_id, value, datetime, lon, lat, fetchlogs_id)
+                    FROM stdin;
+                    """,
+                    iterator,
+                )
+                mrows = cursor.rowcount
                 status = cursor.statusmessage
-                # logger.debug(f"INGEST Rows: {rows} Status: {status}")
+                logger.debug(f"COPY Rows: {mrows} Status: {status}")
                 cursor.execute(
                     """
                     INSERT INTO fetchlogs(
                         key,
-                        last_modified,
-                        completed_datetime
-                    ) SELECT *, clock_timestamp()
+                        loaded_datetime
+                    ) SELECT key, clock_timestamp()
                     FROM keys
                     ON CONFLICT (key) DO
                     UPDATE
                         SET
-                        last_modified=EXCLUDED.last_modified,
+                        loaded_datetime=EXCLUDED.loaded_datetime
+                    ;
+                    """
+                )
+                connection.commit()
+                cursor.execute(get_query("lcs_meas_ingest.sql"))
+                for notice in connection.notices:
+                    print(notice)
+
+                cursor.execute(
+                    """
+                    INSERT INTO fetchlogs(
+                        key,
+                        completed_datetime
+                    ) SELECT key, clock_timestamp()
+                    FROM keys
+                    ON CONFLICT (key) DO
+                    UPDATE
+                        SET
                         completed_datetime=EXCLUDED.completed_datetime
                     ;
                     """
                 )
-                rows = cursor.rowcount
-                status = cursor.statusmessage
+                logger.info(
+                    "load_measurements: keys: %s; rows: %s; time: %0.4f",
+                    len(rows), mrows, time() - start_time)
                 connection.commit()
+
                 for notice in connection.notices:
-                    logger.debug(f"LOAD MEASUREMENTS {notice}")
-                logger.debug(f"UPDATED LOGS Rows: {rows} Status: {status}")
-
-    except Exception as e:
-        logger.debug(f"Failed to ingest measurements: {e}")
-
-
-if __name__ == "__main__":
-    app()
+                    logger.debug(notice)

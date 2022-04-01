@@ -12,6 +12,7 @@ sensor_nodes.source_name = ms_sensornodes.source_name
 AND
 sensor_nodes.source_id = ms_sensornodes.ingest_id;
 
+
 INSERT INTO sensor_nodes (
 site_name
 , source_name

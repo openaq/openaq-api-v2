@@ -7,6 +7,14 @@ from typing import Optional
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.types import ASGIApp
+from starlette.responses import JSONResponse
+
+from openaq_fastapi.settings import settings
+
+from fastapi import (
+    status,
+    HTTPException,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -82,4 +90,37 @@ class GetHostMiddleware(BaseHTTPMiddleware):
 
         response = await call_next(request)
 
+        return response
+
+
+class APIKeyMiddleware(BaseHTTPMiddleware):
+    """Very simple API key middleware. Requires at least one route
+    to include the securty method for the docs to show a form"""
+
+    async def dispatch(self, request: Request, call_next):
+        api_key = settings.API_KEY
+        whitelist = ["/openapi.json", "/"]
+        route = request.url.path
+        if route not in whitelist and api_key is not None:
+            token = None
+            if 'access_token' in request.headers.keys():
+                token = request.headers['access_token']
+            if 'Authorization' in request.headers.keys():
+                token = request.headers['Authorization']
+            if token is None:
+                return JSONResponse(
+                    {
+                        "detail": "No API Key provided"
+                    },
+                    status_code=401
+                )
+            if token != api_key:
+                return JSONResponse(
+                    {
+                        "detail": "API Key not authorized"
+                    },
+                    status_code=401
+                )
+
+        response = await call_next(request)
         return response

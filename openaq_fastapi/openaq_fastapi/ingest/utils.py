@@ -1,6 +1,12 @@
 import io
 import os
 from pathlib import Path
+import logging
+from urllib.parse import unquote_plus
+from datetime import datetime, timedelta
+from time import time
+
+import gzip
 
 import boto3
 from io import StringIO
@@ -13,10 +19,9 @@ app = typer.Typer()
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
+s3 = boto3.client("s3")
 
-FETCH_BUCKET = settings.OPENAQ_FETCH_BUCKET
-s3 = boto3.resource("s3")
-s3c = boto3.client("s3")
+logger = logging.getLogger(__name__)
 
 
 class StringIteratorIO(io.TextIOBase):
@@ -62,12 +67,212 @@ def clean_csv_value(value):
 
 
 def get_query(file, **params):
-    # print(f"{params}")
+    logger.debug("get_query: {file}, params: {params}")
     query = Path(os.path.join(dir_path, file)).read_text()
     if params is not None and len(params) >= 1:
-        # print(f"adding parameters {params}")
         query = query.format(**params)
     return query
+
+
+def calculate_hourly_rollup_day(day: str):
+    """Calculate a full day of hourly values"""
+    if isinstance(day, str):
+        day = datetime.fromisoformat(day).date()
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SET LOCAL statement_timeout = '900s'"
+            )
+            cursor.execute(
+                """
+                SELECT COALESCE((metadata->'latestHour')::int, -1) + 1
+                FROM daily_stats
+                WHERE day = %s
+                """,
+                (day,),
+            )
+            last_hour = cursor.fetchone()[0]
+            for hr in range(last_hour, 24):
+                dt = datetime.fromisoformat(day.isoformat())
+                dt = dt.replace(hour=hr, minute=0, second=0)+timedelta(hours=1)
+                start_time = time()
+                cursor.execute(
+                    """
+                    SELECT calculate_hourly_rollup(%s) as n
+                    """,
+                    (dt,),
+                )
+                n = cursor.fetchone()[0]
+                logger.info('Updated %s with %s sensor hours in %0.4f seconds',
+                            dt.strftime("%Y-%m-%d %H"), n, time() - start_time)
+                cursor.execute(
+                    """
+                    UPDATE daily_stats
+                    SET metadata = COALESCE(metadata, '{}'::jsonb)
+                    || jsonb_build_object('latestHour', %s)
+                    , measurements_count = measurements_count + %s
+                    WHERE day = %s
+                    RETURNING measurements_count
+                    """,
+                    (hr, n, day,),
+                )
+                connection.commit()
+                n = cursor.fetchone()[0]
+                last_hour = hr
+            # return 23 or higher to mark as done
+            return last_hour
+
+
+def calculate_hourly_rollup_hour(hour: str):
+    """Get the fetch logs based on fetchlogs_id"""
+    if isinstance(hour, str):
+        hour = datetime.fromisoformat(hour)
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT calculate_hourly_rollup(%s) as n
+                """,
+                (hour,),
+            )
+            n = cursor.fetchone()
+            return n[0]
+
+
+def get_pending_rollup_days(limit: int = 1):
+    """Get the fetch logs based on fetchlogs_id"""
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                WITH days AS (
+                 SELECT day
+                 FROM daily_stats
+                 WHERE initiated_on IS NULL
+                 OR (calculated_on IS NULL
+                 AND age(now(), initiated_on) > '20min'::interval)
+                 ORDER BY day DESC
+                 LIMIT %s
+                ), updates AS (
+                UPDATE daily_stats
+                SET initiated_on = current_timestamp
+                FROM days
+                WHERE daily_stats.day = days.day)
+                SELECT day
+                FROM days
+                """,
+                (limit,),
+            )
+            days = cursor.fetchall()
+            return days
+
+
+def calculate_hourly_rollup_stale(limit: int = 500):
+    """Get the fetch logs based on fetchlogs_id"""
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SET LOCAL statement_timeout = '900s'"
+            )
+            cursor.execute(
+                """
+                WITH updates AS (
+                SELECT calculate_hourly_rollup(sensors_id, datetime) as n
+                FROM hourly_rollups
+                WHERE updated_on > calculated_on
+                LIMIT %s)
+                SELECT COALESCE(SUM(n), 0)::bigint as count
+                FROM updates;
+                """,
+                (limit,),
+            )
+            n = cursor.fetchone()
+            return n[0]
+
+
+def calculate_rollup_daily_stats(day: str):
+    """mark a day as finished"""
+    if isinstance(day, str):
+        day = datetime.fromisoformat(day).date()
+    with psycopg2.connect(
+            settings.DATABASE_WRITE_URL,
+            connect_timeout=15
+    ) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT calculate_rollup_daily_stats(%s) as n
+                """,
+                (day,),
+            )
+            n = cursor.fetchone()
+            print(n)
+            return n[0]
+
+
+def get_logs_from_ids(ids):
+    """Get the fetch logs based on fetchlogs_id"""
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT fetchlogs_id
+                , key
+                , init_datetime
+                , loaded_datetime
+                , completed_datetime
+                , last_message
+                , last_modified
+                FROM fetchlogs
+                WHERE fetchlogs_id = ANY(%s)
+                """,
+                (ids,),
+            )
+            rows = cursor.fetchall()
+            return rows
+
+
+def get_logs_from_pattern(pattern: str, limit: int = 250):
+    """Fetch all logs matching a pattern"""
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT fetchlogs_id
+                , key
+                , init_datetime
+                , loaded_datetime
+                , completed_datetime
+                , last_message
+                , last_modified
+                FROM fetchlogs
+                WHERE key~*%s
+                LIMIT %s
+                """,
+                (pattern, limit,),
+            )
+            rows = cursor.fetchall()
+            return rows
+
+
+def fix_units(value: str):
+    """Clean up the units field. This was created to deal with mu vs micro issue in the current units list"""
+    units = {
+        "μg/m3": "µg/m³",
+        "µg/m3": "µg/m³",
+        "μg/m³": "µg/m³",
+    }
+    if value in units.keys():
+        return units[value]
+    else:
+        return value
 
 
 def check_if_done(cursor, key):
@@ -105,6 +310,199 @@ def check_if_done(cursor, key):
     return False
 
 
+def get_object(
+        key: str,
+        bucket: str = settings.OPENAQ_ETL_BUCKET,
+):
+    key = unquote_plus(key)
+    text = ''
+    if bucket is not None and bucket != '':
+        obj = s3.get_object(
+            Bucket=bucket,
+            Key=key,
+        )
+        body = obj['Body']
+        if str.endswith(key, ".gz"):
+            text = gzip.decompress(body.read()).decode('utf-8')
+        else:
+            text = body
+    else:
+        logger.debug('attempting to load file locally {key}')
+        if str.endswith(key, ".gz"):
+            with gzip.open(key, 'rt') as f:
+                for line in f:
+                    text += line
+        else:
+            text = Path(key).read_text()
+
+    return text
+
+
+def put_object(
+        data: str,
+        key: str,
+        bucket: str = settings.OPENAQ_ETL_BUCKET
+):
+    out = io.BytesIO()
+    with gzip.GzipFile(fileobj=out, mode='wb') as gz:
+        with io.TextIOWrapper(gz, encoding='utf-8') as wrapper:
+            wrapper.write(data)
+    if settings.DRYRUN:
+        filepath = os.path.join(bucket, key)
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        logger.debug(f"Dry Run: Writing file to local file in {filepath}")
+        txt = open(f"{filepath}", "wb")
+        txt.write(out.getvalue())
+        txt.close()
+    else:
+        logger.info(f"Uploading file to {bucket}/{key}")
+        s3.put_object(
+            Bucket=bucket,
+            Key=key,
+            Body=out.getvalue(),
+        )
+
+
+def select_object(key: str):
+    key = unquote_plus(key)
+    output_serialization = None
+    input_serialization = None
+
+    if str.endswith(key, ".gz"):
+        compression = "GZIP"
+    else:
+        compression = "NONE"
+
+    if '.csv' in key:
+        output_serialization = {
+            'CSV': {}
+        }
+        input_serialization = {
+            "CSV": {"FieldDelimiter": ","},
+            "CompressionType": compression,
+        }
+    elif 'json' in key:
+        output_serialization = {
+            'JSON': {}
+        }
+        input_serialization = {
+            "JSON": {"Type": "Document"},
+            "CompressionType": compression,
+        }
+
+    content = ""
+    logger.debug(f"Getting object: {key}, {output_serialization}")
+    resp = s3.select_object_content(
+        Bucket=settings.OPENAQ_ETL_BUCKET,
+        Key=key,
+        ExpressionType="SQL",
+        Expression="""
+            SELECT
+            *
+            FROM s3object
+            """,
+        InputSerialization=input_serialization,
+        OutputSerialization=output_serialization,
+    )
+    for event in resp["Payload"]:
+        if "Records" in event:
+            content += event["Records"]["Payload"].decode("utf-8")
+    return content
+
+
+def load_errors_summary(days: int = 30):
+    """Fetch any possible file errors"""
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                WITH logs AS (
+                SELECT init_datetime
+                , CASE
+                WHEN key~E'^realtime' THEN 'realtime'
+                WHEN key~E'^lcs-etl-pipeline/measures' THEN 'pipeline'
+                WHEN key~E'^lcs-etl-pipeline/station' THEN 'metadata'
+                ELSE key
+                END AS type
+                , fetchlogs_id
+                FROM fetchlogs
+                WHERE last_message~*'^error'
+                AND init_datetime > current_date - %s)
+                SELECT type
+                , init_datetime::date as day
+                , COUNT(1) as n
+                , MIN(init_datetime)::time as min_time
+                , MAX(init_datetime)::time as max_time
+                , MIN(fetchlogs_id) as fetchlogs_id
+                FROM logs
+                GROUP BY init_datetime::date, type
+                ORDER BY init_datetime::date
+                """,
+                (days,),
+            )
+            rows = cursor.fetchall()
+            return rows
+
+
+def load_rejects_summary(days: int = 30):
+    """Fetch any possible file errors"""
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                WITH r AS (
+                SELECT split_part(r->>'ingest_id', '-', 2) as source_id
+                , split_part(r->>'ingest_id', '-', 1) as provider_id
+                , fetchlogs_id
+                FROM rejects
+                WHERE fetchlogs_id IS NOT NULL
+                AND t > current_date - %s)
+                SELECT provider_id
+                , r.source_id
+                , fetchlogs_id
+                , sensor_nodes_id
+                , COUNT(1) as records
+                FROM r
+                LEFT JOIN sensor_nodes sn
+                ON (r.source_id = sn.source_id
+                AND r.provider_id = sn.source_name)
+                GROUP BY provider_id
+                , r.source_id
+                , sensor_nodes_id
+                , fetchlogs_id;
+                """,
+                (days,),
+            )
+            rows = cursor.fetchall()
+            return rows
+
+
+def load_errors_list(limit: int = 10):
+    """Fetch any possible file errors"""
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT fetchlogs_id
+                , key
+                , init_datetime
+                , loaded_datetime
+                , completed_datetime
+                , last_message
+                FROM fetchlogs
+                WHERE last_message~*'^error'
+                ORDER BY fetchlogs_id DESC
+                LIMIT %s
+                """,
+                (limit,),
+            )
+            rows = cursor.fetchall()
+            return rows
+
+
 def load_fail(cursor, key, e):
     # print("full copy failed", key, e)
     cursor.execute(
@@ -122,26 +520,107 @@ def load_fail(cursor, key, e):
     )
 
 
-def load_success(cursor, key):
+# def load_success(cursor, key):
+#     cursor.execute(
+#         """
+#         UPDATE fetchlogs
+#         SET
+#         last_message=%s,
+#         loaded_datetime=clock_timestamp()
+#         WHERE
+#         key=%s
+#         """,
+#         (
+#             str(cursor.statusmessage),
+#             key,
+#         ),
+#     )
+
+
+def load_success(cursor, keys, message: str = 'success'):
     cursor.execute(
         """
         UPDATE fetchlogs
         SET
-        last_message=%s,
-        loaded_datetime=clock_timestamp()
-        WHERE
-        key=%s
+        last_message=%s
+        , completed_datetime=clock_timestamp()
+        WHERE key=ANY(%s)
         """,
         (
-            str(cursor.statusmessage),
-            key,
+            message,
+            keys,
         ),
     )
 
 
+def add_fetchlog(key: str):
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        with connection.cursor() as cursor:
+            connection.set_session(autocommit=True)
+            cursor.execute(
+                """
+                INSERT INTO fetchlogs (key, last_modified)
+                VALUES(%s, clock_timestamp())
+                ON CONFLICT (key) DO UPDATE
+                SET last_modified=EXCLUDED.last_modified,
+                completed_datetime=NULL RETURNING *;
+                """,
+                (key,),
+            )
+            row = cursor.fetchone()
+            connection.commit()
+            return row
+
+
+def mark_success(
+        id: int = None,
+        key: str = None,
+        keys: list = None,
+        ids: list = None,
+        message: str = 'success',
+        reset: bool = False,
+):
+    if id is not None:
+        where = "fetchlogs_id = %s"
+        param = id
+    elif key is not None:
+        where = "key=%s"
+        param = key
+    elif keys is not None:
+        where = "key=ANY(%s)"
+        param = keys
+    elif ids is not None:
+        where = "fetchlogs_id=ANY(%s)"
+        param = ids
+    else:
+        logger.error('Failed to pass identifier')
+
+    if reset:
+        completed = 'NULL'
+    else:
+        completed = 'clock_timestamp'
+
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
+        connection.set_session(autocommit=True)
+        with connection.cursor() as cursor:
+            logger.info(f"Marking {where} / {param} as done, completed: {completed}")
+            cursor.execute(
+                f"""
+                UPDATE fetchlogs
+                SET
+                last_message=%s
+                , completed_datetime={completed}
+                WHERE {where}
+                """,
+                (
+                    message,
+                    param,
+                ),
+    )
+
+
 def crawl(bucket, prefix):
-    paginator = s3c.get_paginator("list_objects_v2")
-    # print(settings.DATABASE_WRITE_URL)
+    paginator = s3.get_paginator("list_objects_v2")
     f = StringIO()
     cnt = 0
     for page in paginator.paginate(

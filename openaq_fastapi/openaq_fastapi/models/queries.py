@@ -348,16 +348,25 @@ class DateRange(OBaseModel):
         return fix_datetime(v)
 
 
-class Versions(OBaseModel):
+class Version(OBaseModel):
     version_date: Optional[date] = Query(
         None,
-        description="Limit to sensors matching the version date",
+        description="""
+        Limit to sensors matching the version date
+        """,
     )
     isLatest: bool = Query(
         None,
-        description="Limit to the either latest versions or non-versioned sensors (true), old verisions (false) or all sensors and versions",
+        description="""
+        Limit to the either latest versions or
+        non-versioned sensors (true), old verisions
+        (false) or all sensors and versions
+        """,
     )
     life_cycles_id: Optional[int] = Query(
         None,
-        description="Limit to sensors with versions matching the provided life cycle id",
+        description="""
+        Limit to sensors with versions matching
+        the provided life cycle id
+        """,
     )
