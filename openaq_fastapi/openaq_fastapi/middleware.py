@@ -102,7 +102,6 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         api_key = settings.API_KEY
         whitelist = ["/openapi.json", "/"]
         route = request.url.path
-        print(route)
         if route not in whitelist and api_key is not None:
             token = None
             if 'access_token' in request.headers.keys():
