@@ -9,14 +9,18 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.openapi.utils import get_openapi
+# from fastapi.openapi.utils import get_openapi
 from mangum import Mangum
 from pydantic import BaseModel, ValidationError
 from starlette.responses import JSONResponse, RedirectResponse
 
 from openaq_fastapi.db import db_pool
-from openaq_fastapi.middleware import (CacheControlMiddleware, GetHostMiddleware,
-                         StripParametersMiddleware, TotalTimeMiddleware)
+from openaq_fastapi.middleware import (
+    CacheControlMiddleware,
+    # GetHostMiddleware,
+    StripParametersMiddleware,
+    TotalTimeMiddleware,
+)
 from openaq_fastapi.routers.averages import router as averages_router
 from openaq_fastapi.routers.cities import router as cities_router
 from openaq_fastapi.routers.countries import router as countries_router
@@ -54,6 +58,7 @@ class ORJSONResponse(JSONResponse):
 app = FastAPI(
     title="OpenAQ",
     description="API for OpenAQ LCS",
+    version="2.0.0",
     default_response_class=ORJSONResponse,
     docs_url="/",
     # servers=[{"url": "/"}],
