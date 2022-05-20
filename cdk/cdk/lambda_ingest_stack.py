@@ -12,6 +12,10 @@ from aws_cdk import (
 )
 
 from constructs import Construct
+from cdk.utils import (
+    stringify_settings,
+    create_dependencies_layer,
+)
 
 
 class LambdaIngestStack(Stack):
@@ -20,6 +24,7 @@ class LambdaIngestStack(Stack):
         scope: Construct,
         id: str,
         env_name: str,
+        lambda_env: Dict,
         fetch_bucket: str,
         ingest_lambda_timeout: int,
         ingest_lambda_memory_size: int,
@@ -45,9 +50,10 @@ class LambdaIngestStack(Stack):
             runtime=aws_lambda.Runtime.PYTHON_3_8,
             allow_public_subnet=True,
             memory_size=ingest_lambda_memory_size,
+            environment=stringify_settings(lambda_env),
             timeout=Duration.seconds(ingest_lambda_timeout),
             layers=[
-                self.create_dependencies_layer(
+                create_dependencies_layer(
                     self,
                     f"{env_name}",
                     'ingest'

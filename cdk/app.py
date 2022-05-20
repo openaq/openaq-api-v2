@@ -40,6 +40,7 @@ ingest = LambdaIngestStack(
     app,
     f"openaq-ingest-{settings.ENV}",
     env_name=settings.ENV,
+    lambda_env=lambda_env,
     fetch_bucket=settings.FETCH_BUCKET,
     ingest_lambda_timeout=settings.INGEST_LAMBDA_TIMEOUT,
     ingest_lambda_memory_size=settings.INGEST_LAMBDA_MEMORY_SIZE,

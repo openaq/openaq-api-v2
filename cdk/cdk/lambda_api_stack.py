@@ -26,7 +26,6 @@ from cdk.utils import (
 )
 
 
-
 class LambdaApiStack(Stack):
     def __init__(
         self,
