@@ -5,6 +5,7 @@ from typing import Dict, Optional
 
 from aws_cdk import (
     aws_lambda,
+    aws_logs,
     Stack,
     Duration,
     CfnOutput,
@@ -15,6 +16,7 @@ from aws_cdk import (
     aws_cloudfront_origins as origins,
     aws_cloudfront as cloudfront
 )
+from aws_cdk.aws_apigatewayv2 import CfnStage
 from aws_cdk.aws_apigatewayv2_alpha import HttpApi, HttpMethod
 from aws_cdk.aws_apigatewayv2_integrations_alpha import HttpLambdaIntegration
 
@@ -70,6 +72,7 @@ class LambdaApiStack(Stack):
         api = HttpApi(
             self,
             f"{id}-endpoint",
+            create_default_stage=False,
             default_integration=HttpLambdaIntegration(
                 f"openaq-api-integration-{env_name}",
                 openaq_api,
@@ -87,8 +90,29 @@ class LambdaApiStack(Stack):
                 "max_age": Duration.days(10),
             },
         )
+
+        log = aws_logs.LogGroup(
+            self,
+            f"{id}-http-gateway-log",
+        )
+
+        CfnStage(
+            self,
+            f"{id}-stage",
+            api_id=api.http_api_id,
+            stage_name="$default",
+            auto_deploy=True,
+            access_log_settings=CfnStage.AccessLogSettingsProperty(
+                destination_arn=log.log_group_arn,
+                format='{"env":"$context.stage","requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","routeKey":"$context.routeKey", "status":"$context.status","protocol":"$context.protocol", "responseLength":"$context.responseLength", "responseLatency": $context.responseLatency, "path": "$context.path"}',
+            )
+        )
+
+        # When you dont include a default stage the api object does not include the url
+        # However, the urls are all standard based on the api_id and the region
+        api_url = f'https://{api.http_api_id}.execute-api.{self.region}.amazonaws.com'
         # TODO setup origin header to prevent traffic to API gateway directly
-        CfnOutput(self, "Endpoint", value=api.url)
+        CfnOutput(self, "Endpoint", value=api_url)
 
         if domain_name and cert_arn and web_acl_id and hosted_zone_id and hosted_zone_name:
 
@@ -112,7 +136,7 @@ class LambdaApiStack(Stack):
                 enable_accept_encoding_brotli=True
             )
 
-            origin_url = Fn.select(2, Fn.split("/", api.url)) # required to split url into compatible format for dist
+            origin_url = Fn.select(2, Fn.split("/", api_url)) # required to split url into compatible format for dist
 
             dist = cloudfront.Distribution(self, f"smartcasa-api-dist-{env_name}",
                     default_behavior=cloudfront.BehaviorOptions(
