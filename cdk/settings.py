@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     ETL_BUCKET: str
     API_CACHE_TIMEOUT: int = 900
     FETCH_ASCENDING: bool = False
+    ROLLUP_LAMBDA_TIMEOUT: int = 900
+    ROLLUP_LAMBDA_MEMORY_SIZE: int = 1512
     INGEST_LAMBDA_TIMEOUT: int = 900
     INGEST_LAMBDA_MEMORY_SIZE: int = 1512
     PIPELINE_LIMIT: int = 10
@@ -25,9 +27,9 @@ class Settings(BaseSettings):
     WEB_ACL_ID: str = None
     DOMAIN_NAME: str = None
     LOG_BUCKET: str = None
-    API_LAMBDA_TIMEOUT: int = 30  # lambda timeout in seconds
     CERTIFICATE_ARN: str = None
     API_LAMBDA_MEMORY_SIZE: int = 1512
+    API_LAMBDA_TIMEOUT: int = 30  # lambda timeout in seconds
 
     class Config:
         parent = Path(__file__).resolve().parent.parent

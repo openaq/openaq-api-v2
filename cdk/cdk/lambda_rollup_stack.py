@@ -1,4 +1,4 @@
-import pathlib
+from typing import Dict
 
 from aws_cdk import (
     aws_lambda,
@@ -9,41 +9,59 @@ from aws_cdk import (
 )
 from constructs import Construct
 
+from cdk.utils import (
+    stringify_settings,
+    create_dependencies_layer,
+)
+
 
 class LambdaRollupStack(Stack):
     def __init__(
         self,
         scope: Construct,
         id: str,
-        package_directory: str,
-        env_variables,
+        env_name: str,
+        lambda_env: Dict,
         lambda_timeout: int = 900,
         memory_size: int = 1512,
+        rate_minutes: int = 5,
         **kwargs,
     ) -> None:
         """Lambda plus cronjob to rollup data"""
         super().__init__(scope, id, *kwargs)
 
-        package = aws_lambda.Code.from_asset(
-            str(pathlib.Path.joinpath(package_directory, "package.zip"))
-        )
-
         rollup_function = aws_lambda.Function(
             self,
             f"{id}-rollup-lambda",
-            code=package,
+            code=aws_lambda.Code.from_asset(
+                path='../openaq_fastapi',
+                exclude=[
+                    'venv',
+                    '__pycache__',
+                    'pytest_cache',
+                ],
+            ),
             handler="openaq_fastapi.ingest.handler.rollup_handler",
             runtime=aws_lambda.Runtime.PYTHON_3_8,
             allow_public_subnet=True,
             memory_size=memory_size,
             timeout=Duration.seconds(lambda_timeout),
-            environment=env_variables,
+            environment=stringify_settings(lambda_env),
+            layers=[
+                create_dependencies_layer(
+                    self,
+                    f"{env_name}",
+                    'rollup'
+                ),
+            ],
         )
 
         aws_events.Rule(
             self,
             f"{id}-rollup-hourly-event-rule",
-            schedule=aws_events.Schedule.cron(minute="0/5"),
+            schedule=aws_events.Schedule.cron(
+                minute=f"0/{rate_minutes}"
+            ),
             targets=[
                 aws_events_targets.LambdaFunction(rollup_function),
             ],

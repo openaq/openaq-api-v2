@@ -1,5 +1,3 @@
-import os
-import subprocess
 from typing import Dict
 
 from aws_cdk import (
