@@ -50,7 +50,7 @@ ingest = LambdaIngestStack(
 )
 
 Tags.of(ingest).add("project", "openaq")
-Tags.of(ingest).add("product", "api")
+Tags.of(ingest).add("product", "ingest")
 Tags.of(ingest).add("env", settings.ENV)
 
 rollup = LambdaRollupStack(
