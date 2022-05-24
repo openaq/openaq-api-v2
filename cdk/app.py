@@ -52,7 +52,8 @@ Tags.of(ingest).add("Project", settings.ENV)
 rollup = LambdaRollupStack(
     app,
     f"openaq-rollup-{settings.ENV}",
-    env_variables=lambda_env,
+    env_name=settings.ENV,
+    lambda_env=lambda_env,
     lambda_timeout=settings.ROLLUP_LAMBDA_TIMEOUT,
     lambda_memory_size=settings.ROLLUP_LAMBDA_MEMORY_SIZE,
     rate_minutes=5,

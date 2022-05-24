@@ -23,7 +23,7 @@ class LambdaRollupStack(Stack):
         env_name: str,
         lambda_env: Dict,
         lambda_timeout: int = 900,
-        memory_size: int = 1512,
+        lambda_memory_size: int = 1512,
         rate_minutes: int = 5,
         **kwargs,
     ) -> None:
@@ -44,14 +44,14 @@ class LambdaRollupStack(Stack):
             handler="openaq_fastapi.ingest.handler.rollup_handler",
             runtime=aws_lambda.Runtime.PYTHON_3_8,
             allow_public_subnet=True,
-            memory_size=memory_size,
+            memory_size=lambda_memory_size,
             timeout=Duration.seconds(lambda_timeout),
             environment=stringify_settings(lambda_env),
             layers=[
                 create_dependencies_layer(
                     self,
                     f"{env_name}",
-                    'rollup'
+                    'api' # just use the same layer for now
                 ),
             ],
         )
