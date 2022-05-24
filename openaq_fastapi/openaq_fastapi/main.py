@@ -9,7 +9,6 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-# from fastapi.openapi.utils import get_openapi
 from mangum import Mangum
 from pydantic import BaseModel, ValidationError
 from starlette.responses import JSONResponse, RedirectResponse
