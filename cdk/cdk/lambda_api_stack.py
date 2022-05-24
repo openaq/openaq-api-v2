@@ -14,7 +14,8 @@ from aws_cdk import (
     aws_route53_targets as targets,
     aws_certificatemanager as acm,
     aws_cloudfront_origins as origins,
-    aws_cloudfront as cloudfront
+    aws_cloudfront as cloudfront,
+    aws_s3
 )
 from aws_cdk.aws_apigatewayv2 import CfnStage
 from aws_cdk.aws_apigatewayv2_alpha import HttpApi, HttpMethod
@@ -42,6 +43,7 @@ class LambdaApiStack(Stack):
         domain_name: Optional[str],
         cert_arn: Optional[str],
         web_acl_id: Optional[str],
+        access_logs_bucket: Optional[str]
         **kwargs,
     ) -> None:
         """Lambda to handle api requests"""
@@ -114,7 +116,7 @@ class LambdaApiStack(Stack):
         # TODO setup origin header to prevent traffic to API gateway directly
         CfnOutput(self, "Endpoint", value=api_url)
 
-        if domain_name and cert_arn and web_acl_id and hosted_zone_id and hosted_zone_name:
+        if domain_name and cert_arn and web_acl_id and hosted_zone_id and hosted_zone_name and access_logs_bucket:
 
             hosted_zone = route53.HostedZone.from_hosted_zone_attributes(
                 self,
@@ -149,7 +151,8 @@ class LambdaApiStack(Stack):
                 ),
                 domain_names=[domain_name],
                 certificate=cert,
-                web_acl_id=web_acl_id
+                web_acl_id=web_acl_id,
+                enable_logging=True
             )
 
             route53.ARecord(self, f"openaq-api-alias-record-{env_name}",
@@ -163,6 +166,7 @@ class LambdaApiStack(Stack):
             print(f"""
             Could not add domain: {domain_name}
             cert: {cert_arn}
-            zone_id: {hosted_zone_id}'
+            zone_id: {hosted_zone_id}
             zone_name: {hosted_zone_name}
+            access_logs_bucket: {access_logs_bucket}
             """)

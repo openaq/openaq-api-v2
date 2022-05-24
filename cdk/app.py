@@ -33,8 +33,10 @@ api = LambdaApiStack(
     cert_arn=settings.CERTIFICATE_ARN,
     web_acl_id=settings.WEB_ACL_ID,
 )
-Tags.of(api).add("Project", settings.ENV)
 
+Tags.of(api).add("project", "openaq")
+Tags.of(api).add("product", "api")
+Tags.of(api).add("env", settings.ENV)
 
 ingest = LambdaIngestStack(
     app,
@@ -46,8 +48,10 @@ ingest = LambdaIngestStack(
     ingest_lambda_memory_size=settings.INGEST_LAMBDA_MEMORY_SIZE,
     ingest_rate_minutes=15,
 )
-Tags.of(ingest).add("Project", settings.ENV)
 
+Tags.of(ingest).add("project", "openaq")
+Tags.of(ingest).add("product", "api")
+Tags.of(ingest).add("env", settings.ENV)
 
 rollup = LambdaRollupStack(
     app,
@@ -58,6 +62,9 @@ rollup = LambdaRollupStack(
     lambda_memory_size=settings.ROLLUP_LAMBDA_MEMORY_SIZE,
     rate_minutes=5,
 )
-Tags.of(rollup).add("Project", settings.ENV)
+
+Tags.of(rollup).add("project", "openaq")
+Tags.of(rollup).add("product", "api")
+Tags.of(rollup).add("env", settings.ENV)
 
 app.synth()
