@@ -43,7 +43,6 @@ class LambdaApiStack(Stack):
         domain_name: Optional[str],
         cert_arn: Optional[str],
         web_acl_id: Optional[str],
-        access_logs_bucket: Optional[str]
         **kwargs,
     ) -> None:
         """Lambda to handle api requests"""
@@ -116,7 +115,7 @@ class LambdaApiStack(Stack):
         # TODO setup origin header to prevent traffic to API gateway directly
         CfnOutput(self, "Endpoint", value=api_url)
 
-        if domain_name and cert_arn and web_acl_id and hosted_zone_id and hosted_zone_name and access_logs_bucket:
+        if domain_name and cert_arn and web_acl_id and hosted_zone_id and hosted_zone_name:
 
             hosted_zone = route53.HostedZone.from_hosted_zone_attributes(
                 self,
@@ -140,7 +139,7 @@ class LambdaApiStack(Stack):
 
             origin_url = Fn.select(2, Fn.split("/", api_url)) # required to split url into compatible format for dist
 
-            dist = cloudfront.Distribution(self, f"smartcasa-api-dist-{env_name}",
+            dist = cloudfront.Distribution(self, f"openaq-api-dist-{env_name}",
                     default_behavior=cloudfront.BehaviorOptions(
                     origin=origins.HttpOrigin(
                         origin_url
@@ -168,5 +167,4 @@ class LambdaApiStack(Stack):
             cert: {cert_arn}
             zone_id: {hosted_zone_id}
             zone_name: {hosted_zone_name}
-            access_logs_bucket: {access_logs_bucket}
             """)

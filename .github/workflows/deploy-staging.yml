@@ -1,0 +1,33 @@
+name: Deploy staging
+
+on: 
+  push:
+    branches:
+      - develop
+
+jobs:
+  aws_cdk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+      - name: Configure aws credentials
+        uses: aws-actions/configure-aws-credentials@master
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Install CDK
+        run: |
+          npm install -g aws-cdk@2.25.0
+      - name: Deploy stack
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.9'
+        working-directory: ./cdk
+        run: |
+          pip install -r requirements.txt
+          cdk deploy openaq-api-staging --require-approval never

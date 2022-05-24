@@ -4,3 +4,5 @@ __pycache__/
 *.py[cod]
 cdk.out/
 .DS_Store
+*.egg-info
+.build
