@@ -34,7 +34,7 @@ api = LambdaApiStack(
     web_acl_id=settings.WEB_ACL_ID,
 )
 
-Tags.of(api).add("project", "openaq")
+Tags.of(api).add("project", settings.PROJECT)
 Tags.of(api).add("product", "api")
 Tags.of(api).add("env", settings.ENV)
 
@@ -49,7 +49,7 @@ ingest = LambdaIngestStack(
     ingest_rate_minutes=15,
 )
 
-Tags.of(ingest).add("project", "openaq")
+Tags.of(ingest).add("project", settings.PROJECT)
 Tags.of(ingest).add("product", "ingest")
 Tags.of(ingest).add("env", settings.ENV)
 
@@ -63,7 +63,7 @@ rollup = LambdaRollupStack(
     rate_minutes=5,
 )
 
-Tags.of(rollup).add("project", "openaq")
+Tags.of(rollup).add("project", settings.PROJECT)
 Tags.of(rollup).add("product", "api")
 Tags.of(rollup).add("env", settings.ENV)
 

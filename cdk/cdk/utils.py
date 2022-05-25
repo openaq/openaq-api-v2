@@ -1,6 +1,7 @@
-from aws_cdk import aws_lambda
 from os import environ
 import subprocess
+
+from aws_cdk import aws_lambda
 
 
 def dictstr(item):

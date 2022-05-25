@@ -1,5 +1,3 @@
-import os
-import subprocess
 from typing import Dict, Optional
 
 
@@ -14,8 +12,7 @@ from aws_cdk import (
     aws_route53_targets as targets,
     aws_certificatemanager as acm,
     aws_cloudfront_origins as origins,
-    aws_cloudfront as cloudfront,
-    aws_s3
+    aws_cloudfront as cloudfront
 )
 from aws_cdk.aws_apigatewayv2 import CfnStage
 from aws_cdk.aws_apigatewayv2_alpha import HttpApi, HttpMethod
@@ -130,7 +127,7 @@ class LambdaApiStack(Stack):
                 cache_policy_name=f"openaq-api-cache-policy-{env_name}",
                 default_ttl=Duration.seconds(60),
                 min_ttl=Duration.minutes(0),
-                max_ttl=Duration.days(10),
+                max_ttl=Duration.days(7),
                 cookie_behavior=cloudfront.CacheCookieBehavior.none(),
                 header_behavior=cloudfront.CacheHeaderBehavior.allow_list("Origin"),
                 enable_accept_encoding_gzip=True,

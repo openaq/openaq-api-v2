@@ -5,8 +5,30 @@ on:
     branches:
       - develop
 
+env:
+  ENV: "staging"
+  PROJECT: "openaq"
+  DATABASE_READ_USER: ${{ secrets.DATABASE_READ_USER }}
+  DATABASE_READ_PASSWORD: ${{ secrets.DATABASE_READ_PASSWORD }}
+  DATABASE_WRITE_USER: ${{ secrets.DATABASE_WRITE_USER }}
+  DATABASE_WRITE_PASSWORD: ${{ secrets.DATABASE_WRITE_PASSWORD }}
+  DATABASE_DB: ${{ secrets.DATABASE_DB }}
+  DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
+  DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
+  FETCH_ASCENDING: ${{ secrets.FETCH_ASCENDING }}
+  PIPELINE_LIMIT: ${{ secrets.PIPELINE_LIMIT }}
+  METADATA_LIMIT: ${{ secrets.METADATA_LIMIT }}
+  REALTIME_LIMIT: ${{ secrets.REALTIME_LIMIT }}
+  FETCH_BUCKET: ${{ secrets.FETCH_BUCKET }}
+  ETL_BUCKET: ${{ secrets.ETL_BUCKET }}
+  HOSTED_ZONE_ID: ${{ secrets.HOSTED_ZONE_ID }}
+  HOSTED_ZONE_NAME: ${{ secrets.HOSTED_ZONE_NAME }}
+  DOMAIN_NAME: "staging.openaq.org"
+  WEB_ACL_ID: ${{ secrets.WEB_ACL_ID }}
+  CERTIFICATE_ARN: ${{ secrets.CERTIFICATE_ARN }}
+
 jobs:
-  aws_cdk:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
@@ -23,11 +45,12 @@ jobs:
       - name: Install CDK
         run: |
           npm install -g aws-cdk@2.25.0
-      - name: Deploy stack
-        uses: actions/setup-python@v3
+      - uses: actions/setup-python@v3
         with:
           python-version: '3.9'
+      - name: Deploy stack
         working-directory: ./cdk
         run: |
           pip install -r requirements.txt
-          cdk deploy openaq-api-staging --require-approval never
+          cdk deploy openaq-api-staging --require-approval never 
+        # only deploy api until ingest and rollup are separated

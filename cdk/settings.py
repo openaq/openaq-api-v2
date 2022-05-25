@@ -4,11 +4,8 @@ from os import environ
 
 
 class Settings(BaseSettings):
-    # DATABASE_URL: str
-    # DATABASE_WRITE_URL: str
     ENV: str = "staging"
-    # FASTAPI_URL: str
-    # DRYRUN: bool = False
+    PROJECT: str = "openaq"
     FETCH_BUCKET: str
     ETL_BUCKET: str
     API_CACHE_TIMEOUT: int = 900

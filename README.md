@@ -13,7 +13,7 @@ The OpenAQ Data format is explained in [openaq-data-format](https://github.com/o
 [openaq-fetch](https://github.com/openaq/openaq-fetch) and [openaq-fetch-lcs](https://github.com/openaq/openaq-fetch-lcs) take care of fetching new data and writing to [S3](https://openaq-fetches.s3.amazonaws.com/index.html). Lambda functions defined in [ingest/](openaq_fastapi/openaq_fastapi/ingest/) then load data into the database, defined in [openaq-db](https://github.com/openaq/openaq-db).
 
 ## Getting started
-This repository holds the code for the OpenAQ API Version 2. Version 1 can be viewed in the [old repository](https://github.com/openaq/openaq-api).
+This repository holds the code for the OpenAQ API Version 2.
 
 This API is based on Python 3 and includes an AWS CDK project to help in deployment.
 
