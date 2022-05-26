@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  ENV: "staging"
+  ENV: "prod"
   PROJECT: "openaq"
   DATABASE_READ_USER: ${{ secrets.DATABASE_READ_USER }}
   DATABASE_READ_PASSWORD: ${{ secrets.DATABASE_READ_PASSWORD }}
@@ -26,6 +26,7 @@ env:
   DOMAIN_NAME: "api.openaq.org"
   WEB_ACL_ID: ${{ secrets.WEB_ACL_ID }}
   CERTIFICATE_ARN: ${{ secrets.CERTIFICATE_ARN }}
+  FASTAPI_URL: ""
 
 jobs:
   deploy:
