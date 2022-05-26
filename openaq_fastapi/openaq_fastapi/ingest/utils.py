@@ -14,7 +14,7 @@ app = typer.Typer()
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
-FETCH_BUCKET = settings.OPENAQ_FETCH_BUCKET
+FETCH_BUCKET = settings.FETCH_BUCKET
 s3 = boto3.resource("s3")
 s3c = boto3.client("s3")
 
@@ -183,8 +183,8 @@ def crawl(bucket, prefix):
 
 
 def crawl_lcs():
-    crawl(settings.OPENAQ_ETL_BUCKET, "lcs-etl-pipeline/")
+    crawl(settings.ETL_BUCKET, "lcs-etl-pipeline/")
 
 
 def crawl_fetch():
-    crawl(settings.OPENAQ_FETCH_BUCKET, "realtime-gzipped/")
+    crawl(settings.FETCH_BUCKET, "realtime-gzipped/")

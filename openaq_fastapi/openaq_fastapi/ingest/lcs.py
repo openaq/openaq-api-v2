@@ -19,7 +19,7 @@ s3c = boto3.client("s3")
 app = typer.Typer()
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
-FETCH_BUCKET = settings.OPENAQ_ETL_BUCKET
+FETCH_BUCKET = settings.ETL_BUCKET
 
 
 class LCSData:
@@ -333,7 +333,7 @@ def load_measurements(key):
         compression = "NONE"
     try:
         resp = s3c.select_object_content(
-            Bucket=settings.OPENAQ_ETL_BUCKET,
+            Bucket=settings.ETL_BUCKET,
             Key=key,
             ExpressionType="SQL",
             Expression="""
