@@ -26,6 +26,7 @@ env:
   DOMAIN_NAME: "staging.openaq.org"
   WEB_ACL_ID: ${{ secrets.WEB_ACL_ID }}
   CERTIFICATE_ARN: ${{ secrets.CERTIFICATE_ARN }}
+  FASTAPI_URL: ""
 
 jobs:
   deploy:
