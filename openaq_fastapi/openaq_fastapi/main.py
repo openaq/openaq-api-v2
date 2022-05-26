@@ -1,5 +1,6 @@
 import datetime
 import logging
+from pathlib import Path
 import time
 from typing import Any, List
 
@@ -8,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.staticfiles import StaticFiles
 from mangum import Mangum
 from pydantic import BaseModel, ValidationError
 from starlette.responses import JSONResponse, RedirectResponse
@@ -63,8 +64,12 @@ app = FastAPI(
     description="OpenAQ API",
     version="2.0.0",
     default_response_class=ORJSONResponse,
-    docs_url="/",
+    docs_url="/docs",
 )
+
+
+
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -117,10 +122,10 @@ async def shutdown_event():
     logger.debug("Connection closed")
 
 
-@app.get("/ping")
+@app.get("/ping", include_in_schema=False)
 def pong():
     """
-    Sanity check.
+    health check.
     This will let the user know that the service is operational.
     And this path operation will:
     * show a lifesign
@@ -128,7 +133,7 @@ def pong():
     return {"ping": "pong!"}
 
 
-@app.get("/favicon.ico")
+@app.get("/favicon.ico", include_in_schema=False)
 def favico():
     return RedirectResponse(
         "https://openaq.org/assets/graphics/meta/favicon.png"
@@ -147,6 +152,11 @@ app.include_router(sources_router)
 app.include_router(parameters_router)
 app.include_router(manufacturers_router)
 app.include_router(summary_router)
+
+
+static_dir = Path.joinpath(Path(__file__).resolve().parent, 'static')
+
+app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
 
 handler = Mangum(app)
 

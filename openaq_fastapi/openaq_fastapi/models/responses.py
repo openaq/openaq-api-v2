@@ -244,3 +244,15 @@ class LatestRow(BaseModel):
 
 class OpenAQLatestResult(OpenAQResult):
     results: List[LatestRow]
+
+
+class SummaryResults(BaseModel):
+    count: int
+    cities: int
+    sources: int
+    countries: int
+    locations: int
+
+
+class Summary(OpenAQResult):
+    results: List[SummaryResults]

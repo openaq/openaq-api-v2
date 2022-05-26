@@ -207,8 +207,13 @@ class HasGeo(OBaseModel):
 
 
 class Geo(OBaseModel):
-    coordinates: Optional[str] = Field(
-        None, regex=r"^-?\d{1,2}\.?\d{0,8},-?1?\d{1,2}\.?\d{0,8}$"
+    coordinates: Optional[str] = Query(
+        None, 
+        regex=r"^-?\d{1,2}\.?\d{0,8},-?1?\d{1,2}\.?\d{0,8}$", 
+        description="""
+        Coordinate pair in form lat,lng
+        """, 
+        example="38.907,-77.037"
     )
     lat: Optional[confloat(ge=-90, le=90)] = None
     lon: Optional[confloat(ge=-180, le=180)] = None
