@@ -224,7 +224,7 @@ async def measurements_get(
             {where}
         """
     rows = await db.fetch(q, params)
-    logger.debug(f"{rows}")
+
     if rows is None:
         return OpenAQResult()
     try:
@@ -416,7 +416,7 @@ async def measurements_get(
             params["rangeend"] = rangeend
             iteration += 1
     meta = Meta(
-        website=os.getenv("APP_HOST", "/"),
+        website=os.getenv("DOMAIN_NAME", os.getenv("BASE_URL", "/")),
         page=m.page,
         limit=m.limit,
         found=count,
