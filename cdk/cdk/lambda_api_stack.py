@@ -143,7 +143,8 @@ class LambdaApiStack(Stack):
                     ),
                     allowed_methods=cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
                     compress=True,
-                    cache_policy=cache_policy
+                    cache_policy=cache_policy,
+                    viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
                 ),
                 domain_names=[domain_name],
                 certificate=cert,
