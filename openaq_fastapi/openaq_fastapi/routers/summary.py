@@ -1,11 +1,9 @@
 import logging
 
-from fastapi import APIRouter, Depends, Query
-from enum import Enum
+from fastapi import APIRouter, Depends
 from ..db import DB
-from ..models.queries import APIBase, Country
 from openaq_fastapi.models.responses import (
-    OpenAQResult,
+    Summary,
 )
 
 logger = logging.getLogger("summary")
@@ -14,13 +12,10 @@ logger.setLevel(logging.DEBUG)
 router = APIRouter()
 
 
-
-
-
-
 @router.get(
     "/v2/summary",
-    response_model=OpenAQResult,
+    response_model=Summary,
+    summary="Provides a summary of platform data",
     tags=["v2"],
 )
 async def summary_get(

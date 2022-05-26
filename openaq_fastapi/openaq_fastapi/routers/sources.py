@@ -46,7 +46,12 @@ class Sources(SourceName, APIBase):
         return " TRUE "
 
 
-@router.get("/v2/sources", response_model=OpenAQResult, tags=["v2"])
+@router.get(
+    "/v2/sources", 
+    response_model=OpenAQResult, 
+    summary="Provides a list of sources",
+    tags=["v2"]
+)
 async def sources_get(
     db: DB = Depends(),
     sources: Sources = Depends(Sources.depends()),
@@ -111,7 +116,12 @@ class SourcesV1(APIBase):
         return " TRUE "
 
 
-@router.get("/v1/sources", response_model=OpenAQResult, tags=["v1"])
+@router.get(
+    "/v1/sources", 
+    response_model=OpenAQResult, 
+    summary="Provides a list of sources",
+    tags=["v1"]
+)
 async def sources_v1_get(
     db: DB = Depends(),
     sources: SourcesV1 = Depends(SourcesV1.depends()),
@@ -142,7 +152,11 @@ async def sources_v1_get(
     return output
 
 
-@router.get("/v2/sources/readme/{slug}", tags=["v2"])
+@router.get(
+    "/v2/sources/readme/{slug}", 
+    summary="Provides a list of parameters",
+    tags=["v2"]
+)
 async def readme_get(
     db: DB = Depends(),
     slug: str = Path(...),
