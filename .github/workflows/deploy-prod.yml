@@ -47,7 +47,7 @@ jobs:
           npm install -g aws-cdk@2.25.0
       - uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.8'
       - name: Deploy stack
         working-directory: ./cdk
         run: |
