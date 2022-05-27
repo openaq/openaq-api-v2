@@ -130,6 +130,7 @@ class LambdaApiStack(Stack):
                 max_ttl=Duration.days(7),
                 cookie_behavior=cloudfront.CacheCookieBehavior.none(),
                 header_behavior=cloudfront.CacheHeaderBehavior.allow_list("Origin"),
+                query_string_behavior=cloudfront.CacheQueryStringBehavior.all(),
                 enable_accept_encoding_gzip=True,
                 enable_accept_encoding_brotli=True
             )
