@@ -54,6 +54,7 @@ WHERE sensors_id IS NULL;
 -- , -99
 -- , generate_series(now() - '3day'::interval, current_date, '1hour'::interval);
 
+
 WITH m AS (
 INSERT INTO measurements (
     sensors_id,

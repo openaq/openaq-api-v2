@@ -23,6 +23,7 @@ app = typer.Typer()
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 FETCH_BUCKET = settings.ETL_BUCKET
+
 logger = logging.getLogger(__name__)
 
 warnings.filterwarnings(

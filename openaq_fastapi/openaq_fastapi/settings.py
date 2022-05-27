@@ -5,7 +5,6 @@ from os import environ
 
 
 class Settings(BaseSettings):
-
     DATABASE_READ_USER: str
     DATABASE_WRITE_USER: str
     DATABASE_READ_PASSWORD: str
