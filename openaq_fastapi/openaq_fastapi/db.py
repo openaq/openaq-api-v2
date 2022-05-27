@@ -8,13 +8,13 @@ from aiocache import SimpleMemoryCache, cached
 from aiocache.plugins import HitMissRatioPlugin, TimingPlugin
 from buildpg import render
 from fastapi import HTTPException, Request
+from asyncio.exceptions import TimeoutError
 
 from openaq_fastapi.settings import settings
 
 from .models.responses import Meta, OpenAQResult
 
-logger = logging.getLogger("base")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger('db')
 
 
 def default(obj):
@@ -45,7 +45,7 @@ cache_config = {
 async def db_pool(pool):
     if pool is None:
         pool = await asyncpg.create_pool(
-            settings.DATABASE_URL,
+            settings.DATABASE_READ_URL,
             command_timeout=14,
             max_inactive_connection_lifetime=15,
             min_size=1,
@@ -68,7 +68,7 @@ class DB:
         )
         return self.request.app.state.pool
 
-    @cached(settings.OPENAQ_CACHE_TIMEOUT, **cache_config)
+    @cached(settings.API_CACHE_TIMEOUT, **cache_config)
     async def fetch(self, query, kwargs):
         pool = await self.pool()
         start = time.time()
@@ -83,8 +83,13 @@ class DB:
                 raise ValueError(f"{e}")
             except asyncpg.exceptions.CharacterNotInRepertoireError as e:
                 raise ValueError(f"{e}")
+            except TimeoutError:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Connection timed out",
+                )
             except Exception as e:
-                logger.debug(f"Database Error: {e}")
+                logger.error(f"Database Error: {e}")
                 if str(e).startswith("ST_TileEnvelope"):
                     raise HTTPException(status_code=422, detail=f"{e}")
                 raise HTTPException(status_code=500, detail=f"{e}")
@@ -124,7 +129,7 @@ class DB:
                 results = []
 
         meta = Meta(
-            website=os.getenv("APP_HOST", "/"),
+            website=os.getenv("DOMAIN_NAME", os.getenv("BASE_URL", "/")),
             page=kwargs["page"],
             limit=kwargs["limit"],
             found=found,

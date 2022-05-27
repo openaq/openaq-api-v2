@@ -2,7 +2,6 @@ import logging
 from typing import List
 
 import jq
-import orjson
 from fastapi import APIRouter, Depends, Query
 from pydantic.typing import Optional
 from enum import Enum
@@ -21,10 +20,8 @@ from ..models.queries import (
 )
 
 from openaq_fastapi.models.responses import OpenAQResult, converter
-from starlette.responses import JSONResponse
 
 logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
 
 router = APIRouter()
 
@@ -165,9 +162,16 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
 
 
 @router.get(
-    "/v2/locations/{location_id}", response_model=OpenAQResult, tags=["v2"]
+    "/v2/locations/{location_id}", 
+    response_model=OpenAQResult, 
+    summary="Provides a location from a given location id",
+    tags=["v2"]
 )
-@router.get("/v2/locations", response_model=OpenAQResult, tags=["v2"])
+@router.get(
+    "/v2/locations", 
+    response_model=OpenAQResult, 
+    summary="Provides a list of all locations",
+    tags=["v2"])
 async def locations_get(
     db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
 ):
@@ -245,17 +249,22 @@ async def locations_get(
         ;
         """
 
-    logger.debug(f"**** {qparams}")
-
     output = await db.fetchOpenAQResult(q, qparams)
 
     return output
 
 
 @router.get(
-    "/v2/latest/{location_id}", response_model=OpenAQResult, tags=["v2"]
+    "/v2/latest/{location_id}", 
+    response_model=OpenAQResult, 
+    summary="Provides latest measurements from a given location",
+    tags=["v2"]
 )
-@router.get("/v2/latest", response_model=OpenAQResult, tags=["v2"])
+@router.get(
+    "/v2/latest", 
+    response_model=OpenAQResult,
+    summary="Provides latest measurements from all locations",
+    tags=["v2"])
 async def latest_get(
     db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
 ):
@@ -361,9 +370,17 @@ async def v1_base(
 
 
 @router.get(
-    "/v1/latest/{location_id}", response_model=OpenAQResult, tags=["v1"]
+    "/v1/latest/{location_id}", 
+    response_model=OpenAQResult, 
+    summary="Provides latest measurements from a given location",
+    tags=["v1"]
 )
-@router.get("/v1/latest", response_model=OpenAQResult, tags=["v1"])
+@router.get(
+    "/v1/latest", 
+    response_model=OpenAQResult, 
+    summary="Provides latest measurements from all locations",
+    tags=["v1"]
+)
 async def latest_v1_get(
     db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
 ):
@@ -406,9 +423,16 @@ async def latest_v1_get(
 
 
 @router.get(
-    "/v1/locations/{location_id}", response_model=OpenAQResult, tags=["v1"]
+    "/v1/locations/{location_id}", 
+    response_model=OpenAQResult, 
+    summary="Provides a location from a given location id",
+    tags=["v1"]
 )
-@router.get("/v1/locations", response_model=OpenAQResult, tags=["v1"])
+@router.get(
+    "/v1/locations", 
+    response_model=OpenAQResult, 
+    summary="Provides a list of all locations",
+    tags=["v1"])
 async def locationsv1_get(
     db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
 ):

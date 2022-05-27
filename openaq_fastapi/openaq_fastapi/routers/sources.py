@@ -16,8 +16,7 @@ from openaq_fastapi.models.responses import (
     OpenAQResult,
 )
 
-logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger("sources")
 
 router = APIRouter()
 
@@ -47,13 +46,19 @@ class Sources(SourceName, APIBase):
         return " TRUE "
 
 
-@router.get("/v2/sources", response_model=OpenAQResult, tags=["v2"])
+@router.get(
+    "/v2/sources", 
+    response_model=OpenAQResult, 
+    summary="Provides a list of sources",
+    tags=["v2"]
+)
 async def sources_get(
     db: DB = Depends(),
     sources: Sources = Depends(Sources.depends()),
 ):
     qparams = sources.params()
 
+    #
     q = f"""
     WITH t AS (
     SELECT
@@ -64,19 +69,19 @@ async def sources_get(
         case when readme is not null then
         '/v2/sources/readmes/' || slug
         else null end as readme,
-        sum(value_count) as count,
-        count(*) as locations,
-        to_char(min(first_datetime),'YYYY-MM-DD') as "firstUpdated",
-        to_char(max(last_datetime), 'YYYY-MM-DD') as "lastUpdated",
-        array_agg(DISTINCT measurand) as parameters
+        --sum(value_count) as count,
+        count(*) as locations
+        --to_char(min(first_datetime),'YYYY-MM-DD') as "firstUpdated",
+        --to_char(max(last_datetime), 'YYYY-MM-DD') as "lastUpdated",
+        --array_agg(DISTINCT measurand) as parameters
     FROM sources
     LEFT JOIN sensor_nodes_sources USING (sources_id)
     LEFT JOIN sensor_systems USING (sensor_nodes_id)
     LEFT JOIN sensors USING (sensor_systems_id)
-    LEFT JOIN rollups USING (sensors_id, measurands_id)
-    LEFT JOIN groups_view USING (groups_id, measurands_id)
-    WHERE rollup='total' AND groups_view.type='node'
-    AND {sources.where()}
+    --LEFT JOIN rollups USING (sensors_id, measurands_id)
+    --LEFT JOIN groups_view USING (groups_id, measurands_id)
+    --WHERE rollup='total' AND groups_view.type='node'
+    WHERE {sources.where()}
     GROUP BY
     1,2,3,4,5
     ORDER BY "{sources.order_by}" {sources.sort}
@@ -111,7 +116,12 @@ class SourcesV1(APIBase):
         return " TRUE "
 
 
-@router.get("/v1/sources", response_model=OpenAQResult, tags=["v1"])
+@router.get(
+    "/v1/sources", 
+    response_model=OpenAQResult, 
+    summary="Provides a list of sources",
+    tags=["v1"]
+)
 async def sources_v1_get(
     db: DB = Depends(),
     sources: SourcesV1 = Depends(SourcesV1.depends()),
@@ -142,7 +152,11 @@ async def sources_v1_get(
     return output
 
 
-@router.get("/v2/sources/readme/{slug}", tags=["v2"])
+@router.get(
+    "/v2/sources/readme/{slug}", 
+    summary="Provides a list of parameters",
+    tags=["v2"]
+)
 async def readme_get(
     db: DB = Depends(),
     slug: str = Path(...),

@@ -25,7 +25,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 
 logger = logging.getLogger(__name__)
 
-FETCH_BUCKET = settings.OPENAQ_FETCH_BUCKET
+FETCH_BUCKET = settings.FETCH_BUCKET
 s3 = boto3.resource("s3")
 
 

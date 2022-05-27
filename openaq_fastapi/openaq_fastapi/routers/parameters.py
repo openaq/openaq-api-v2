@@ -13,8 +13,7 @@ from openaq_fastapi.models.responses import (
     OpenAQParametersResult, converter
 )
 import jq
-logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger("parameters")
 
 router = APIRouter()
 
@@ -24,7 +23,10 @@ class Parameters(SourceName, APIBase):
 
 
 @router.get(
-    "/v2/parameters", response_model=OpenAQParametersResult, tags=["v2"]
+    "/v2/parameters", 
+    response_model=OpenAQParametersResult, 
+    summary="Provides a list of parameters",
+    tags=["v2"]
 )
 async def parameters_get(
     db: DB = Depends(),
@@ -57,7 +59,10 @@ async def parameters_get(
 
 
 @router.get(
-    "/v1/parameters", response_model=OpenAQParametersResult, tags=["v1"]
+    "/v1/parameters", 
+    response_model=OpenAQParametersResult, 
+    summary="Provides a list of parameters",
+    tags=["v1"]
 )
 async def parameters_getv1(
     db: DB = Depends(),

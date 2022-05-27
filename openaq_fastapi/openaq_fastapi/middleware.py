@@ -8,8 +8,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.types import ASGIApp
 
-logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger("middleware")
 
 
 class CacheControlMiddleware(BaseHTTPMiddleware):
@@ -71,16 +70,16 @@ class GetHostMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
 
-        if (
-            not hasattr(request.app.state, "servers")
-            or request.app.state.servers is None
-        ):
-            logger.debug(f"***** Setting Servers to {request.base_url} ****")
-            request.app.state.servers = [{"url": str(request.base_url)}]
-            environ['APP_HOST'] = str(request.base_url)
-        else:
-            request.app.state.servers = None
+        # if (
+        #     not hasattr(request.app.state, "servers")
+        #     or request.app.state.servers is None
+        # ):
+        #     logger.debug(f"***** Setting Servers to {request.base_url} ****")
+        #     request.app.state.servers = [{"url": str(request.base_url)}]
+        # else:
+        #     request.app.state.servers = None
 
+        environ['BASE_URL'] = str(request.base_url)
         response = await call_next(request)
 
         return response

@@ -44,8 +44,7 @@ class TileJSON(BaseModel):
     bounds: List[float] = [-180, -90, 180, 90]
 
 
-logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger("mvt")
 
 router = APIRouter()
 

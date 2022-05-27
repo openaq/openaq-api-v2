@@ -18,7 +18,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 
 s3 = boto3.client("s3")
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('utils')
 
 
 class StringIteratorIO(io.TextIOBase):
@@ -510,8 +510,8 @@ def crawl(bucket, prefix):
 
 
 def crawl_lcs():
-    crawl(settings.OPENAQ_ETL_BUCKET, "lcs-etl-pipeline/")
+    crawl(settings.ETL_BUCKET, "lcs-etl-pipeline/")
 
 
 def crawl_fetch():
-    crawl(settings.OPENAQ_FETCH_BUCKET, "realtime-gzipped/")
+    crawl(settings.FETCH_BUCKET, "realtime-gzipped/")

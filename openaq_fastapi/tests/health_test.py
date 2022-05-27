@@ -19,7 +19,7 @@ if settings.DRYRUN:
     client = TestClient(app)
 else:
     schema = schemathesis.from_uri(
-        f"{settings.OPENAQ_FASTAPI_URL}/openapi.json"
+        f"{settings.FASTAPI_URL}/openapi.json"
     )
 
 
@@ -57,7 +57,7 @@ def test_ok_status(url_list, max_wait):
             with TestClient(app) as client:
                 r = client.get(url)
         else:
-            r = requests.get(f"{settings.OPENAQ_FASTAPI_URL}{url}")
+            r = requests.get(f"{settings.FASTAPI_URL}{url}")
         assert r.status_code == requests.codes.ok
         assert r.elapsed.total_seconds() < max_wait
 

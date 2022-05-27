@@ -1,5 +1,6 @@
 import datetime
 import logging
+from pathlib import Path
 import time
 from typing import Any, List
 
@@ -8,15 +9,18 @@ from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.openapi.utils import get_openapi
+from fastapi.staticfiles import StaticFiles
 from mangum import Mangum
 from pydantic import BaseModel, ValidationError
 from starlette.responses import JSONResponse, RedirectResponse
 
 from openaq_fastapi.db import db_pool
-from openaq_fastapi.middleware import (CacheControlMiddleware, GetHostMiddleware,
-                         StripParametersMiddleware, TotalTimeMiddleware)
+from openaq_fastapi.middleware import (
+    CacheControlMiddleware,
+    GetHostMiddleware,
+    StripParametersMiddleware,
+    TotalTimeMiddleware,
+)
 from openaq_fastapi.routers.averages import router as averages_router
 from openaq_fastapi.routers.cities import router as cities_router
 from openaq_fastapi.routers.countries import router as countries_router
@@ -29,9 +33,17 @@ from openaq_fastapi.routers.projects import router as projects_router
 from openaq_fastapi.routers.sources import router as sources_router
 from openaq_fastapi.routers.summary import router as summary_router
 from openaq_fastapi.settings import settings
+from os import environ
 
-logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
+logging.basicConfig(
+    format='[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s',
+    level=settings.LOG_LEVEL.upper(),
+    force=True,
+)
+logger = logging.getLogger('main')
+
+# this is instead of importing settings elsewhere
+environ['DOMAIN_NAME'] = settings.DOMAIN_NAME
 
 
 def default(obj):
@@ -49,33 +61,16 @@ class ORJSONResponse(JSONResponse):
 
 app = FastAPI(
     title="OpenAQ",
-    description="API for OpenAQ LCS",
+    description="OpenAQ API",
+    version="2.0.0",
     default_response_class=ORJSONResponse,
-    docs_url="/",
-    servers=[{"url": "/"}],
+    docs_url="/docs",
 )
 
 
-def custom_openapi():
-    logger.debug(f"servers -- {app.state.servers}")
-    if app.state.servers is not None and app.openapi_schema:
-        return app.openapi_schema
-    logger.debug(f"Creating OpenApi Docs with server {app.state.servers}")
-    openapi_schema = get_openapi(
-        title=app.title,
-        description=app.description,
-        servers=app.state.servers,
-        version="2.0.0",
-        routes=app.routes,
-    )
-    # openapi_schema['info']['servers']=app.state.servers
-    app.openapi_schema = openapi_schema
-    return app.openapi_schema
 
 
-app.openapi = custom_openapi
 
-app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -114,23 +109,23 @@ async def startup_event():
     Application startup:
     register the database
     """
-    logger.info(f"Connecting to {settings.DATABASE_URL}")
+    logger.debug(f"Connecting to {settings.DATABASE_READ_URL}")
     app.state.pool = await db_pool(None)
-    logger.info("Connection established")
+    logger.debug("Connection established")
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Application shutdown: de-register the database connection."""
-    logger.info("Closing connection to database")
+    logger.debug("Closing connection to database")
     await app.state.pool.close()
-    logger.info("Connection closed")
+    logger.debug("Connection closed")
 
 
-@app.get("/ping")
+@app.get("/ping", include_in_schema=False)
 def pong():
     """
-    Sanity check.
+    health check.
     This will let the user know that the service is operational.
     And this path operation will:
     * show a lifesign
@@ -138,7 +133,7 @@ def pong():
     return {"ping": "pong!"}
 
 
-@app.get("/favicon.ico")
+@app.get("/favicon.ico", include_in_schema=False)
 def favico():
     return RedirectResponse(
         "https://openaq.org/assets/graphics/meta/favicon.png"
@@ -158,6 +153,11 @@ app.include_router(parameters_router)
 app.include_router(manufacturers_router)
 app.include_router(summary_router)
 
+
+static_dir = Path.joinpath(Path(__file__).resolve().parent, 'static')
+
+app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+
 handler = Mangum(app)
 
 
@@ -175,7 +175,7 @@ def run():
             )
         except Exception:
             attempts += 1
-            print("waiting for database to start")
+            logger.debug("waiting for database to start")
             time.sleep(3)
             pass
 

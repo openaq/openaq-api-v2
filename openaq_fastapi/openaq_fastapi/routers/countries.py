@@ -9,8 +9,7 @@ from openaq_fastapi.models.responses import (
     converter
 )
 import jq
-logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger("countries")
 
 router = APIRouter()
 
@@ -41,14 +40,21 @@ class Countries(Country, APIBase):
 @router.get(
     "/v1/countries/{country_id}",
     response_model=OpenAQCountriesResult,
+    summary="Provides a country within the platform by id",
     tags=["v1"],
 )
 @router.get(
     "/v2/countries/{country_id}",
     response_model=OpenAQCountriesResult,
+    summary="Provides a country within the platform by id",
     tags=["v2"],
 )
-@router.get("/v2/countries", response_model=OpenAQCountriesResult, tags=["v2"])
+@router.get(
+    "/v2/countries", 
+    response_model=OpenAQCountriesResult, 
+    summary="Provides a listing of countries within the platform",
+    tags=["v2"]
+)
 async def countries_get(
     db: DB = Depends(),
     countries: Countries = Depends(Countries.depends()),
@@ -86,7 +92,11 @@ async def countries_get(
 
     return output
 
-@router.get("/v1/countries", response_model=OpenAQCountriesResult, tags=["v1"])
+@router.get(
+    "/v1/countries", 
+    response_model=OpenAQCountriesResult, 
+    summary="Provides a listing of countries within the platform",
+    tags=["v1"])
 async def countries_getv1(
     db: DB = Depends(),
     countries: Countries = Depends(Countries.depends()),

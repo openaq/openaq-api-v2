@@ -8,8 +8,7 @@ import jq
 from ..db import DB
 from ..models.queries import APIBase, City, Country
 
-logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger("cities")
 
 router = APIRouter()
 
@@ -50,7 +49,7 @@ class Cities(City, Country, APIBase):
     "/v2/cities",
     response_model=OpenAQCitiesResult,
     tags=["v2"],
-    summary="Provides a simple listing of cities within the platform",
+    summary="Provides a listing of cities within the platform",
 )
 async def cities_get(
     db: DB = Depends(), cities: Cities = Depends(Cities.depends())

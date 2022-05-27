@@ -8,8 +8,7 @@ from ..db import DB
 from ..models.queries import APIBase, Country, Measurands, Project
 from enum import Enum
 
-logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger("projects")
 
 router = APIRouter()
 
