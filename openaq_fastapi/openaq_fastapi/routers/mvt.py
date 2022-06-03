@@ -64,13 +64,20 @@ class MobileTile(TileBase):
     project: Optional[int] = None
     isAnalysis: Optional[bool] = None
 
+    def try_cast(value: str):
+        try:
+            int(value)
+            return True
+        except ValueError: 
+            return False
+
     def where(self):
         wheres = []
         for f, v in self:
             if v is not None:
                 if f == "location" and all(isinstance(x, int) for x in v):
                     wheres.append(" location_id = ANY(:location::int[]) ")
-                elif f == "parameter" and isinstance(v, int):
+                elif f == "parameter" and self.try_cast(v):
                     wheres.append(" measurands_id = :parameter::int ")
                 elif f == "parameter":
                     wheres.append(" measurand = :parameter ")
