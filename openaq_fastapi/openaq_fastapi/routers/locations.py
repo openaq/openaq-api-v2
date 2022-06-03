@@ -5,6 +5,8 @@ import jq
 from fastapi import APIRouter, Depends, Query
 from pydantic.typing import Optional
 from enum import Enum
+
+from ..models.responses import LocationsResponse
 from ..db import DB
 from ..models.queries import (
     APIBase,
@@ -163,13 +165,13 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
 
 @router.get(
     "/v2/locations/{location_id}", 
-    response_model=OpenAQResult, 
+    response_model=LocationsResponse, 
     summary="Provides a location from a given location id",
     tags=["v2"]
 )
 @router.get(
     "/v2/locations", 
-    response_model=OpenAQResult, 
+    response_model=LocationsResponse, 
     summary="Provides a list of all locations",
     tags=["v2"])
 async def locations_get(
@@ -250,7 +252,6 @@ async def locations_get(
         """
 
     output = await db.fetchOpenAQResult(q, qparams)
-
     return output
 
 

@@ -75,6 +75,10 @@ class MobileTile(TileBase):
     def where(self):
         wheres = []
         for f, v in self:
+            print("WHERE")
+            print(v)
+            print(type(v))
+            print(isinstance(v, int))
             if v is not None:
                 if f == "location" and all(isinstance(x, int) for x in v):
                     wheres.append(" location_id = ANY(:location::int[]) ")

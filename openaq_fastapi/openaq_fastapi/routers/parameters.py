@@ -10,7 +10,7 @@ from ..models.queries import (
 )
 
 from openaq_fastapi.models.responses import (
-    OpenAQParametersResult, converter
+    ParametersResponse, converter
 )
 import jq
 logger = logging.getLogger("parameters")
@@ -24,7 +24,7 @@ class Parameters(SourceName, APIBase):
 
 @router.get(
     "/v2/parameters", 
-    response_model=OpenAQParametersResult, 
+    response_model=ParametersResponse, 
     summary="Provides a list of parameters",
     tags=["v2"]
 )
@@ -60,7 +60,7 @@ async def parameters_get(
 
 @router.get(
     "/v1/parameters", 
-    response_model=OpenAQParametersResult, 
+    response_model=ParametersResponse, 
     summary="Provides a list of parameters",
     tags=["v1"]
 )

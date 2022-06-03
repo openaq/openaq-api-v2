@@ -1,11 +1,9 @@
 import logging
 
 from fastapi import APIRouter, Depends
+from openaq_fastapi.models.responses import ManufacturersResponse, ModelsResponse
 from ..db import DB
 
-from openaq_fastapi.models.responses import (
-    OpenAQResult,
-)
 
 logger = logging.getLogger("manufacturers")
 logger.setLevel(logging.DEBUG)
@@ -15,7 +13,7 @@ router = APIRouter()
 
 @router.get(
     "/v2/manufacturers", 
-    response_model=OpenAQResult, 
+    response_model=ManufacturersResponse, 
     summary="Provides a list of manufacturers",
     tags=["v2"])
 async def mfr_get(db: DB = Depends()):
@@ -35,7 +33,7 @@ async def mfr_get(db: DB = Depends()):
 
 @router.get(
     "/v2/models", 
-    response_model=OpenAQResult,
+    response_model=ModelsResponse,
     summary="Provides a list of models", 
     tags=["v2"])
 async def model_get(db: DB = Depends()):

@@ -13,7 +13,7 @@ from ..models.queries import (
 )
 
 from openaq_fastapi.models.responses import (
-    OpenAQResult,
+    OpenAQResult, SourcesResponse
 )
 
 logger = logging.getLogger("sources")
@@ -48,7 +48,7 @@ class Sources(SourceName, APIBase):
 
 @router.get(
     "/v2/sources", 
-    response_model=OpenAQResult, 
+    response_model=SourcesResponse, 
     summary="Provides a list of sources",
     tags=["v2"]
 )

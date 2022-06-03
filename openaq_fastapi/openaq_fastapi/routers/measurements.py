@@ -456,7 +456,7 @@ async def measurements_get_v1(
     data = await measurements_get(db, m, "json")
     meta = data.meta
     res = data.results
-
+    print(type(res[0]))
     if format == "csv":
         return Response(
             content=meas_csv(res),
@@ -492,7 +492,6 @@ async def measurements_get_v1(
                 country:.country,
                 city: .city {fields}
             }}
-
         """
     )
 

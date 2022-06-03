@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import List, Optional, Union
 
-from pydantic import AnyUrl
+from pydantic import AnyUrl, Field
 from pydantic.main import BaseModel
 from pydantic.typing import Any
 import orjson
@@ -29,35 +29,20 @@ class Meta(BaseModel):
     found: int = 0
 
 
+class Date(BaseModel):
+    utc: str
+    local: str
+
+
+class Coordinates(BaseModel):
+    latitude: float
+    longitude: float
+
+
+# Abstract class for all responses
 class OpenAQResult(BaseModel):
     meta: Meta = Meta()
     results: List[Any] = []
-
-
-class CoordinatesDict(BaseModel):
-    latitude: Optional[float]
-    longitude: Optional[float]
-
-
-class DateDict(BaseModel):
-    utc: datetime
-    local: datetime
-
-
-class MeasurementsRow(BaseModel):
-    locationId: int
-    location: str
-    parameter: str
-    date: DateDict
-    unit: str
-    coordinates: CoordinatesDict
-    country: Optional[str]
-    city: Optional[str]
-    isMobile: bool
-
-
-class OpenAQMeasurementsResult(OpenAQResult):
-    results: List[MeasurementsRow]
 
 
 class AveragesRow(BaseModel):
@@ -112,38 +97,9 @@ class OpenAQCountriesResult(OpenAQResult):
     results: List[CountriesRow]
 
 
-class SourcesRow(BaseModel):
-    url: AnyUrl
-    name: str
-    count: int
-    active: bool
-    adapter: str
-    country: str
-    contacts: List[str]
-    locations: int
-    sourceURL: AnyUrl
-    parameters: List[str]
-    description: str
-    lastUpdated: str
-    firstUpdated: str
 
 
-class OpenAQSourcesResult(OpenAQResult):
-    results: List[SourcesRow]
 
-
-class ParametersRow(BaseModel):
-    id: int
-    name: str
-    displayName: str
-    description: str
-    preferredUnit: str
-    isCore: Optional[bool]
-    maxColorValue: Optional[Union[float, None]]
-
-
-class OpenAQParametersResult(OpenAQResult):
-    results: List[ParametersRow]
 
 
 class ProjectParameterDetails(BaseModel):
@@ -182,71 +138,118 @@ class OpenAQProjectsResult(OpenAQResult):
     results: List[ProjectsRow]
 
 
-class SourceDetails(BaseModel):
-    url: str
-    city: str
+class Source(BaseModel):
+    id: str
+    url: Optional[str] = None
     name: str
-    active: bool
-    adapter: str
-    country: str
-    contacts: List[str]
-    sourceURL: AnyUrl
-    description: str
 
 
-class LocationParameterDetails(BaseModel):
+class Parameter(BaseModel):
     id: int
     unit: str
     count: int
     average: float
     lastValue: float
-    measurand: str
-    lastUpdated: datetime
-    firstUpdated: datetime
+    parameter: str
     displayName: str
+    lastUpdated: str
+    parameterId: int
+    firstUpdated: str
 
 
 class LocationsRow(BaseModel):
     id: int
-    city: Optional[str]
+    city: str
     name: str
-    country: Optional[str]
-    sources: List[Any]
-    isMobile: bool
-    isAnalysis: bool
-    parameters: List[LocationParameterDetails]
-    sourceType: str
-    coordinates: CoordinatesDict
-    lastUpdated: datetime
-    firstUpdated: datetime
+    entity: str
+    country: str
+    sources: List[Source]
+    is_mobile: bool = Field(..., alias='isMobile')
+    is_analysis: bool = Field(..., alias='isAnalysis')
+    parameters: List[Parameter]
+    sensor_type: str = Field(..., alias='sensorType')
+    coordinates: Coordinates
+    last_updated: str = Field(..., alias='lastUpdated')
+    first_updated: str = Field(..., alias='firstUpdated')
     measurements: int
-    rawData: Optional[Any]
 
 
-class OpenAQLocationsResult(OpenAQResult):
+class LocationsResponse(OpenAQResult):
     results: List[LocationsRow]
 
 
-class MeasurementDetails(BaseModel):
+
+
+class ManufacturersResponse(OpenAQResult):
+    results: List[str]
+
+
+class MeasurementsRow(BaseModel):
+    location_id: int = Field(..., alias='locationId')
+    location: str
     parameter: str
     value: float
-    lastUpdated: str
+    date: Date
     unit: str
-
-
-class LatestRow(BaseModel):
-    location: str
-    city: str
+    coordinates: Coordinates
     country: str
-    coordinates: CoordinatesDict
-    measurements: List[MeasurementDetails]
+    city: str
+    is_mobile: bool = Field(..., alias='isMobile')
+    is_analysis: bool = Field(..., alias='isAnalysis')
+    entity: str
+    sensor_type: str = Field(..., alias='sensorType')
 
 
-class OpenAQLatestResult(OpenAQResult):
-    results: List[LatestRow]
+class MeasurementsResponse(OpenAQResult):
+    results: List[MeasurementsRow]
 
 
-class SummaryResults(BaseModel):
+class ModelsResponse(OpenAQResult):
+    results: List[str]
+
+
+# /v2/parameters
+
+class ParametersRow(BaseModel):
+    id: int
+    name: str
+    displayName: str
+    description: str
+    preferredUnit: str
+    isCore: Optional[bool]
+    maxColorValue: Optional[Union[float, None]]
+
+
+class ParametersResponse(OpenAQResult):
+    results: List[ParametersRow]
+
+
+
+# /v2/sources
+
+
+class SourcesRow(BaseModel):
+    url: AnyUrl
+    name: str
+    count: int
+    active: bool
+    adapter: str
+    country: str
+    contacts: List[str]
+    locations: int
+    sourceURL: AnyUrl
+    parameters: List[str]
+    description: str
+    lastUpdated: str
+    firstUpdated: str
+
+
+class SourcesResponse(OpenAQResult):
+    results: List[SourcesRow]
+
+# /v2/summary
+
+class SummaryRow(BaseModel):
     count: int
     cities: int
     sources: int
@@ -254,5 +257,5 @@ class SummaryResults(BaseModel):
     locations: int
 
 
-class Summary(OpenAQResult):
-    results: List[SummaryResults]
+class SummaryResponse(OpenAQResult):
+    results: List[SummaryRow]
