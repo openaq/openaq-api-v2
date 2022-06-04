@@ -56,7 +56,7 @@ class TileBase(OBaseModel):
 
 
 class MobileTile(TileBase):
-    parameter: Optional[int] = Query(None)
+    parameter: Optional[Union[int, str]] = Query(None)
     location: Optional[List[int]] = Query(None, description="limit data to location id")
     lastUpdatedFrom: Optional[Union[datetime, date]] = None
     lastUpdatedTo: Optional[Union[datetime, date]] = None
