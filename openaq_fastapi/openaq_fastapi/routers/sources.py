@@ -12,8 +12,8 @@ from ..models.queries import (
     SourceName,
 )
 
-from openaq_fastapi.models.responses import (
-    OpenAQResult, SourcesResponse
+from ..models.responses import (
+    OpenAQResult, SourcesResponse, SourcesResponseV1
 )
 
 logger = logging.getLogger("sources")
@@ -118,7 +118,7 @@ class SourcesV1(APIBase):
 
 @router.get(
     "/v1/sources", 
-    response_model=OpenAQResult, 
+    response_model=SourcesResponseV1, 
     summary="Provides a list of sources",
     tags=["v1"]
 )
@@ -155,6 +155,7 @@ async def sources_v1_get(
 @router.get(
     "/v2/sources/readme/{slug}", 
     summary="Provides a list of parameters",
+    response_class=HTMLResponse,
     tags=["v2"]
 )
 async def readme_get(

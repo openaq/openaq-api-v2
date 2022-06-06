@@ -2,7 +2,7 @@ import logging
 import os
 import pathlib
 import urllib
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from pydantic.typing import List, Optional, Union
 
 from fastapi import APIRouter, Depends, Path, Query, Response
@@ -75,10 +75,6 @@ class MobileTile(TileBase):
     def where(self):
         wheres = []
         for f, v in self:
-            print("WHERE")
-            print(v)
-            print(type(v))
-            print(isinstance(v, int))
             if v is not None:
                 if f == "location" and all(isinstance(x, int) for x in v):
                     wheres.append(" location_id = ANY(:location::int[]) ")
@@ -129,6 +125,7 @@ class MobileTile(TileBase):
     responses={200: {"content": {"application/x-protobuf": {}}}},
     response_class=Response,
     tags=["v2"],
+    include_in_schema=False
 )
 async def get_tile(
     db: DB = Depends(),
@@ -183,6 +180,7 @@ async def get_tile(
     responses={200: {"content": {"application/x-protobuf": {}}}},
     response_class=Response,
     tags=["v2"],
+    include_in_schema=False
 )
 async def get_mobiletile(
     db: DB = Depends(),
@@ -303,6 +301,7 @@ async def get_mobiletile(
     responses={200: {"content": {"application/x-protobuf": {}}}},
     response_class=Response,
     tags=["v2"],
+    include_in_schema=False
 )
 async def get_mobilegentile(
     db: DB = Depends(),
@@ -412,6 +411,7 @@ async def tilejsonfunc(
     responses={200: {"description": "Return a tilejson"}},
     response_model_exclude_none=True,
     tags=["v2"],
+    include_in_schema=False
 )
 async def tilejson(
     request: Request,
@@ -425,6 +425,7 @@ async def tilejson(
     responses={200: {"description": "Return a tilejson"}},
     response_model_exclude_none=True,
     tags=["v2"],
+    include_in_schema=False
 )
 async def mobiletilejson(request: Request):
     return await tilejsonfunc(request, "get_mobiletile", minzoom=8, maxzoom=18)
@@ -435,12 +436,16 @@ async def mobiletilejson(request: Request):
     responses={200: {"description": "Return a tilejson"}},
     response_model_exclude_none=True,
     tags=["v2"],
+    include_in_schema=False
 )
 async def mobilegentilejson(request: Request):
     return await tilejsonfunc(request, "get_mobilegentile", maxzoom=24)
 
 @router.get(
-    "/v2/locations/tiles/viewer", response_class=HTMLResponse, tags=["v2"]
+    "/v2/locations/tiles/viewer", 
+    response_class=HTMLResponse, 
+    tags=["v2"],    
+    include_in_schema=False
 )
 def demo(request: Request):
     params = urllib.parse.unquote(request.url.query)

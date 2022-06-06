@@ -75,7 +75,6 @@ async def parameters_getv1(
     if len(res) == 0:
         return data
 
-
     v1_jq = jq.compile(
         """
         .[] | . as $m |
@@ -85,7 +84,6 @@ async def parameters_getv1(
                 description: .description,
                 preferredUnit: .preferredUnit
             }
-
         """
     )
 

@@ -8,9 +8,9 @@ import orjson as json
 from dateutil.tz import UTC
 from datetime import timedelta, datetime
 from fastapi import APIRouter, Depends, Query
-from starlette.responses import Response, JSONResponse
+from starlette.responses import Response
 from ..db import DB
-from ..models.responses import Meta
+from ..models.responses import MeasurementsResponse, MeasurementsResponseV1, Meta
 from ..models.queries import (
     APIBase,
     City,
@@ -143,6 +143,7 @@ class Measurements(
 @router.get(
     "/v2/measurements", 
     summary="Provides a list of measurements",
+    response_model=MeasurementsResponse,
     tags=["v2"]
 )
 async def measurements_get(
@@ -445,6 +446,7 @@ async def measurements_get(
 @router.get(
     "/v1/measurements", 
     summary="Provides a list of measurements",
+    response_model=MeasurementsResponseV1,
     tags=["v1"]
 )
 async def measurements_get_v1(
