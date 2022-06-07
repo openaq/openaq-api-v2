@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
-from openaq_fastapi.models.responses import OpenAQCitiesResult, converter
+from openaq_fastapi.models.responses import CitiesResponse, converter
 import jq
 from ..db import DB
 from ..models.queries import APIBase, City, Country
@@ -47,9 +47,9 @@ class Cities(City, Country, APIBase):
 
 @router.get(
     "/v2/cities",
-    response_model=OpenAQCitiesResult,
+    response_model=CitiesResponse,
     tags=["v2"],
-    summary="Provides a listing of cities within the platform",
+    summary="Provides a list of cities within the platform",
 )
 async def cities_get(
     db: DB = Depends(), cities: Cities = Depends(Cities.depends())
@@ -97,9 +97,9 @@ async def cities_get(
 
 @router.get(
     "/v1/cities",
-    response_model=OpenAQCitiesResult,
+    response_model=CitiesResponse,
     tags=["v1"],
-    summary="Provides a simple listing of cities within the platform",
+    summary="Provides a list of cities within the platform",
 )
 async def cities_getv1(
     db: DB = Depends(), cities: Cities = Depends(Cities.depends()),
@@ -122,7 +122,6 @@ async def cities_getv1(
                 count: .count,
                 locations: .locations
             }
-
         """
     )
 

@@ -1,8 +1,8 @@
 import logging
 
 from fastapi import APIRouter, Depends, Query
-from openaq_fastapi.models.responses import OpenAQProjectsResult
-from pydantic.typing import Literal, Optional, List
+from openaq_fastapi.models.responses import ProjectsResponse
+from pydantic.typing import Optional, List
 
 from ..db import DB
 from ..models.queries import APIBase, Country, Measurands, Project
@@ -103,10 +103,16 @@ class Projects(Project, Measurands, APIBase, Country):
 
 @router.get(
     "/v2/projects/{project_id}",
-    response_model=OpenAQProjectsResult,
+    response_model=ProjectsResponse,
+    summary="Provides a list of parameters",
     tags=["v2"],
 )
-@router.get("/v2/projects", response_model=OpenAQProjectsResult, tags=["v2"])
+@router.get(
+    "/v2/projects", 
+    response_model=ProjectsResponse, 
+    summary="Provides a list of parameters",
+
+    tags=["v2"])
 async def projects_get(
     db: DB = Depends(),
     projects: Projects = Depends(Projects.depends()),
