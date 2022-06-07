@@ -275,7 +275,7 @@ class ParametersRow(BaseModel):
     description: str
     preferred_unit: str = Field(..., alias='preferredUnit')
     is_core: Optional[bool] = Field(..., alias='isCore')
-    max_color_value: Optional[Union[float, None]] = Field(..., alias='maxColorValue')
+    max_color_value: Optional[Union[float, None]] # not camel case in output
 
 
 class ParametersResponse(OpenAQResult):
