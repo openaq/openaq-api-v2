@@ -298,7 +298,7 @@ async def latest_get(
     )
 
     ret = latest_jq.input(res).all()
-    return OpenAQResult(meta=meta, results=ret)
+    return LatestResponse(meta=meta, results=ret)
 
 
 async def v1_base(

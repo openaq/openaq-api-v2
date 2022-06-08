@@ -158,7 +158,7 @@ class LatestRow(BaseModel):
     location: str
     city: str
     country: str
-    coordinates: Coordinates
+    coordinates: Optional[Coordinates]
     measurements: List[LatestMeasurement]
 
 class LatestResponse(OpenAQResult):
@@ -339,22 +339,20 @@ class SourcesResponseV1(OpenAQResult):
 
 # /v2/sources
 
+class Datum(BaseModel):
+    url: Optional[str] = None
+    data_avg_dur: Optional[str] = None
+    organization: Optional[str] = None
+    lifecycle_stage: Optional[str] = None
+
 
 class SourcesRow(BaseModel):
-    url: AnyUrl
-    name: str
-    count: int
-    active: bool
-    adapter: str
-    country: str
-    contacts: List[str]
+    data: Optional[Datum]
+    readme: Optional[str]
+    source_id: int = Field(..., alias='sourceId')
     locations: int
-    source_url: AnyUrl = Field(..., alias='sourceURL')
-    parameters: List[str]
-    description: str
-    lastUpdated: str
-    firstUpdated: str
-
+    source_name: str = Field(..., alias='sourceName')
+    source_slug: Optional[str] = Field(..., alias='sourceSlug')
 
 class SourcesResponse(OpenAQResult):
     results: List[SourcesRow]
