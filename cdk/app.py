@@ -1,84 +1,70 @@
-import pathlib
-
-import docker
 import aws_cdk
 from aws_cdk import (
     Tags,
 )
 
-# Stacks
-from rollup_stack import RollupStack
-from api_stack import ApiStack
-from ingest_stack import IngestStack
+from cdk.lambda_api_stack import LambdaApiStack
+from cdk.lambda_ingest_stack import LambdaIngestStack
+from cdk.lambda_rollup_stack import LambdaRollupStack
+
+from settings import settings
 
 # this is the only way that I can see to allow us to have
 # one settings file and import it from there. I would recommend
 # a better package structure in the future.
 import os
 import sys
-p = os.path.abspath('../openaq_fastapi/openaq_fastapi')
+p = os.path.abspath('../openaq_fastapi')
 sys.path.insert(1, p)
-from settings import settings
-
-code_dir = pathlib.Path(__file__).parent.absolute()
-parent = code_dir.parent.absolute()
-docker_dir = code_dir.parent.absolute()
-
-
-def dictstr(item):
-    return item[0], str(item[1])
-
-
-env = dict(map(dictstr, settings.dict().items()))
-
-# create package using docker
-client = docker.from_env()
-client.images.build(
-    path=str(docker_dir),
-    dockerfile="Dockerfile",
-    tag="openaqfastapi",
-    nocache=False,
-)
-client.containers.run(
-    image="openaqfastapi",
-    command="/bin/sh -c 'cp /tmp/package.zip /local/package.zip'",
-    remove=True,
-    volumes={str(code_dir): {"bind": "/local/", "mode": "rw"}},
-    user=0,
-)
-
+from openaq_fastapi.settings import settings as lambda_env
 
 app = aws_cdk.App()
 
-
-ingest = IngestStack(
+api = LambdaApiStack(
     app,
-    f"openaq-ingest-{settings.OPENAQ_ENV}",
-    fetch_bucket=settings.OPENAQ_FETCH_BUCKET,
-    package_directory=code_dir,
-    env_variables=env,
-    lambda_timeout=30,
+    f"openaq-api-{settings.ENV}",
+    env_name=settings.ENV,
+    lambda_env=lambda_env,
+    hosted_zone_name=settings.HOSTED_ZONE_NAME,
+    hosted_zone_id=settings.HOSTED_ZONE_ID,
+    lambda_timeout=settings.API_LAMBDA_TIMEOUT,
+    memory_size=settings.API_LAMBDA_MEMORY_SIZE,
+    domain_name=settings.DOMAIN_NAME,
+    cert_arn=settings.CERTIFICATE_ARN,
+    web_acl_id=settings.WEB_ACL_ID,
 )
-Tags.of(ingest).add("Project", settings.OPENAQ_ENV)
 
+Tags.of(api).add("project", settings.PROJECT)
+Tags.of(api).add("product", "api")
+Tags.of(api).add("env", settings.ENV)
 
-api = ApiStack(
+ingest = LambdaIngestStack(
     app,
-    f"openaq-api-{settings.OPENAQ_ENV}",
-    package_directory=code_dir,
-    env_variables=env,
-    lambda_timeout=30,
+    f"openaq-ingest-{settings.ENV}",
+    env_name=settings.ENV,
+    lambda_env=lambda_env,
+    fetch_bucket=settings.FETCH_BUCKET,
+    ingest_lambda_timeout=settings.INGEST_LAMBDA_TIMEOUT,
+    ingest_lambda_memory_size=settings.INGEST_LAMBDA_MEMORY_SIZE,
+    ingest_rate_minutes=15,
 )
-Tags.of(api).add("Project", settings.OPENAQ_ENV)
 
+Tags.of(ingest).add("project", settings.PROJECT)
+Tags.of(ingest).add("product", "ingest")
+Tags.of(ingest).add("env", settings.ENV)
 
-rollup = RollupStack(
+rollup = LambdaRollupStack(
     app,
-    f"openaq-rollup-{settings.OPENAQ_ENV}",
-    package_directory=code_dir,
-    env_variables=env,
-    lambda_timeout=900,
+    f"openaq-rollup-{settings.ENV}",
+    env_name=settings.ENV,
+    lambda_env=lambda_env,
+    lambda_timeout=settings.ROLLUP_LAMBDA_TIMEOUT,
+    lambda_memory_size=settings.ROLLUP_LAMBDA_MEMORY_SIZE,
+    rate_minutes=5,
 )
-Tags.of(rollup).add("Project", settings.OPENAQ_ENV)
+
+Tags.of(rollup).add("project", settings.PROJECT)
+Tags.of(rollup).add("product", "api")
+Tags.of(rollup).add("env", settings.ENV)
 
 app.synth()

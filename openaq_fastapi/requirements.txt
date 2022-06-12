@@ -1,5 +1,4 @@
 fastapi>=0.61.2
-# git+git://github.com/bitner/fastapi.git@multialias
 mangum>=0.1.0
 fastapi-utils
 wheel
@@ -9,7 +8,7 @@ pydantic[dotenv]
 buildpg
 aiocache
 jq
-orjson
+orjson==3.6.8
 msgpack
 asyncpg
 uvicorn
@@ -18,7 +17,5 @@ jinja2
 typer
 markdown
 psycopg2-binary
-boto3
 dateparser
 pyhumps
-ujson

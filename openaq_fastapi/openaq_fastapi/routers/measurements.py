@@ -140,7 +140,11 @@ class Measurements(
         return " TRUE "
 
 
-@router.get("/v2/measurements", tags=["v2"])
+@router.get(
+    "/v2/measurements", 
+    summary="Provides a list of measurements",
+    tags=["v2"]
+)
 async def measurements_get(
     db: DB = Depends(),
     m: Measurements = Depends(Measurements.depends()),
@@ -416,7 +420,7 @@ async def measurements_get(
             params["rangeend"] = rangeend
             iteration += 1
     meta = Meta(
-        website=os.getenv("APP_HOST", "/"),
+        website=os.getenv("DOMAIN_NAME", os.getenv("BASE_URL", "/")),
         page=m.page,
         limit=m.limit,
         found=count,
@@ -438,7 +442,11 @@ async def measurements_get(
     return output
 
 
-@router.get("/v1/measurements", tags=["v1"])
+@router.get(
+    "/v1/measurements", 
+    summary="Provides a list of measurements",
+    tags=["v1"]
+)
 async def measurements_get_v1(
     db: DB = Depends(),
     m: Measurements = Depends(Measurements.depends()),

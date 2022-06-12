@@ -14,12 +14,12 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 
 schemathesis.fixups.install()
 client = None
-if settings.TESTLOCAL:
+if settings.DRYRUN:
     schema = schemathesis.from_asgi("/openapi.json", app)
     client = TestClient(app)
 else:
     schema = schemathesis.from_uri(
-        f"{settings.OPENAQ_FASTAPI_URL}/openapi.json"
+        f"{settings.FASTAPI_URL}/openapi.json"
     )
 
 
@@ -53,11 +53,11 @@ def test_ok_status(url_list, max_wait):
     """
     for url in url_list:
         print(url)
-        if settings.TESTLOCAL:
+        if settings.DRYRUN:
             with TestClient(app) as client:
                 r = client.get(url)
         else:
-            r = requests.get(f"{settings.OPENAQ_FASTAPI_URL}{url}")
+            r = requests.get(f"{settings.FASTAPI_URL}{url}")
         assert r.status_code == requests.codes.ok
         assert r.elapsed.total_seconds() < max_wait
 
@@ -65,7 +65,7 @@ def test_ok_status(url_list, max_wait):
 @schema.parametrize()
 @hypothesis.settings(max_examples=10, deadline=15000)
 def test_api(case):
-    if settings.TESTLOCAL:
+    if settings.DRYRUN:
         with TestClient(app):
             response = case.call_asgi()
             case.validate_response(response)

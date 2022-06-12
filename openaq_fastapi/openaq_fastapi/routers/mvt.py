@@ -56,7 +56,7 @@ class TileBase(OBaseModel):
 
 
 class MobileTile(TileBase):
-    parameter: Optional[Union[int, str]] = Query(None)
+    parameter: Optional[int] = Query(None)
     location: Optional[List[int]] = Query(None, description="limit data to location id")
     lastUpdatedFrom: Optional[Union[datetime, date]] = None
     lastUpdatedTo: Optional[Union[datetime, date]] = None
@@ -64,14 +64,22 @@ class MobileTile(TileBase):
     project: Optional[int] = None
     isAnalysis: Optional[bool] = None
 
+    def try_cast(self, value: str):
+        try:
+            int(value)
+            self.parameter = int(value)
+            return True
+        except ValueError: 
+            return False
+
     def where(self):
         wheres = []
         for f, v in self:
             if v is not None:
                 if f == "location" and all(isinstance(x, int) for x in v):
                     wheres.append(" location_id = ANY(:location::int[]) ")
-                elif f == "parameter" and isinstance(v, int):
-                    wheres.append(" measurands_id = :parameter::int ")
+                elif f == "parameter" and self.try_cast(v):
+                    wheres.append(" measurands_id = (:parameter)::int ")
                 elif f == "parameter":
                     wheres.append(" measurand = :parameter ")
                 elif f == "lastUpdatedFrom":

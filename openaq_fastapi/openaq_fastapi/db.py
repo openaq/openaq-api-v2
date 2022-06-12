@@ -45,7 +45,7 @@ cache_config = {
 async def db_pool(pool):
     if pool is None:
         pool = await asyncpg.create_pool(
-            settings.DATABASE_URL,
+            settings.DATABASE_READ_URL,
             command_timeout=14,
             max_inactive_connection_lifetime=15,
             min_size=1,
@@ -68,7 +68,7 @@ class DB:
         )
         return self.request.app.state.pool
 
-    @cached(settings.OPENAQ_CACHE_TIMEOUT, **cache_config)
+    @cached(settings.API_CACHE_TIMEOUT, **cache_config)
     async def fetch(self, query, kwargs):
         pool = await self.pool()
         start = time.time()
@@ -129,7 +129,7 @@ class DB:
                 results = []
 
         meta = Meta(
-            website=os.getenv("APP_HOST", "/"),
+            website=os.getenv("DOMAIN_NAME", os.getenv("BASE_URL", "/")),
             page=kwargs["page"],
             limit=kwargs["limit"],
             found=found,
