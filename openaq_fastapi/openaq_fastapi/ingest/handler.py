@@ -5,17 +5,22 @@ from ..settings import settings
 from .lcs import load_measurements_db, load_metadata_db
 from .fetch import load_db
 from time import time
+import json
 
 from datetime import datetime, timezone
 
 s3c = boto3.client("s3")
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('handler')
 logging.basicConfig(
     format='[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s',
     level=settings.LOG_LEVEL.upper(),
     force=True,
 )
+
+logging.getLogger('boto3').setLevel(logging.WARNING)
+logging.getLogger('botocore').setLevel(logging.WARNING)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 
 def handler(event, context):
@@ -27,41 +32,72 @@ def handler(event, context):
                 with connection.cursor() as cursor:
                     connection.set_session(autocommit=True)
                     for record in records:
-                        bucket = record["s3"]["bucket"]["name"]
-                        key = record["s3"]["object"]["key"]
+                        if record['EventSource'] == 'aws:sns':
+                            keys = getKeysFromSnsRecord(record)
+                        else:
+                            keys = getKeysFromS3Record(record)
 
-                        lov2 = s3c.list_objects_v2(
-                            Bucket=bucket, Prefix=key, MaxKeys=1
-                        )
-                        try:
-                            last_modified = lov2["Contents"][0]["LastModified"]
-                        except KeyError:
-                            logger.error("""
-                            could not get last modified time from obj
-                            """)
-                        last_modified = datetime.now().replace(
-                            tzinfo=timezone.utc
-                        )
+                        logger.debug(keys)
+                        for obj in keys:
+                            bucket = obj['bucket']
+                            key = obj['key']
+                            logger.debug(f"{bucket}:{key}")
+                            lov2 = s3c.list_objects_v2(
+                                Bucket=bucket, Prefix=key, MaxKeys=1
+                            )
 
-                        cursor.execute(
-                            """
-                            INSERT INTO fetchlogs (key, last_modified)
-                            VALUES(%s, %s)
-                            ON CONFLICT (key) DO UPDATE
-                            SET last_modified=EXCLUDED.last_modified,
-                            completed_datetime=NULL RETURNING *;
-                            """,
-                            (key, last_modified,),
-                        )
-                        row = cursor.fetchone()
-                        connection.commit()
-                        logger.info(f"ingest-handler: {row}")
+                            try:
+                                last_modified = lov2["Contents"][0]["LastModified"]
+                            except KeyError:
+                                logger.error("""
+                                could not get last modified time from obj
+                                """)
+                                last_modified = datetime.now().replace(
+                                    tzinfo=timezone.utc
+                                )
+
+                            cursor.execute(
+                                """
+                                INSERT INTO fetchlogs (key, last_modified)
+                                VALUES(%s, %s)
+                                ON CONFLICT (key) DO UPDATE
+                                SET last_modified=EXCLUDED.last_modified,
+                                completed_datetime=NULL RETURNING *;
+                                """,
+                                (key, last_modified,),
+                            )
+                            row = cursor.fetchone()
+                            connection.commit()
+                            logger.info(f"ingest-handler: {row}")
         except Exception as e:
-            logger.warning(f"Exception: {e}")
+            logger.warning(f"Exception: {event}: {e}")
     elif event.get("source") and event["source"] == "aws.events":
         cronhandler(event, context)
     else:
         logger.warning(f"ingest-handler: nothing to do: {event}")
+
+
+def getKeysFromSnsRecord(record):
+    message = json.loads(record['Sns']['Message'])
+    keys = []
+    for _record in message['Records']:
+        # a hack to deal with a missing SNS event
+        key = _record["s3"]["object"]["key"]
+        key = key.replace('realtime', 'realtime-gzipped')
+        key = key.replace('ndjson', 'ndjson.gz')
+        keys.append({
+            "bucket": _record["s3"]["bucket"]["name"],
+            "key": key,
+        })
+    return keys
+
+
+def getKeysFromS3Record(record):
+    keys = [{
+        "bucket": record["s3"]["bucket"]["name"],
+        "key": record["s3"]["object"]["key"],
+    }]
+    return keys
 
 
 def cronhandler(event, context):
@@ -73,7 +109,7 @@ def cronhandler(event, context):
     metadata_limit = settings.METADATA_LIMIT if 'metadata_limit' not in event else event['metadata_limit']
 
     logger.info(f"Running cron job: {event['source']}, ascending: {ascending}")
-    with psycopg2.connect(settings.DATABASE_URL) as connection:
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
         connection.set_session(autocommit=True)
         with connection.cursor() as cursor:
             cursor.execute(
@@ -130,8 +166,14 @@ def cronhandler(event, context):
     try:
         if realtime > 0 and realtime_limit > 0:
             cnt = 0
-            while cnt < realtime and (time() - start_time) < timeout:
-                cnt += load_db(realtime_limit, ascending)
+            loaded = 1
+            while (
+                    loaded > 0
+                    and cnt < realtime
+                    and (time() - start_time) < timeout
+            ):
+                loaded = load_db(realtime_limit, ascending)
+                cnt += loaded
                 logger.info(
                     "loaded %s of %s fetch records, timer: %0.4f",
                     cnt, realtime, time() - start_time
