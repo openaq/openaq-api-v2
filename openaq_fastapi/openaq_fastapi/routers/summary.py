@@ -2,8 +2,8 @@ import logging
 
 from fastapi import APIRouter, Depends
 from ..db import DB
-from openaq_fastapi.models.responses import (
-    Summary,
+from ..models.responses import (
+    SummaryResponse,
 )
 
 logger = logging.getLogger("summary")
@@ -14,7 +14,7 @@ router = APIRouter()
 
 @router.get(
     "/v2/summary",
-    response_model=Summary,
+    response_model=SummaryResponse,
     summary="Provides a summary of platform data",
     tags=["v2"],
 )
@@ -33,8 +33,7 @@ async def summary_get(
             sensor_nodes
             LEFT JOIN sensor_nodes_sources USING (sensor_nodes_id)
     ) SELECT 1 as count, to_jsonb(t) as json FROM t
-;
-
+    ;
     """
 
     output = await db.fetchOpenAQResult(q, {"page": 1, "limit": 1000})
