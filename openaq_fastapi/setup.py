@@ -59,5 +59,10 @@ setup(
         ]
     },
     include_package_data=True,
-    package_data={"": ["*.sql"],},
+    package_data={
+        "": ["*.sql"],
+    },
+    package_dir={
+        'static': 'openaq_fastapi/static',
+    },
 )

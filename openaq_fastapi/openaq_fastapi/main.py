@@ -79,7 +79,7 @@ app.add_middleware(
 app.add_middleware(StripParametersMiddleware)
 app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
 app.add_middleware(TotalTimeMiddleware)
-app.add_middleware(GetHostMiddleware)
+# app.add_middleware(GetHostMiddleware)
 
 
 class OpenAQValidationResponseDetail(BaseModel):
