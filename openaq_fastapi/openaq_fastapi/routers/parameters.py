@@ -25,7 +25,7 @@ class Parameters(SourceName, APIBase):
 @router.get(
     "/v2/parameters", 
     response_model=ParametersResponse, 
-    summary="Provides a list of parameters",
+    summary="Get a list of parameters",
     tags=["v2"]
 )
 async def parameters_get(
@@ -61,7 +61,7 @@ async def parameters_get(
 @router.get(
     "/v1/parameters", 
     response_model=ParametersResponse, 
-    summary="Provides a list of parameters",
+    summary="Get a list of parameters",
     tags=["v1"]
 )
 async def parameters_getv1(

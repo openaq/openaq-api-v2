@@ -371,13 +371,13 @@ async def v1_base(
 @router.get(
     "/v1/latest/{location_id}", 
     response_model=LatestResponseV1, 
-    summary="Provides latest measurements from a given location",
+    summary="Get latest measurements for a location ID",
     tags=["v1"]
 )
 @router.get(
     "/v1/latest", 
     response_model=LatestResponseV1, 
-    summary="Provides latest measurements from all locations",
+    summary="Get latest measurements for locations",
     tags=["v1"]
 )
 async def latest_v1_get(
@@ -424,13 +424,13 @@ async def latest_v1_get(
 @router.get(
     "/v1/locations/{location_id}", 
     response_model=LocationsResponseV1, 
-    summary="Provides a location from a given location id",
+    summary="Get a single location by ID",
     tags=["v1"]
 )
 @router.get(
     "/v1/locations", 
     response_model=LocationsResponseV1, 
-    summary="Provides a list of all locations",
+    summary="Get a list of locations",
     tags=["v1"])
 async def locationsv1_get(
     db: DB = Depends(), locations: Locations = Depends(Locations.depends()),

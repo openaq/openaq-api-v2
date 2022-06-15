@@ -14,7 +14,7 @@ router = APIRouter()
 @router.get(
     "/v2/manufacturers", 
     response_model=ManufacturersResponse, 
-    summary="Provides a list of manufacturers",
+    summary="Get a list of manufacturers",
     tags=["v2"])
 async def mfr_get(db: DB = Depends()):
 
@@ -34,7 +34,7 @@ async def mfr_get(db: DB = Depends()):
 @router.get(
     "/v2/models", 
     response_model=ModelsResponse,
-    summary="Provides a list of models", 
+    summary="Get a list of models", 
     tags=["v2"])
 async def model_get(db: DB = Depends()):
 

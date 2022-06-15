@@ -40,19 +40,19 @@ class Countries(Country, APIBase):
 @router.get(
     "/v1/countries/{country_id}",
     response_model=CountriesResponse,
-    summary="Provides a country within the platform by id",
+    summary="Get a single country by ID",
     tags=["v1"],
 )
 @router.get(
     "/v2/countries/{country_id}",
     response_model=CountriesResponse,
-    summary="Provides a country within the platform by id",
+    summary="Get a single country by ID",
     tags=["v2"],
 )
 @router.get(
     "/v2/countries", 
     response_model=CountriesResponse, 
-    summary="Provides a list of countries within the platform",
+    summary="Get a list of countries",
     tags=["v2"]
 )
 async def countries_get(
@@ -95,7 +95,7 @@ async def countries_get(
 @router.get(
     "/v1/countries", 
     response_model=CountriesResponse, 
-    summary="Provides a list of countries within the platform",
+    summary="Get a list of countries",
     tags=["v1"])
 async def countries_getv1(
     db: DB = Depends(),

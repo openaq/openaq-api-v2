@@ -142,7 +142,7 @@ class Measurements(
 
 @router.get(
     "/v2/measurements", 
-    summary="Provides a list of measurements",
+    summary="Get a list of measurements",
     response_model=MeasurementsResponse,
     tags=["v2"]
 )
@@ -445,7 +445,7 @@ async def measurements_get(
 
 @router.get(
     "/v1/measurements", 
-    summary="Provides a list of measurements",
+    summary="Get a list of measurements",
     response_model=MeasurementsResponseV1,
     tags=["v1"]
 )
