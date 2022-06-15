@@ -64,6 +64,7 @@ jobs:
       - name: generate schema
         working-directory: ./openaq_fastapi
         run: |
+            pip install -r requirements.txt
             npm install -g rdme@latest
             python generate_schema.py
             rdme openapi openapi.json --version=v3.1 --key=${{ secrets.README_KEY }} --id=${{ secrets.README_API_DEFINITION_ID }}
