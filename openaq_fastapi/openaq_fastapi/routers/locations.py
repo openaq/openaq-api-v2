@@ -178,7 +178,6 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
 async def locations_get(
     db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
 ):
-
     order_by = locations.order_by
     if order_by == "location":
         order_by = "name"
