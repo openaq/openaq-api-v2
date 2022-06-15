@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic.typing import Optional
 from enum import Enum
 
-from ..models.responses import LatestResponse, LatestResponseV1, LocationsResponse, LocationsResponseV1
+from ..models.responses import LatestResponse, LatestResponseV1, LocationsResponse, LocationsResponseV1, converter
 from ..db import DB
 from ..models.queries import (
     APIBase,
@@ -20,8 +20,6 @@ from ..models.queries import (
     EntityTypes,
     SensorTypes,
 )
-
-from openaq_fastapi.models.responses import OpenAQResult, converter
 
 logger = logging.getLogger("locations")
 
