@@ -65,13 +65,18 @@ jobs:
     needs: deploy
     runs-on: ubuntu-latest
     steps:
-      - name: generate schema
-        uses: actions/setup-node@v2
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v2
         with:
           node-version: "16"
-        uses: actions/setup-python@v3
+          
+      - uses: actions/setup-python@v3
         with:
           python-version: '3.8'
+
+      - name: build schema
         working-directory: ./openaq_fastapi
         run: |
             pip install -r requirements.txt
