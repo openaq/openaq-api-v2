@@ -60,10 +60,26 @@ jobs:
           pip install -r requirements.txt
           cdk deploy openaq-api-prod --require-approval never 
         # only deploy api until ingest and rollup are separated
-      
-      - name: generate schema
+
+  update-docs:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+          
+      - uses: actions/setup-python@v3
+        with:
+          python-version: '3.8'
+
+      - name: build schema
         working-directory: ./openaq_fastapi
         run: |
+            pip install -r requirements.txt
             npm install -g rdme@latest
             python generate_schema.py
             rdme openapi openapi.json --version=v3.1 --key=${{ secrets.README_KEY }} --id=${{ secrets.README_API_DEFINITION_ID }}
