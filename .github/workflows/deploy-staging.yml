@@ -61,7 +61,17 @@ jobs:
           cdk deploy openaq-api-staging --require-approval never 
         # only deploy api until ingest and rollup are separated
 
+  update-docs:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
       - name: generate schema
+        uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.8'
         working-directory: ./openaq_fastapi
         run: |
             pip install -r requirements.txt
