@@ -49,7 +49,7 @@ class Sources(SourceName, APIBase):
 @router.get(
     "/v2/sources", 
     response_model=SourcesResponse, 
-    summary="Provides a list of sources",
+    summary="Get a list of sources",
     tags=["v2"]
 )
 async def sources_get(
@@ -119,7 +119,7 @@ class SourcesV1(APIBase):
 @router.get(
     "/v1/sources", 
     response_model=SourcesResponseV1, 
-    summary="Provides a list of sources",
+    summary="Get a list of sources",
     tags=["v1"]
 )
 async def sources_v1_get(
@@ -154,7 +154,7 @@ async def sources_v1_get(
 
 @router.get(
     "/v2/sources/readme/{slug}", 
-    summary="Provides a list of parameters",
+    summary="Get a source readme by slug",
     response_class=HTMLResponse,
     tags=["v2"]
 )

@@ -104,13 +104,13 @@ class Projects(Project, Measurands, APIBase, Country):
 @router.get(
     "/v2/projects/{project_id}",
     response_model=ProjectsResponse,
-    summary="Provides a list of parameters",
+    summary="Get a list of projects",
     tags=["v2"],
 )
 @router.get(
     "/v2/projects", 
     response_model=ProjectsResponse, 
-    summary="Provides a list of parameters",
+    summary="Get a list of projects",
 
     tags=["v2"])
 async def projects_get(

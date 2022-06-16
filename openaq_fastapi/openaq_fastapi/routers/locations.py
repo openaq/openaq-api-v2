@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic.typing import Optional
 from enum import Enum
 
-from ..models.responses import LatestResponse, LatestResponseV1, LocationsResponse, LocationsResponseV1
+from ..models.responses import LatestResponse, LatestResponseV1, LocationsResponse, LocationsResponseV1, converter
 from ..db import DB
 from ..models.queries import (
     APIBase,
@@ -20,8 +20,6 @@ from ..models.queries import (
     EntityTypes,
     SensorTypes,
 )
-
-from openaq_fastapi.models.responses import OpenAQResult, converter
 
 logger = logging.getLogger("locations")
 
@@ -178,7 +176,6 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
 async def locations_get(
     db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
 ):
-
     order_by = locations.order_by
     if order_by == "location":
         order_by = "name"
@@ -374,13 +371,13 @@ async def v1_base(
 @router.get(
     "/v1/latest/{location_id}", 
     response_model=LatestResponseV1, 
-    summary="Provides latest measurements from a given location",
+    summary="Get latest measurements for a location ID",
     tags=["v1"]
 )
 @router.get(
     "/v1/latest", 
     response_model=LatestResponseV1, 
-    summary="Provides latest measurements from all locations",
+    summary="Get latest measurements for locations",
     tags=["v1"]
 )
 async def latest_v1_get(
@@ -427,13 +424,13 @@ async def latest_v1_get(
 @router.get(
     "/v1/locations/{location_id}", 
     response_model=LocationsResponseV1, 
-    summary="Provides a location from a given location id",
+    summary="Get a single location by ID",
     tags=["v1"]
 )
 @router.get(
     "/v1/locations", 
     response_model=LocationsResponseV1, 
-    summary="Provides a list of all locations",
+    summary="Get a list of locations",
     tags=["v1"])
 async def locationsv1_get(
     db: DB = Depends(), locations: Locations = Depends(Locations.depends()),

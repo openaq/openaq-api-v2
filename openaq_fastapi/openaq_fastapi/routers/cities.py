@@ -49,7 +49,7 @@ class Cities(City, Country, APIBase):
     "/v2/cities",
     response_model=CitiesResponse,
     tags=["v2"],
-    summary="Provides a list of cities within the platform",
+    summary="Get a list of cities",
 )
 async def cities_get(
     db: DB = Depends(), cities: Cities = Depends(Cities.depends())
@@ -99,7 +99,7 @@ async def cities_get(
     "/v1/cities",
     response_model=CitiesResponse,
     tags=["v1"],
-    summary="Provides a list of cities within the platform",
+    summary="Get a list of cities",
 )
 async def cities_getv1(
     db: DB = Depends(), cities: Cities = Depends(Cities.depends()),

@@ -73,7 +73,7 @@ class Averages(APIBase, Country, Project, Measurands, DateRange):
 @router.get(
     "/v2/averages", 
     response_model=AveragesResponse, 
-    summary="Provides a averaged values given parameters",
+    summary="Get averaged values",
     tags=["v2"])
 async def averages_v2_get(
     db: DB = Depends(),
