@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     DOMAIN_NAME: str = None
     LOG_BUCKET: str = None
     CERTIFICATE_ARN: str = None
+    TOPIC_ARN: str = None
     API_LAMBDA_MEMORY_SIZE: int = 1512
     API_LAMBDA_TIMEOUT: int = 30  # lambda timeout in seconds
 

@@ -7,6 +7,8 @@ from aws_cdk import (
     Duration,
     aws_events,
     aws_events_targets,
+    aws_sns,
+    aws_sns_subscriptions,
 )
 
 from constructs import Construct
@@ -27,6 +29,7 @@ class LambdaIngestStack(Stack):
         ingest_lambda_timeout: int,
         ingest_lambda_memory_size: int,
         ingest_rate_minutes: int = 15,
+        topic_arn: str = None,
         **kwargs,
     ) -> None:
         """Lambda plus cronjob to ingest metadata,
@@ -75,3 +78,15 @@ class LambdaIngestStack(Stack):
         )
 
         openaq_fetch_bucket.grant_read(ingest_function)
+
+        if topic_arn is not None:
+            topic = aws_sns.Topic.from_topic_arn(
+                self,
+                f"{id}-ingest-topic",
+                topic_arn=topic_arn
+            )
+            topic.add_subscription(
+                aws_sns_subscriptions.LambdaSubscription(
+                    ingest_function
+                )
+            )
