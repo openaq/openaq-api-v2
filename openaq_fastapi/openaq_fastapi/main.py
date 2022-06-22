@@ -61,14 +61,12 @@ class ORJSONResponse(JSONResponse):
 
 app = FastAPI(
     title="OpenAQ",
-    description="OpenAQ API",
+    description="OpenAQ API - https://docs.openaq.org",
     version="2.0.0",
     default_response_class=ORJSONResponse,
+    terms_of_service="https://github.com/openaq/openaq-info/blob/master/DATA-POLICY.md",
     docs_url="/docs",
 )
-
-
-
 
 
 app.add_middleware(
@@ -81,7 +79,7 @@ app.add_middleware(
 app.add_middleware(StripParametersMiddleware)
 app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
 app.add_middleware(TotalTimeMiddleware)
-app.add_middleware(GetHostMiddleware)
+# app.add_middleware(GetHostMiddleware)
 
 
 class OpenAQValidationResponseDetail(BaseModel):
@@ -109,7 +107,7 @@ async def startup_event():
     Application startup:
     register the database
     """
-    logger.debug(f"Connecting to {settings.DATABASE_READ_URL}")
+    logger.debug(f"Connecting to database")
     app.state.pool = await db_pool(None)
     logger.debug("Connection established")
 
@@ -141,16 +139,17 @@ def favico():
 
 
 # app.include_router(nodes_router)
-app.include_router(measurements_router)
+
 app.include_router(averages_router)
-app.include_router(locations_router)
 app.include_router(cities_router)
 app.include_router(countries_router)
+app.include_router(locations_router)
+app.include_router(manufacturers_router)
+app.include_router(measurements_router)
 app.include_router(mvt_router)
+app.include_router(parameters_router)
 app.include_router(projects_router)
 app.include_router(sources_router)
-app.include_router(parameters_router)
-app.include_router(manufacturers_router)
 app.include_router(summary_router)
 
 

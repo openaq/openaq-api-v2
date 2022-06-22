@@ -318,7 +318,7 @@ def load_metadata_bucketscan(count=100):
 
 def load_metadata_db(count=250, ascending: bool = False):
     order = 'ASC' if ascending else 'DESC'
-    with psycopg2.connect(settings.DATABASE_URL) as connection:
+    with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
         connection.set_session(autocommit=True)
         with connection.cursor() as cursor:
             cursor.execute(

@@ -315,8 +315,8 @@ def load_db(limit: int = 50, ascending: bool = False):
                 ,last_modified
                 ,fetchlogs_id
                 FROM fetchlogs
-                WHERE key~E'^realtime-gzipped/.*\\.ndjson.gz$' AND
-                completed_datetime is null
+                WHERE key~E'^realtime-gzipped/.*\\.ndjson.gz$'
+                AND completed_datetime is null
                 ORDER BY last_modified {order} nulls last
                 LIMIT %s
                 ;

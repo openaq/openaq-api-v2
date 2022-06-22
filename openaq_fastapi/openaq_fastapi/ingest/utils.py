@@ -168,7 +168,7 @@ def check_if_done(cursor, key):
 
 def get_object(
         key: str,
-        bucket: str = settings.OPENAQ_ETL_BUCKET
+        bucket: str = settings.ETL_BUCKET
 ):
     key = unquote_plus(key)
     text = ''
@@ -187,7 +187,7 @@ def get_object(
 def put_object(
         data: str,
         key: str,
-        bucket: str = settings.OPENAQ_ETL_BUCKET
+        bucket: str = settings.ETL_BUCKET
 ):
     out = io.BytesIO()
     with gzip.GzipFile(fileobj=out, mode='wb') as gz:
@@ -239,7 +239,7 @@ def select_object(key: str):
     content = ""
     logger.debug(f"Getting object: {key}, {output_serialization}")
     resp = s3.select_object_content(
-        Bucket=settings.OPENAQ_ETL_BUCKET,
+        Bucket=settings.ETL_BUCKET,
         Key=key,
         ExpressionType="SQL",
         Expression="""

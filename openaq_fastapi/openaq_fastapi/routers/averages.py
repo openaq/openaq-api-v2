@@ -14,7 +14,7 @@ from ..models.queries import (
     Temporal,
     Sort,
 )
-from openaq_fastapi.models.responses import OpenAQResult
+from ..models.responses import AveragesResponse, OpenAQResult
 from pydantic import root_validator
 
 logger = logging.getLogger("averages")
@@ -70,7 +70,12 @@ class Averages(APIBase, Country, Project, Measurands, DateRange):
         return values
 
 
-@router.get("/v2/averages", response_model=OpenAQResult, tags=["v2"])
+@router.get(
+    "/v2/averages", 
+    response_model=AveragesResponse, 
+    summary="Get averaged values",
+    description="",
+    tags=["v2"])
 async def averages_v2_get(
     db: DB = Depends(),
     av: Averages = Depends(Averages.depends()),

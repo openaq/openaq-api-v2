@@ -6,11 +6,17 @@ services:
       context: ..
       dockerfile: .devcontainer/Dockerfile.api
     environment:
-      - DATABASE_URL=postgres://apiuser:apiuserpw@db/openaq
-      - DATABASE_WRITE_URL=postgres://rwuser:rwuserpw@db/openaq
-      - OPENAQ_FETCH_BUCKET=openaq-fetches
-      - OPENAQ_ETL_BUCKET=openaq-fetches
-      - OPENAQ_FASTAPI_URL=http://localhost
+      - DATABASE_READ_USER=postgres
+      - DATABASE_READ_PASSWORD=postgres
+      - DATABASE_WRITE_USER=postgres
+      - DATABASE_WRITE_PASSWORD=postgres
+      - DATABASE_DB=openaq
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432
+      - FETCH_BUCKET=openaq-fetches
+      - ETL_BUCKET=openaq-fetches
+      - FASTAPI_URL=http://localhost
+      - DOMAIN_NAME=localhost
       - WAIT_HOSTS=db:5432
       - PGUSER=postgres
       - PGDATABASE=openaq

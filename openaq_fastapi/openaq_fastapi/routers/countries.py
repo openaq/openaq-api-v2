@@ -5,7 +5,7 @@ from enum import Enum
 from ..db import DB
 from ..models.queries import APIBase, Country
 from openaq_fastapi.models.responses import (
-    OpenAQCountriesResult,
+    CountriesResponse,
     converter
 )
 import jq
@@ -39,20 +39,23 @@ class Countries(Country, APIBase):
 
 @router.get(
     "/v1/countries/{country_id}",
-    response_model=OpenAQCountriesResult,
-    summary="Provides a country within the platform by id",
+    response_model=CountriesResponse,
+    summary="Get country by ID",
+    description="Provides a single country by country ID",
     tags=["v1"],
 )
 @router.get(
     "/v2/countries/{country_id}",
-    response_model=OpenAQCountriesResult,
-    summary="Provides a country within the platform by id",
+    response_model=CountriesResponse,
+    summary="Get country by ID",
+    description="Provides a single country by country ID",
     tags=["v2"],
 )
 @router.get(
     "/v2/countries", 
-    response_model=OpenAQCountriesResult, 
-    summary="Provides a listing of countries within the platform",
+    response_model=CountriesResponse, 
+    summary="Get countries",
+    description="Providecs a list of countries",
     tags=["v2"]
 )
 async def countries_get(
@@ -94,8 +97,9 @@ async def countries_get(
 
 @router.get(
     "/v1/countries", 
-    response_model=OpenAQCountriesResult, 
-    summary="Provides a listing of countries within the platform",
+    response_model=CountriesResponse, 
+    summary="Get countries",
+    description="Providecs a list of countries",
     tags=["v1"])
 async def countries_getv1(
     db: DB = Depends(),

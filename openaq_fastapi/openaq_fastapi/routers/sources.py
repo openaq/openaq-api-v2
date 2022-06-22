@@ -12,8 +12,8 @@ from ..models.queries import (
     SourceName,
 )
 
-from openaq_fastapi.models.responses import (
-    OpenAQResult,
+from ..models.responses import (
+    SourcesResponse, SourcesResponseV1
 )
 
 logger = logging.getLogger("sources")
@@ -28,7 +28,11 @@ class SourcesOrder(str, Enum):
 
 
 class Sources(SourceName, APIBase):
-    order_by: SourcesOrder = Query("sourceName")
+    order_by: SourcesOrder = Query(
+        "sourceName",
+        description="Field by which to order the results",
+        example="?order_by=sourceName or ?order_by=firstUpdated"
+    )
 
     def where(self):
         wheres = []
@@ -48,8 +52,9 @@ class Sources(SourceName, APIBase):
 
 @router.get(
     "/v2/sources", 
-    response_model=OpenAQResult, 
-    summary="Provides a list of sources",
+    response_model=SourcesResponse, 
+    summary="Sources",
+    description="Provides a list of sources",
     tags=["v2"]
 )
 async def sources_get(
@@ -118,8 +123,9 @@ class SourcesV1(APIBase):
 
 @router.get(
     "/v1/sources", 
-    response_model=OpenAQResult, 
-    summary="Provides a list of sources",
+    response_model=SourcesResponseV1, 
+    summary="Sources",
+    description="Provides a list of sources",
     tags=["v1"]
 )
 async def sources_v1_get(
@@ -154,7 +160,9 @@ async def sources_v1_get(
 
 @router.get(
     "/v2/sources/readme/{slug}", 
-    summary="Provides a list of parameters",
+    summary="Source Readme",
+    description="Provides a readme for a given source by the source slug",
+    response_class=HTMLResponse,
     tags=["v2"]
 )
 async def readme_get(
