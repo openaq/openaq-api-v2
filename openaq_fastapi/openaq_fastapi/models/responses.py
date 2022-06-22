@@ -75,8 +75,8 @@ class OpenAQResult(BaseModel):
 
 class AveragesRow(BaseModel):
     id: int
-    hour: Union[datetime, None]
-    day: Union[datetime, None]
+    hour: Union[date, None]
+    day: Union[date, None]
     month: Union[date, None]
     year: Union[date, None]
     hod: Union[int, None]
