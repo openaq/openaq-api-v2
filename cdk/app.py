@@ -47,6 +47,7 @@ ingest = LambdaIngestStack(
     ingest_lambda_timeout=settings.INGEST_LAMBDA_TIMEOUT,
     ingest_lambda_memory_size=settings.INGEST_LAMBDA_MEMORY_SIZE,
     ingest_rate_minutes=15,
+    topic_arn=settings.TOPIC_ARN,
 )
 
 Tags.of(ingest).add("project", settings.PROJECT)
