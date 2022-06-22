@@ -84,15 +84,39 @@ class Measurements(
     Location, City, Country, Geo, Measurands, HasGeo, APIBase, DateRange
 ):
     order_by: MeasOrder = Query("datetime")
-    sort: Sort = "desc"
-    isMobile: Optional[bool] = None
-    isAnalysis: Optional[bool] = None
-    project: Optional[int] = None
-    entity: Optional[EntityTypes] = None
-    sensorType: Optional[SensorTypes] = None
-    value_from: Optional[float] = None
-    value_to: Optional[float] = None
-    include_fields: Optional[str] = None
+    sort: Sort = Query("desc")
+    isMobile: Optional[bool] = Query(
+        None,
+        description="Location is mobile",
+        example="?isMobile=false"
+    )
+    isAnalysis: Optional[bool] =  Query(
+        None,
+        description="Data is the product of a previous analysis/aggregation and not raw measurements",
+        example="?isAnalysis=false"
+    )
+    project: Optional[int] = Query(None)
+    entity: Optional[EntityTypes] = Query(None)
+    sensorType: Optional[SensorTypes] =  Query(
+        None,
+        description="Filter by sensor type (e.g. reference grade, low-cost sensor)",
+        example="?sensorType=reference%20grade"
+    )
+    value_from: Optional[float] =  Query(
+        None,
+        description="",
+        example=""
+    )
+    value_to: Optional[float] =  Query(
+        None,
+        description="",
+        example=""
+    )
+    include_fields: Optional[str] =  Query(
+        None,
+        description="Additional fields to include in response (e.g. )",
+        example="?include_fields"
+    )
 
     def where(self):
         wheres = []
@@ -142,7 +166,8 @@ class Measurements(
 
 @router.get(
     "/v2/measurements", 
-    summary="Get a list of measurements",
+    summary="Get measurements",
+    description="",
     response_model=MeasurementsResponse,
     tags=["v2"]
 )

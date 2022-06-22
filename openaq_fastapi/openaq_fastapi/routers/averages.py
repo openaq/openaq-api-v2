@@ -74,6 +74,7 @@ class Averages(APIBase, Country, Project, Measurands, DateRange):
     "/v2/averages", 
     response_model=AveragesResponse, 
     summary="Get averaged values",
+    description="",
     tags=["v2"])
 async def averages_v2_get(
     db: DB = Depends(),
