@@ -36,8 +36,8 @@ class LambdaApiStack(Stack):
         lambda_env: Dict,
         memory_size: int,
         lambda_timeout: int,
-        vpc_id: Union[str, None],
-        availability_zones: Union[List[str], None],
+        vpc_id: str,
+        vpc_availability_zones: str,
         hosted_zone_name: Union[str, None],
         hosted_zone_id: Union[str, None],
         domain_name: Union[str, None],
@@ -49,14 +49,12 @@ class LambdaApiStack(Stack):
         super().__init__(scope, id, *kwargs)
 
 
-        if not vpc_id:
-            vpc = aws_ec2.Vpc(self, "")
-        else:
-            vpc = aws_ec2.Vpc.from_vpc_attributes(
+        vpc = aws_ec2.Vpc.from_vpc_attributes(
             self,
-            vpc_id,
-            availability_zones
-            )
+            f"{id}-vpc",
+            vpc_id=vpc_id,
+            availability_zones=vpc_availability_zones.split(' ')
+        )
 
         openaq_api = aws_lambda.Function(
             self,

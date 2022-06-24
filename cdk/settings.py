@@ -1,4 +1,5 @@
-from pydantic import BaseSettings
+from typing import List
+from pydantic import BaseSettings, validator
 from pathlib import Path
 from os import environ
 
@@ -19,6 +20,8 @@ class Settings(BaseSettings):
     REALTIME_LIMIT: int = 10
     LOG_LEVEL: str = 'INFO'
     LOCAL_SAVE_DIRECTORY: str = './openaq_files'
+    VPC_ID: str
+    VPC_AVAILABILTIY_ZONES: str
     HOSTED_ZONE_ID: str = None
     HOSTED_ZONE_NAME: str = None
     WEB_ACL_ID: str = None

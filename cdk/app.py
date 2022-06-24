@@ -20,11 +20,14 @@ from openaq_fastapi.settings import settings as lambda_env
 
 app = aws_cdk.App()
 
+
 api = LambdaApiStack(
     app,
     f"openaq-api-{settings.ENV}",
     env_name=settings.ENV,
     lambda_env=lambda_env,
+    vpc_id=settings.VPC_ID,
+    vpc_availability_zones=settings.VPC_AVAILABILTIY_ZONES,
     hosted_zone_name=settings.HOSTED_ZONE_NAME,
     hosted_zone_id=settings.HOSTED_ZONE_ID,
     lambda_timeout=settings.API_LAMBDA_TIMEOUT,
