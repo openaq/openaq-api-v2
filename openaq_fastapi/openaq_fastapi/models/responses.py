@@ -35,8 +35,8 @@ class Date(BaseModel):
 
 
 class Coordinates(BaseModel):
-    latitude: float
-    longitude: float
+    latitude: Union[float, None]
+    longitude: Union[float, None]
 
 
 class Source(BaseModel):
