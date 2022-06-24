@@ -212,7 +212,7 @@ class LocationsRow(BaseModel):
     country: str
     sources: Union[List[Source], None]
     is_mobile: bool = Field(..., alias='isMobile')
-    is_analysis: bool = Field(..., alias='isAnalysis')
+    is_analysis: Union[bool, None] = Field(..., alias='isAnalysis')
     parameters: List[Parameter]
     sensor_type: str = Field(..., alias='sensorType')
     coordinates: Union[Coordinates, None] = None
