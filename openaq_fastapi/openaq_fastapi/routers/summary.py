@@ -15,7 +15,8 @@ router = APIRouter()
 @router.get(
     "/v2/summary",
     response_model=SummaryResponse,
-    summary="Get a summary of platform data",
+    summary="Platform Summary",
+    description="Provides a summary of platform data",
     tags=["v2"],
 )
 async def summary_get(

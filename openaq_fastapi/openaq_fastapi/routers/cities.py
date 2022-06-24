@@ -48,8 +48,9 @@ class Cities(City, Country, APIBase):
 @router.get(
     "/v2/cities",
     response_model=CitiesResponse,
-    tags=["v2"],
-    summary="Get a list of cities",
+    summary="Get cities",
+    description="Provides a list of cities supported by the platform",
+    tags=["v2"]
 )
 async def cities_get(
     db: DB = Depends(), cities: Cities = Depends(Cities.depends())
@@ -99,7 +100,8 @@ async def cities_get(
     "/v1/cities",
     response_model=CitiesResponse,
     tags=["v1"],
-    summary="Get a list of cities",
+    summary="Get cities",
+    description="Provides a list of cities supported by the platform"
 )
 async def cities_getv1(
     db: DB = Depends(), cities: Cities = Depends(Cities.depends()),

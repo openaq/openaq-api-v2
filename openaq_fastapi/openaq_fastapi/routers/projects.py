@@ -104,14 +104,15 @@ class Projects(Project, Measurands, APIBase, Country):
 @router.get(
     "/v2/projects/{project_id}",
     response_model=ProjectsResponse,
-    summary="Get a list of projects",
+    summary="Project by ID",
+    description="Provides a project by project ID",
     tags=["v2"],
 )
 @router.get(
     "/v2/projects", 
     response_model=ProjectsResponse, 
-    summary="Get a list of projects",
-
+    summary="Projects",
+    description="Provides a list of projects",
     tags=["v2"])
 async def projects_get(
     db: DB = Depends(),

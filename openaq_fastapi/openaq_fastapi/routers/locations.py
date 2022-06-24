@@ -162,15 +162,17 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
 
 
 @router.get(
-    "/v2/locations/{location_id}", 
-    response_model=LocationsResponse, 
-    summary="Provides a location from a given location id",
+    "/v2/locations/{location_id}",
+    response_model=LocationsResponse,
+    summary="Get a location by ID",
+    description="Provides a location by location ID",
     tags=["v2"]
 )
 @router.get(
-    "/v2/locations", 
-    response_model=LocationsResponse, 
-    summary="Provides a list of all locations",
+    "/v2/locations",
+    response_model=LocationsResponse,
+    summary="Get locations",
+    description="Provides a list of locations",
     tags=["v2"]
 )
 async def locations_get(
@@ -256,14 +258,17 @@ async def locations_get(
 @router.get(
     "/v2/latest/{location_id}", 
     response_model=LatestResponse, 
-    summary="Provides latest measurements from a given location",
+    summary="Get latest measurements by location ID",
+    description="Provides latest measurements for a locations by location ID",
     tags=["v2"]
 )
 @router.get(
     "/v2/latest", 
     response_model=LatestResponse,
-    summary="Provides latest measurements from all locations",
-    tags=["v2"])
+    summary="Get latest measurements",
+    description="Provides a list of locations with latest measurements",
+    tags=["v2"]
+)
 async def latest_get(
     db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
 ):
@@ -371,13 +376,13 @@ async def v1_base(
 @router.get(
     "/v1/latest/{location_id}", 
     response_model=LatestResponseV1, 
-    summary="Get latest measurements for a location ID",
+    summary="Get latest measurements by location ID",
     tags=["v1"]
 )
 @router.get(
     "/v1/latest", 
     response_model=LatestResponseV1, 
-    summary="Get latest measurements for locations",
+    summary="Get latest measurements",
     tags=["v1"]
 )
 async def latest_v1_get(
@@ -424,13 +429,13 @@ async def latest_v1_get(
 @router.get(
     "/v1/locations/{location_id}", 
     response_model=LocationsResponseV1, 
-    summary="Get a single location by ID",
+    summary="Get location by ID",
     tags=["v1"]
 )
 @router.get(
     "/v1/locations", 
     response_model=LocationsResponseV1, 
-    summary="Get a list of locations",
+    summary="Get locations",
     tags=["v1"])
 async def locationsv1_get(
     db: DB = Depends(), locations: Locations = Depends(Locations.depends()),

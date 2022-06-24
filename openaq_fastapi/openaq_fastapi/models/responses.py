@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import List, Optional, Union
+from typing import List, Union
 
 from pydantic import AnyUrl, Field
 from pydantic.main import BaseModel
@@ -74,16 +74,16 @@ class OpenAQResult(BaseModel):
 # /v2/averages
 
 class AveragesRow(BaseModel):
-    id: int
+    id: Union[List[int], int]
     hour: Union[datetime, None]
-    day: Union[datetime, None]
+    day: Union[date, None]
     month: Union[date, None]
     year: Union[date, None]
     hod: Union[int, None]
     dom: Union[int, None]
-    name: str
+    name: Union[List[str],str]
     average: float
-    subtitle: str
+    name: Union[List[str],str]
     measurement_count: int # TODO make camelCase
     parameter: str
     parameter_id: int = Field(..., alias='parameterId')
@@ -206,13 +206,13 @@ class LocationsResponseV1(OpenAQResult):
 
 class LocationsRow(BaseModel):
     id: int
-    city: str
+    city: Union[str, None]
     name: str
     entity: str
     country: str
     sources: Union[List[Source], None]
     is_mobile: bool = Field(..., alias='isMobile')
-    is_analysis: bool = Field(..., alias='isAnalysis')
+    is_analysis: Union[bool, None] = Field(..., alias='isAnalysis')
     parameters: List[Parameter]
     sensor_type: str = Field(..., alias='sensorType')
     coordinates: Union[Coordinates, None] = None

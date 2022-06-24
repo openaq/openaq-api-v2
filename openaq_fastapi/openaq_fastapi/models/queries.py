@@ -106,10 +106,8 @@ class OBaseModel(BaseModel):
 class City(OBaseModel):
     city: Optional[List[str]] = Query(
         None,
-        description="""
-        Limit results by a certain city or cities.
-        (ex. ?city=Chicago or ?city=Chicago&city=Boston)
-        """,
+        description="Limit results by a certain city or cities. (e.g. ?city=Chicago or ?city=Chicago&city=Boston)",
+        example="?city=Chicago or ?city=Chicago&city=Boston"
     )
 
 
@@ -119,20 +117,16 @@ class Country(OBaseModel):
         min_length=2,
         max_length=2,
         regex="[a-zA-Z][a-zA-Z]",
-        description="""
-        Limit results by a certain country using two letter country code.
-        (ex. /US)
-        """,
+        description="Limit results by a certain country using two letter country code. (e.g. /US)",
+        example="/US"
     )
     country: Optional[List[str]] = Query(
         None,
         min_length=2,
         max_length=2,
         regex="[a-zA-Z][a-zA-Z]",
-        description="""
-        Limit results by a certain country using two letter country code.
-        (ex. ?country=US or ?country=US&country=MX)
-        """,
+        description="Limit results by a certain country using two letter country code. (e.g. ?country=US or ?country=US&country=MX)",
+        example="?country=US or ?country=US&country=MX"
     )
 
     @validator("country", check_fields=False)
@@ -210,14 +204,16 @@ class Geo(OBaseModel):
     coordinates: Optional[str] = Query(
         None, 
         regex=r"^-?\d{1,2}\.?\d{0,8},-?1?\d{1,2}\.?\d{0,8}$", 
-        description="""
-        Coordinate pair in form lat,lng
-        """, 
-        example="38.907,-77.037"
+        description="Coordinate pair in form lat,lng. Up to 8 decimal points of precision e.g. 38.907,-77.037", 
+        example="coordinates=38.907,-77.037"
     )
     lat: Optional[confloat(ge=-90, le=90)] = None
     lon: Optional[confloat(ge=-180, le=180)] = None
-    radius: conint(gt=0, le=100000) = 1000
+    radius: conint(gt=0, le=100000) =  Query(
+        1000,
+        description="Search radius from coordinates as center in meters. Maximum of 100,000 (100km) defaults to 1000 (1km)",
+        exmaple="radius=10000"
+    )
 
     @root_validator(pre=True)
     def addlatlon(cls, values):
@@ -239,10 +235,26 @@ class Geo(OBaseModel):
 
 
 class Measurands(OBaseModel):
-    parameter_id: Optional[int] = None
-    parameter: Optional[List[Union[int, str]]] = Query(None, gt=0, le=maxint)
-    measurand: Optional[List[str]] = None
-    unit: Optional[List[str]] = None
+    parameter_id: Optional[int] = Query(
+        None,
+        description="(optional) A parameter ID to filter measurement results. e.g. parameter_id=2 parameter ID 2 (i.e. PM2.5) will limit measurement results to only PM2.5 measurements",
+        example="parameter_id=2"
+    )
+    parameter: Optional[List[Union[int, str]]] = Query(
+        None, 
+        gt=0, 
+        le=maxint,
+        description="(optional) A parameter name or ID by which to filter measurement results. e.g. parameter=pm25 or parameter=pm25&parameter=pm10",
+        example="parameter=pm25 or parameter=pm25&parameter=pm10"
+    )
+    measurand: Optional[List[str]] = Query(
+        None,
+        description=""
+    )
+    unit: Optional[List[str]] = Query(
+        None,
+        description="",
+    )
 
     @validator("measurand", check_fields=False)
     def check_measurand(cls, v, values):
@@ -262,10 +274,15 @@ class Paging(OBaseModel):
         100,
         gt=0,
         le=100000,
-        description="Change the number of results returned.",
+        description="Change the number of results returned. e.g. limit=1000 will return up to 1000 results",
+        example="limit=1000"
     )
     page: int = Query(
-        1, gt=0, le=6000, description="Paginate through results."
+        1,
+        gt=0,
+        le=6000, 
+        description="Paginate through results. e.g. page=1 will return first page of results",
+        example="page=1"
     )
     offset: int = Query(0, ge=0, le=10000)
 
@@ -301,7 +318,12 @@ class Temporal(str, Enum):
 
 
 class APIBase(Paging):
-    sort: Optional[Sort] = Query("asc", description="Define sort order.")
+    sort: Optional[Sort] = Query(
+        "asc", 
+        description="Define sort order.",
+        exmaple="sort=asc"
+
+    )
 
 
 def fix_datetime(
