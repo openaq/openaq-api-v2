@@ -2,6 +2,7 @@ from typing import Dict, List, Union
 
 
 from aws_cdk import (
+    Environment,
     aws_ec2,
     aws_lambda,
     aws_logs,
@@ -32,28 +33,27 @@ class LambdaApiStack(Stack):
         self,
         scope: Construct,
         id: str,
+        env: Environment,
         env_name: str,
         lambda_env: Dict,
         memory_size: int,
         lambda_timeout: int,
         vpc_id: str,
-        vpc_availability_zones: str,
         hosted_zone_name: Union[str, None],
         hosted_zone_id: Union[str, None],
         domain_name: Union[str, None],
         cert_arn: Union[str, None],
         web_acl_id: Union[str, None],
+        
         **kwargs,
     ) -> None:
         """Lambda to handle api requests"""
-        super().__init__(scope, id, *kwargs)
+        super().__init__(scope, id, env=env, **kwargs)
 
-
-        vpc = aws_ec2.Vpc.from_vpc_attributes(
+        vpc = aws_ec2.Vpc.from_lookup(
             self,
             f"{id}-vpc",
-            vpc_id=vpc_id,
-            availability_zones=vpc_availability_zones.split(' ')
+            vpc_id=vpc_id
         )
 
         openaq_api = aws_lambda.Function(

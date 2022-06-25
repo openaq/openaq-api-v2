@@ -3,7 +3,7 @@ from typing import List
 
 import jq
 from fastapi import APIRouter, Depends, Query
-from pydantic.typing import Optional
+from pydantic.typing import Union
 from enum import Enum
 
 from ..models.responses import LatestResponse, LatestResponseV1, LocationsResponse, LocationsResponseV1, converter
@@ -41,31 +41,31 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
     order_by: LocationsOrder = Query(
         "lastUpdated", description="Order by a field"
     )
-    sort: Optional[Sort] = Query("desc", description="Sort Direction")
-    isMobile: Optional[bool] = Query(None, description="Location is mobile")
-    isAnalysis: Optional[bool] = Query(
+    sort: Union[Sort, None] = Query("desc", description="Sort Direction")
+    isMobile: Union[bool, None] = Query(None, description="Location is mobile")
+    isAnalysis: Union[bool, None] = Query(
         None,
         description=(
             "Data is the product of a previous "
             "analysis/aggregation and not raw measurements"
         ),
     )
-    sourceName: Optional[List[str]] = Query(
+    sourceName: Union[List[str], None] = Query(
         None, description="Name of the data source"
     )
-    entity: Optional[EntityTypes] = Query(
+    entity: Union[EntityTypes, None] = Query(
         None, description="Source entity type."
     )
-    sensorType: Optional[SensorTypes] = Query(
+    sensorType: Union[SensorTypes, None] = Query(
         None, description="Type of Sensor"
     )
-    modelName: Optional[List[str]] = Query(
+    modelName: Union[List[str], None] = Query(
         None, description="Model Name of Sensor"
     )
-    manufacturerName: Optional[List[str]] = Query(
+    manufacturerName: Union[List[str], None] = Query(
         None, description="Manufacturer of Sensor"
     )
-    dumpRaw: Optional[bool] = False
+    dumpRaw: Union[bool, None] = False
 
     def where(self):
         wheres = []

@@ -4,7 +4,7 @@ import json
 import re
 import time
 from os import environ
-from typing import Optional
+from typing import Union
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
@@ -21,7 +21,7 @@ class CacheControlMiddleware(BaseHTTPMiddleware):
     """MiddleWare to add CacheControl in response headers."""
 
     def __init__(
-        self, app: ASGIApp, cachecontrol: Optional[str] = None
+        self, app: ASGIApp, cachecontrol: Union[str, None] = None
     ) -> None:
         """Init Middleware."""
         super().__init__(app)

@@ -1,6 +1,6 @@
 import logging
 from enum import Enum
-from typing import Optional
+from typing import Union
 
 from fastapi import APIRouter, Depends, Query
 from openaq_fastapi.models.responses import CitiesResponse, converter
@@ -22,7 +22,7 @@ class CitiesOrder(str, Enum):
 
 class Cities(City, Country, APIBase):
     order_by: CitiesOrder = Query("city", description="Order by a field")
-    entity: Optional[str] = None
+    entity: Union[str, None] = None
 
     def where(self):
         wheres = []

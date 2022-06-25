@@ -5,6 +5,8 @@ from os import environ
 
 
 class Settings(BaseSettings):
+    CDK_ACCOUNT: str
+    CDK_REGION: str
     ENV: str = "staging"
     PROJECT: str = "openaq"
     FETCH_BUCKET: str

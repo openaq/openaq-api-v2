@@ -2,7 +2,7 @@ import logging
 
 from fastapi import APIRouter, Depends, Query
 from openaq_fastapi.models.responses import ProjectsResponse
-from pydantic.typing import Optional, List
+from pydantic.typing import Union, List
 
 from ..db import DB
 from ..models.queries import APIBase, Country, Measurands, Project
@@ -22,11 +22,11 @@ class ProjectsOrder(str, Enum):
 
 class Projects(Project, Measurands, APIBase, Country):
     order_by: ProjectsOrder = Query("lastUpdated")
-    isMobile: Optional[bool] = None
-    isAnalysis: Optional[bool] = None
-    entity: Optional[str] = None
-    sensorType: Optional[str] = None
-    sourceName: Optional[List[str]] = None
+    isMobile: Union[bool, None] = None
+    isAnalysis: Union[bool, None] = None
+    entity: Union[str, None] = None
+    sensorType: Union[str, None] = None
+    sourceName: Union[List[str], None] = None
 
     def where(self):
         wheres = []

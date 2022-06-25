@@ -1,5 +1,6 @@
 import aws_cdk
 from aws_cdk import (
+    Environment,
     Tags,
 )
 
@@ -20,6 +21,7 @@ from openaq_fastapi.settings import settings as lambda_env
 
 app = aws_cdk.App()
 
+env = Environment(account=settings.CDK_ACCOUNT, region=settings.CDK_REGION)
 
 api = LambdaApiStack(
     app,
@@ -27,7 +29,6 @@ api = LambdaApiStack(
     env_name=settings.ENV,
     lambda_env=lambda_env,
     vpc_id=settings.VPC_ID,
-    vpc_availability_zones=settings.VPC_AVAILABILTIY_ZONES,
     hosted_zone_name=settings.HOSTED_ZONE_NAME,
     hosted_zone_id=settings.HOSTED_ZONE_ID,
     lambda_timeout=settings.API_LAMBDA_TIMEOUT,
@@ -35,6 +36,7 @@ api = LambdaApiStack(
     domain_name=settings.DOMAIN_NAME,
     cert_arn=settings.CERTIFICATE_ARN,
     web_acl_id=settings.WEB_ACL_ID,
+    env=env,
 )
 
 Tags.of(api).add("project", settings.PROJECT)
