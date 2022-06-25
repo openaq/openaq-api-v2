@@ -164,8 +164,8 @@ class LatestMeasurement(BaseModel):
 
 class LatestRow(BaseModel):
     location: str
-    city: str
-    country: str
+    city: Union[str, None]
+    country: Union[str, None]
     coordinates: Union[Coordinates, None]
     measurements: List[LatestMeasurement]
 
