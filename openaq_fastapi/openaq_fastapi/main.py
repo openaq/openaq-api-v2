@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from mangum import Mangum
 from pydantic import BaseModel, ValidationError
+import redis
 from starlette.responses import JSONResponse, RedirectResponse
 
 from openaq_fastapi.db import db_pool
@@ -74,6 +75,12 @@ if settings.RATE_LIMITING:
         host=settings.REDIS_HOST,
         port=settings.REDIS_PORT
     )
+
+
+redis_client = redis.Redis(
+    host='127.0.0.1',
+    port=6379
+)
 
 
 app.add_middleware(

@@ -56,6 +56,15 @@ class LambdaApiStack(Stack):
             vpc_id=vpc_id
         )
 
+
+        if not vpc_id:
+            vpc = aws_ec2.Vpc(self, "")
+        else:
+            vpc = aws_ec2.Vpc.from_vpc_attributes(
+            self,
+            vpc_id
+            )
+
         openaq_api = aws_lambda.Function(
             self,
             f"{id}-lambda",
