@@ -57,10 +57,7 @@ class LambdaApiStack(Stack):
         )
 
 
-        if not vpc_id:
-            vpc = aws_ec2.Vpc(self, "")
-        else:
-            vpc = aws_ec2.Vpc.from_vpc_attributes(
+        vpc = aws_ec2.Vpc.from_vpc_attributes(
             self,
             vpc_id
             )
