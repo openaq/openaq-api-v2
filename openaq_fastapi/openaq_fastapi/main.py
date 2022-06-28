@@ -70,9 +70,9 @@ app = FastAPI(
 
 if settings.RATE_LIMITING:
     import redis
-    redis_client = redis.Redis(
-        host='127.0.0.1',
-        port=6379
+    redis_client = redis.RedisCluster(
+        host=settings.REDIS_HOST,
+        port=settings.REDIS_PORT
     )
 
 
@@ -91,9 +91,9 @@ if settings.RATE_LIMITING == True:
     app.add_middleware(
         RateLimiterMiddleWare,
         redis_client=redis_client,
-        rate_amount=1,
-        rate_amount_key=1,
-        rate_time=datetime.timedelta(minutes=1)
+        rate_amount=settings.RATE_AMOUNT,
+        rate_amount_key=settings.RATE_AMOUNT_KEY,
+        rate_time=datetime.timedelta(minutes=settings.RATE_TIME)
     )
 
 class OpenAQValidationResponseDetail(BaseModel):
