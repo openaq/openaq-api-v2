@@ -71,8 +71,14 @@ app = FastAPI(
 if settings.RATE_LIMITING:
     import redis
     redis_client = redis.RedisCluster(
-        host=settings.REDIS_HOST,
-        port=settings.REDIS_PORT
+        startup_nodes=[
+            {
+                "host": settings.REDIS_HOST,
+                "port": settings.REDIS_PORT
+            }
+        ], 
+        decode_responses=True,
+        skip_full_coverage_check=True
     )
 
 
