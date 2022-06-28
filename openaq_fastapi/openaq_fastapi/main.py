@@ -76,12 +76,6 @@ if settings.RATE_LIMITING:
     )
 
 
-redis_client = redis.Redis(
-    host='127.0.0.1',
-    port=6379
-)
-
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
