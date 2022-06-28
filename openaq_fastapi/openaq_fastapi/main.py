@@ -74,7 +74,8 @@ if settings.RATE_LIMITING:
         host=settings.REDIS_HOST,
         port=settings.REDIS_PORT,
         decode_responses=True,
-        skip_full_coverage_check=True
+        skip_full_coverage_check=True,
+        socket_timeout=5
     )
 
 
