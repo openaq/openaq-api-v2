@@ -1,7 +1,9 @@
-from typing import Dict, Optional
+from typing import Dict, List, Union
 
 
 from aws_cdk import (
+    Environment,
+    aws_ec2,
     aws_lambda,
     aws_logs,
     Stack,
@@ -31,19 +33,28 @@ class LambdaApiStack(Stack):
         self,
         scope: Construct,
         id: str,
+        env: Environment,
         env_name: str,
         lambda_env: Dict,
         memory_size: int,
         lambda_timeout: int,
-        hosted_zone_name: Optional[str],
-        hosted_zone_id: Optional[str],
-        domain_name: Optional[str],
-        cert_arn: Optional[str],
-        web_acl_id: Optional[str],
+        vpc_id: str,
+        hosted_zone_name: Union[str, None],
+        hosted_zone_id: Union[str, None],
+        domain_name: Union[str, None],
+        cert_arn: Union[str, None],
+        web_acl_id: Union[str, None],
+        
         **kwargs,
     ) -> None:
         """Lambda to handle api requests"""
-        super().__init__(scope, id, *kwargs)
+        super().__init__(scope, id, env=env, **kwargs)
+
+        vpc = aws_ec2.Vpc.from_lookup(
+            self,
+            f"{id}-vpc",
+            vpc_id=vpc_id
+        )
 
         openaq_api = aws_lambda.Function(
             self,
@@ -58,6 +69,7 @@ class LambdaApiStack(Stack):
             ),
             handler="openaq_fastapi.main.handler",
             runtime=aws_lambda.Runtime.PYTHON_3_8,
+            vpc=vpc,
             allow_public_subnet=True,
             memory_size=memory_size,
             environment=stringify_settings(lambda_env),

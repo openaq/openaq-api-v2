@@ -17,9 +17,9 @@ from starlette.responses import JSONResponse, RedirectResponse
 from openaq_fastapi.db import db_pool
 from openaq_fastapi.middleware import (
     CacheControlMiddleware,
-    GetHostMiddleware,
     StripParametersMiddleware,
     TotalTimeMiddleware,
+    RateLimiterMiddleWare
 )
 from openaq_fastapi.routers.averages import router as averages_router
 from openaq_fastapi.routers.cities import router as cities_router
@@ -68,6 +68,13 @@ app = FastAPI(
     docs_url="/docs",
 )
 
+if settings.RATE_LIMITING:
+    import redis
+    redis_client = redis.RedisCluster(
+        host=settings.REDIS_HOST,
+        port=settings.REDIS_PORT
+    )
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -79,8 +86,15 @@ app.add_middleware(
 app.add_middleware(StripParametersMiddleware)
 app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
 app.add_middleware(TotalTimeMiddleware)
-# app.add_middleware(GetHostMiddleware)
 
+if settings.RATE_LIMITING == True:
+    app.add_middleware(
+        RateLimiterMiddleWare,
+        redis_client=redis_client,
+        rate_amount=settings.RATE_AMOUNT,
+        rate_amount_key=settings.RATE_AMOUNT_KEY,
+        rate_time=datetime.timedelta(minutes=settings.RATE_TIME)
+    )
 
 class OpenAQValidationResponseDetail(BaseModel):
     loc: List[str] = None
@@ -137,8 +151,6 @@ def favico():
         "https://openaq.org/assets/graphics/meta/favicon.png"
     )
 
-
-# app.include_router(nodes_router)
 
 app.include_router(averages_router)
 app.include_router(cities_router)

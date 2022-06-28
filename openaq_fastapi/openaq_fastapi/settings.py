@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Union
 from pydantic import BaseSettings, validator
 from pathlib import Path
 from os import environ
@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     DATABASE_DB: str
     DATABASE_HOST: str
     DATABASE_PORT: int
-    DATABASE_READ_URL: Optional[str]
-    DATABASE_WRITE_URL: Optional[str]
+    DATABASE_READ_URL: Union[str, None]
+    DATABASE_WRITE_URL: Union[str, None]
     FASTAPI_URL: str
     DRYRUN: bool = False
     FETCH_BUCKET: str
@@ -27,6 +27,14 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = 'INFO'
     LOG_BUCKET: str = None
     DOMAIN_NAME: str = None
+
+    REDIS_HOST: Union[str, None] = None
+    REDIS_PORT: Union[int, None] = 6379
+
+    RATE_LIMITING: bool = False
+    RATE_AMOUNT: Union[int, None] = None
+    RATE_AMOUNT_KEY: Union[int, None] = None
+    RATE_TIME: Union[int, None] = None
 
     @validator('DATABASE_READ_URL', allow_reuse=True)
     def get_read_url(cls, v, values):
