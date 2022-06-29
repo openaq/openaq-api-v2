@@ -71,13 +71,16 @@ app = FastAPI(
 if settings.RATE_LIMITING:
     logger.debug("Connecting to redis")
     import redis
-    redis_client = redis.RedisCluster(
-        host=settings.REDIS_HOST,
-        port=settings.REDIS_PORT,
-        decode_responses=True,
-        skip_full_coverage_check=True,
-        socket_timeout=5
-    )
+    try:
+        redis_client = redis.RedisCluster(
+            host=settings.REDIS_HOST,
+            port=settings.REDIS_PORT,
+            decode_responses=True,
+            skip_full_coverage_check=True,
+            socket_timeout=5
+        )
+    except Exception as e:
+        logging.error("")
     logger.debug("Redis connected")
 
 
@@ -126,7 +129,7 @@ async def startup_event():
     Application startup:
     register the database
     """
-    logger.debug(f"Connecting to database")
+    logger.debug("Connecting to database")
     app.state.pool = await db_pool(None)
     logger.debug("Connection established")
 

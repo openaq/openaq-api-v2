@@ -123,7 +123,7 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         if "/v2/locations/tiles" in route:
             return False
         return True
-        
+
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         route = request.url.path
@@ -144,4 +144,5 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
                 content={"message": "Too many requests"}
             )
         response = await call_next(request)
+
         return response
