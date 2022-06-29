@@ -69,7 +69,7 @@ app = FastAPI(
 )
 
 if settings.RATE_LIMITING:
-    logger.debug("connecting to redis...")
+    logger.debug("Connecting to redis")
     import redis
     redis_client = redis.RedisCluster(
         host=settings.REDIS_HOST,
@@ -78,7 +78,7 @@ if settings.RATE_LIMITING:
         skip_full_coverage_check=True,
         socket_timeout=5
     )
-    logger.debug("redis connected")
+    logger.debug("Redis connected")
 
 
 app.add_middleware(

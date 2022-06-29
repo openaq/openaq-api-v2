@@ -98,6 +98,7 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         self.rate_amount_key = rate_amount_key
         self.rate_time = rate_time
 
+
     def request_is_limited(self, key: str, limit: int):
         if self.redis_client.setnx(key, limit):
             self.redis_client.expire(key, int(self.rate_time.total_seconds()))
@@ -114,8 +115,17 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         return False
 
 
+    @staticmethod
+    def limited_path(route: str) -> bool:
+        allow_list = ["/", "/openapi.json", "/docs"]
+        if route in allow_list:
+            return False
+        if "/v2/locations/tiles" in route:
+            return False
+        return True
+        
+
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        allow_list = ["/openapi.json", "/docs", "/v2/locations/tiles"]
         route = request.url.path
         auth = request.headers.get("X-API-Key", None)
         limit = self.rate_amount
@@ -128,7 +138,7 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
                 )
             key = auth
             limit = self.rate_amount_key
-        if route not in allow_list and self.request_is_limited(key, limit):
+        if self.limited_path(route) and self.request_is_limited(key, limit):
             return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS, 
                 content={"message": "Too many requests"}

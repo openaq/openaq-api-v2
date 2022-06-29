@@ -36,10 +36,10 @@ env:
   REDIS_HOST: ${{ secrets.REDIS_HOST_STAGING }}
   REDIS_PORT: ${{ secrets.REDIS_PORT }}
 
-  RATE_LIMITING: False
-  RATE_AMOUNT: 5
-  RATE_AMOUNT_KEY: 10
-  RATE_TIME: 1
+  RATE_LIMITING: True
+  RATE_AMOUNT: 300
+  RATE_AMOUNT_KEY: 300
+  RATE_TIME: 5
 
 jobs:
   deploy:
