@@ -1,8 +1,6 @@
 from enum import Enum
-from typing import Union
-from fastapi import Request
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel
 
 from humps import camelize
 
