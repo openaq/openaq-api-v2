@@ -96,13 +96,16 @@ app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
 app.add_middleware(TotalTimeMiddleware)
 
 if settings.RATE_LIMITING == True:
-    app.add_middleware(
-        RateLimiterMiddleWare,
-        redis_client=redis_client,
-        rate_amount=settings.RATE_AMOUNT,
-        rate_amount_key=settings.RATE_AMOUNT_KEY,
-        rate_time=datetime.timedelta(minutes=settings.RATE_TIME)
-    )
+    if redis_client:
+        app.add_middleware(
+            RateLimiterMiddleWare,
+            redis_client=redis_client,
+            rate_amount=settings.RATE_AMOUNT,
+            rate_amount_key=settings.RATE_AMOUNT_KEY,
+            rate_time=datetime.timedelta(minutes=settings.RATE_TIME)
+        )
+    else:
+        logger.warning("RATE_LIMITING set to TRUE but no valid redis client provided")
 
 class OpenAQValidationResponseDetail(BaseModel):
     loc: List[str] = None
