@@ -5,16 +5,17 @@ import time
 from typing import Any, List
 
 import orjson
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from mangum import Mangum
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, validator
 from starlette.responses import JSONResponse, RedirectResponse
 
 from openaq_fastapi.db import db_pool
+from openaq_fastapi.logging.logging import ErrorLog, LogType, ModelValidationError, UnprocessableEntityLog, WarnLog
 from openaq_fastapi.middleware import (
     CacheControlMiddleware,
     StripParametersMiddleware,
@@ -80,7 +81,10 @@ if settings.RATE_LIMITING:
             socket_timeout=5
         )
     except Exception as e:
-        logging.error("")
+        logging.error(ErrorLog(
+            type=LogType.INFRASTRUCTURE_ERROR,
+            detail=f"failed to connect to redis: {e}"
+        ))
     logger.debug("Redis connected")
 
 
@@ -105,7 +109,9 @@ if settings.RATE_LIMITING == True:
             rate_time=datetime.timedelta(minutes=settings.RATE_TIME)
         )
     else:
-        logger.warning("RATE_LIMITING set to TRUE but no valid redis client provided")
+        logger.warning(WarnLog(
+            detail="valid redis client not provided but RATE_LIMITING set to TRUE"
+        ).json())
 
 class OpenAQValidationResponseDetail(BaseModel):
     loc: List[str] = None
@@ -118,17 +124,22 @@ class OpenAQValidationResponse(BaseModel):
 
 
 @app.exception_handler(RequestValidationError)
-async def openaq_request_validation_exception_handler(request, exc):
+async def openaq_request_validation_exception_handler(request: Request, exc: RequestValidationError):
     detail = orjson.loads(exc.json())
-    logger.debug(f"{detail}")
+    logger.info(UnprocessableEntityLog(
+        path=request.url.path,
+        params=request.url.query
+    ).json())
     detail = OpenAQValidationResponse(detail=detail)
     return ORJSONResponse(status_code=422, content=jsonable_encoder(detail))
 
 
 @app.exception_handler(ValidationError)
-async def openaq_exception_handler(request, exc):
-    detail = orjson.loads(exc.json())
-    logger.debug(f"{detail}")
+async def openaq_exception_handler(request: Request, exc: ValidationError):
+    logger.info(ModelValidationError(
+        path=request.url.path,
+        params=request.url.query
+    ).json())
     return ORJSONResponse(status_code=500, content={"message":"internal server error"})
 
 
