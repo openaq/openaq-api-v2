@@ -1,9 +1,12 @@
-from pydantic import BaseSettings
+from typing import List
+from pydantic import BaseSettings, validator
 from pathlib import Path
 from os import environ
 
 
 class Settings(BaseSettings):
+    CDK_ACCOUNT: str
+    CDK_REGION: str
     ENV: str = "staging"
     PROJECT: str = "openaq"
     FETCH_BUCKET: str
@@ -19,6 +22,7 @@ class Settings(BaseSettings):
     REALTIME_LIMIT: int = 10
     LOG_LEVEL: str = 'INFO'
     LOCAL_SAVE_DIRECTORY: str = './openaq_files'
+    VPC_ID: str
     HOSTED_ZONE_ID: str = None
     HOSTED_ZONE_NAME: str = None
     WEB_ACL_ID: str = None

@@ -3,7 +3,7 @@ import os
 import pathlib
 import urllib
 from datetime import date, datetime
-from pydantic.typing import List, Optional, Union
+from pydantic.typing import List, Union
 
 from fastapi import APIRouter, Depends, Path, Query, Response
 from fastapi.exceptions import HTTPException
@@ -29,12 +29,12 @@ class TileJSON(BaseModel):
     """
 
     tilejson: str = "2.2.0"
-    name: Optional[str]
-    description: Optional[str]
+    name: Union[str, None]
+    description: Union[str, None]
     version: str = "1.0.0"
-    attribution: Optional[str]
-    template: Optional[str]
-    legend: Optional[str]
+    attribution: Union[str, None]
+    template: Union[str, None]
+    legend: Union[str, None]
     scheme: str = "xyz"
     tiles: List[str]
     grids: List[str] = []
@@ -56,13 +56,13 @@ class TileBase(OBaseModel):
 
 
 class MobileTile(TileBase):
-    parameter: Optional[int] = Query(None)
-    location: Optional[List[int]] = Query(None, description="limit data to location id")
-    lastUpdatedFrom: Optional[Union[datetime, date]] = None
-    lastUpdatedTo: Optional[Union[datetime, date]] = None
-    isMobile: Optional[bool] = None
-    project: Optional[int] = None
-    isAnalysis: Optional[bool] = None
+    parameter: Union[int, None] = Query(None)
+    location: Union[List[int], None] = Query(None, description="limit data to location id")
+    lastUpdatedFrom: Union[Union[datetime, date], None] = None
+    lastUpdatedTo: Union[Union[datetime, date], None] = None
+    isMobile: Union[bool, None] = None
+    project: Union[int, None] = None
+    isAnalysis: Union[bool, None] = None
 
     def try_cast(self, value: str):
         try:

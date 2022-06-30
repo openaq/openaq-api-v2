@@ -115,6 +115,28 @@ OPENAQ_FETCH_BUCKET=openaq-fetches
 OPENAQ_ETL_BUCKET=openaq-fetches
 ```
 
+## Rate limiting
+
+In the production environment rate limiting is handled in two places, AWS WAF and at the application level with [Starlette Middleware](https://www.starlette.io/middleware/). The application rate limiting is configurable via environment variables. The rate limiting middleware requires access to an instance of [redis](https://redis.io/). For local development [docker](https://www.docker.com/) can be a convenient method to set up a local redis instance. With docker, use the following commend:
+
+```sh
+docker run --name redis -p 6379:6379 -d redis:6.2-alpine 
+```
+
+Now a redis instance will be available at ``` http://localhost:6379 ```. Configure the REDIS_HOST to `localhost` and REDIS_PORT to `6379`. 
+
+### Rate limiting values
+
+Rate limiting can be toggled off for local develop via the `RATE_LIMITING` environment variable. Other rate limiting values are:
+* `RATE_AMOUNT` - The number of requests allowed without a valid API key
+* `RATE_AMOUNT_KEY` - The number of requests allow with a valid API key
+* `RATE_TIME` - The number of minutes for the rate
+
+e.g. `RATE_AMOUNT=5` and `RATE_TIME=1` would allow 5 requests per 1 minute.
+
+N.B. - With AWS WAF rate limiting also occurs at the cloudfront stage. The application level rate limiting should be less than or equal to the value set at AWS WAF.
+
+
 ## Contributing
 There are a lot of ways to contribute to this project, more details can be found in the [contributing guide](CONTRIBUTING.md).
 

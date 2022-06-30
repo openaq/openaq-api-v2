@@ -242,8 +242,8 @@ class MeasurementsRowV1(BaseModel):
     date: Date
     unit: str
     coordinates: Coordinates
-    country: str
-    city: str
+    country: Union[str, None]
+    city: Union[str, None]
 
 
 class MeasurementsResponseV1(OpenAQResult):
@@ -260,7 +260,7 @@ class MeasurementsRow(BaseModel):
     date: Date
     unit: str
     coordinates: Coordinates
-    country: str
+    country: Union[str, None]
     city: Union[str, None]
     is_mobile: bool = Field(..., alias='isMobile')
     is_analysis: Union[bool, None] = Field(None, alias='isAnalysis')

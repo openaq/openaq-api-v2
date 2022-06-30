@@ -28,6 +28,19 @@ env:
   CERTIFICATE_ARN: ${{ secrets.CERTIFICATE_ARN }}
   FASTAPI_URL: ""
 
+  CDK_ACCOUNT: ${{ secrets.CDK_ACCOUNT }}
+  CDK_REGION: ${{ secrets.CDK_REGION }}
+
+  VPC_ID: ${{ secrets.VPC_ID }}
+
+  REDIS_HOST: ${{ secrets.REDIS_HOST_STAGING }}
+  REDIS_PORT: ${{ secrets.REDIS_PORT }}
+
+  RATE_LIMITING: True
+  RATE_AMOUNT: 300
+  RATE_AMOUNT_KEY: 300
+  RATE_TIME: 5
+
 jobs:
   deploy:
     runs-on: ubuntu-latest

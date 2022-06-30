@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Union
 
 from fastapi import APIRouter, Depends, Path, Query
 from fastapi.responses import HTMLResponse
@@ -107,7 +107,7 @@ class SourcesV1Order(str, Enum):
 
 
 class SourcesV1(APIBase):
-    name: Optional[str] = None
+    name: Union[str, None] = None
     order_by: SourcesV1Order = Query("name")
 
     def where(self):
