@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from fastapi import Response, status
 from redis import Redis
 
-from openaq_fastapi.logging.logging import TooManyRequestsLog, UnauthorizedLog
+from openaq_fastapi.models.logging import TooManyRequestsLog, UnauthorizedLog
 
 logger = logging.getLogger("middleware")
 
@@ -87,7 +87,7 @@ class GetHostMiddleware(BaseHTTPMiddleware):
 class RateLimiterMiddleWare(BaseHTTPMiddleware):
 
     def __init__(
-        self, app: ASGIApp, 
+        self, app: ASGIApp,
         redis_client: Redis,
         rate_amount: int, # number of requests allow without api key
         rate_amount_key: int, # number of requests allow with api key
@@ -139,7 +139,7 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
                     params=request.url.query
                 ).json())
                 return JSONResponse(
-                    status_code=status.HTTP_401_UNAUTHORIZED, 
+                    status_code=status.HTTP_401_UNAUTHORIZED,
                     content={"message": "invalid credentials"}
                 )
             key = auth
@@ -150,7 +150,7 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
                     params=request.url.query
             ).json())
             return JSONResponse(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS, 
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 content={"message": "Too many requests"}
             )
         response = await call_next(request)

@@ -15,7 +15,15 @@ from pydantic import BaseModel, ValidationError, validator
 from starlette.responses import JSONResponse, RedirectResponse
 
 from openaq_fastapi.db import db_pool
-from openaq_fastapi.logging.logging import ErrorLog, LogType, ModelValidationError, UnprocessableEntityLog, WarnLog
+
+from openaq_fastapi.models.logging import (
+    ErrorLog,
+    LogType,
+    ModelValidationError,
+    UnprocessableEntityLog,
+    WarnLog,
+)
+
 from openaq_fastapi.middleware import (
     CacheControlMiddleware,
     StripParametersMiddleware,
