@@ -68,6 +68,8 @@ app = FastAPI(
     docs_url="/docs",
 )
 
+redis_client = None # initialize for generalize_schema.py
+
 if settings.RATE_LIMITING:
     logger.debug("Connecting to redis")
     import redis
