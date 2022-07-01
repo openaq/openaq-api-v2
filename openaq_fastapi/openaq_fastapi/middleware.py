@@ -14,6 +14,8 @@ from fastapi.responses import JSONResponse
 from fastapi import Response, status
 from redis import Redis
 
+from openaq_fastapi.models.logging import HTTPLog, LogType, TooManyRequestsLog, UnauthorizedLog
+
 logger = logging.getLogger("middleware")
 
 
@@ -81,11 +83,25 @@ class GetHostMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class LoggingMiddleware(BaseHTTPMiddleware):
+    """MiddleWare to set servers url on App with current url."""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        if response.status_code == 200:
+            logging.info(HTTPLog(
+                type=LogType.SUCCESS,
+                path=request.url.path,
+                params=request.url.query,
+                http_code=response.status_code
+            ).json(by_alias=True))
+        return response
+
 
 class RateLimiterMiddleWare(BaseHTTPMiddleware):
 
     def __init__(
-        self, app: ASGIApp, 
+        self, app: ASGIApp,
         redis_client: Redis,
         rate_amount: int, # number of requests allow without api key
         rate_amount_key: int, # number of requests allow with api key
@@ -132,15 +148,23 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         key = request.client.host
         if auth:
             if not self.check_valid_key(auth):
+                logging.info(UnauthorizedLog(
+                    path=request.url.path,
+                    params=request.url.query
+                ).json(by_alias=True))
                 return JSONResponse(
-                    status_code=status.HTTP_401_UNAUTHORIZED, 
+                    status_code=status.HTTP_401_UNAUTHORIZED,
                     content={"message": "invalid credentials"}
                 )
             key = auth
             limit = self.rate_amount_key
         if self.limited_path(route) and self.request_is_limited(key, limit):
+            logging.info(TooManyRequestsLog(
+                    path=request.url.path,
+                    params=request.url.query
+            ).json(by_alias=True))
             return JSONResponse(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS, 
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 content={"message": "Too many requests"}
             )
         response = await call_next(request)
