@@ -1,12 +1,14 @@
 from enum import Enum
+from typing import Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, validator
 from fastapi import status
 
 from humps import camelize
 
 
 class LogType(Enum):
+    SUCCESS = "SUCCESS"
     VALIDATION_ERROR = "VALIDATION_ERROR"
     INFRASTRUCTURE_ERROR = "INFRASTRUCTURE_ERROR"
     UNPROCESSABLE_ENTITY = "UNPROCESSABLE_ENTITY"
@@ -20,20 +22,28 @@ class BaseLog(BaseModel):
     abstract base class for logging
     """
     type: LogType
-    detail: str
+    detail: Union[str, None]
 
     class Config:
         alias_generator = camelize
-
+        allow_population_by_field_name = True
 
 class WarnLog(BaseLog):
     type = LogType.WARNING
 
 
-class HTTPLog(BaseModel):
+class HTTPLog(BaseLog):
     path: str
     params: str
+    params_obj: Union[dict, None]
     http_code: int
+
+    @validator('params_obj', always=True)
+    def set_params_obj(cls, v, values) -> dict:
+        if "=" in values["params"]:
+            return v or dict(x.split("=") for x in values["params"].split("&"))
+        else:
+            return None
 
 
 class ErrorLog(HTTPLog):

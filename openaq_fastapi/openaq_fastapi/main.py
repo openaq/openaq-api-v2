@@ -28,7 +28,8 @@ from openaq_fastapi.middleware import (
     CacheControlMiddleware,
     StripParametersMiddleware,
     TotalTimeMiddleware,
-    RateLimiterMiddleWare
+    RateLimiterMiddleWare,
+    LoggingMiddleware
 )
 from openaq_fastapi.routers.averages import router as averages_router
 from openaq_fastapi.routers.cities import router as cities_router
@@ -106,6 +107,7 @@ app.add_middleware(
 app.add_middleware(StripParametersMiddleware)
 app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
 app.add_middleware(TotalTimeMiddleware)
+app.add_middleware(LoggingMiddleware)
 
 if settings.RATE_LIMITING == True:
     if redis_client:
@@ -119,7 +121,7 @@ if settings.RATE_LIMITING == True:
     else:
         logger.warning(WarnLog(
             detail="valid redis client not provided but RATE_LIMITING set to TRUE"
-        ).json())
+        ).json(by_alias=True))
 
 class OpenAQValidationResponseDetail(BaseModel):
     loc: List[str] = None
@@ -136,18 +138,20 @@ async def openaq_request_validation_exception_handler(request: Request, exc: Req
     detail = orjson.loads(exc.json())
     logger.info(UnprocessableEntityLog(
         path=request.url.path,
-        params=request.url.query
-    ).json())
+        params=request.url.query,
+        detail=exc.json()
+    ).json(by_alias=True))
     detail = OpenAQValidationResponse(detail=detail)
     return ORJSONResponse(status_code=422, content=jsonable_encoder(detail))
 
 
 @app.exception_handler(ValidationError)
 async def openaq_exception_handler(request: Request, exc: ValidationError):
-    logger.info(ModelValidationError(
+    logger.error(ModelValidationError(
         path=request.url.path,
-        params=request.url.query
-    ).json())
+        params=request.url.query,
+        detail=exc.json()
+    ).json(by_alias=True))
     return ORJSONResponse(status_code=500, content={"message":"internal server error"})
 
 
