@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from mangum import Mangum
 from pydantic import BaseModel, ValidationError, validator
-from starlette.responses import JSONResponse, RedirectResponse
+from starlette.responses import JSONResponse, RedirectResponse, PlainTextResponse
 
 from openaq_fastapi.db import db_pool
 
@@ -139,8 +139,7 @@ class OpenAQValidationResponse(BaseModel):
 async def openaq_request_validation_exception_handler(request: Request, exc: RequestValidationError):
     detail = orjson.loads(exc.json())
     logger.info(UnprocessableEntityLog(
-        path=request.url.path,
-        params=request.url.query,
+        request=request,
         detail=exc.json()
     ).json(by_alias=True))
     detail = OpenAQValidationResponse(detail=detail)
@@ -150,8 +149,7 @@ async def openaq_request_validation_exception_handler(request: Request, exc: Req
 @app.exception_handler(ValidationError)
 async def openaq_exception_handler(request: Request, exc: ValidationError):
     logger.error(ModelValidationError(
-        path=request.url.path,
-        params=request.url.query,
+        request=request,
         detail=exc.json()
     ).json(by_alias=True))
     return ORJSONResponse(status_code=500, content={"message":"internal server error"})
