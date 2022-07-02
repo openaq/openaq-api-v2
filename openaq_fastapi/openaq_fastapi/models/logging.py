@@ -2,10 +2,10 @@ from enum import Enum
 from typing import Union
 
 from pydantic import BaseModel, Field, validator
-from fastapi import status
+from fastapi import status, Request
 
 from humps import camelize
-
+import orjson
 
 class LogType(Enum):
     SUCCESS = "SUCCESS"
@@ -26,6 +26,7 @@ class BaseLog(BaseModel):
 
     class Config:
         alias_generator = camelize
+        arbitrary_types_allowed = True
         allow_population_by_field_name = True
 
 class WarnLog(BaseLog):
@@ -33,10 +34,37 @@ class WarnLog(BaseLog):
 
 
 class HTTPLog(BaseLog):
-    path: str
-    params: str
-    params_obj: Union[dict, None]
     http_code: int
+    request: Request = Field(..., exclude=True)
+    path: Union[str, None]
+    params: Union[str, None]
+    params_obj: Union[dict, None]
+    ip: Union[str, None]
+    api_key: Union[str, None]
+
+    @validator('api_key', always=True)
+    def set_api_key(cls, v, values) -> dict:
+        request = values['request']
+        api_key = request.headers.get("X-API-Key", None)
+        return v or api_key
+
+    @validator('ip', always=True)
+    def set_ip(cls, v, values) -> dict:
+        request = values['request']
+        ip = request.client.host
+        return v or ip
+
+    @validator('path', always=True)
+    def set_path(cls, v, values) -> dict:
+        request = values['request']
+        path = request.url.path
+        return v or path
+
+    @validator('params', always=True)
+    def set_params(cls, v, values) -> dict:
+        request = values['request']
+        params = request.url.query
+        return v or params
 
     @validator('params_obj', always=True)
     def set_params_obj(cls, v, values) -> dict:
