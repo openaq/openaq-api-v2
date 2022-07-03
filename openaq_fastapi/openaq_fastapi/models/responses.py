@@ -207,7 +207,7 @@ class LocationsResponseV1(OpenAQResult):
 class LocationsRow(BaseModel):
     id: int
     city: Union[str, None]
-    name: str
+    name: Union[str, None]
     entity: str
     country: Union[str, None]
     sources: Union[List[Source], None]
