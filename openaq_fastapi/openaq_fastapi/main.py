@@ -12,13 +12,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from mangum import Mangum
 from pydantic import BaseModel, ValidationError, validator
-from starlette.responses import JSONResponse, RedirectResponse, PlainTextResponse
+from starlette.responses import JSONResponse, RedirectResponse
 
 from openaq_fastapi.db import db_pool
 
 from openaq_fastapi.models.logging import (
-    ErrorLog,
-    LogType,
+    InfrastructureErrorLog,
     ModelValidationError,
     UnprocessableEntityLog,
     WarnLog,
@@ -92,8 +91,7 @@ if settings.RATE_LIMITING:
             socket_timeout=5
         )
     except Exception as e:
-        logging.error(ErrorLog(
-            type=LogType.INFRASTRUCTURE_ERROR,
+        logging.error(InfrastructureErrorLog(
             detail=f"failed to connect to redis: {e}"
         ))
     logger.debug("Redis connected")
