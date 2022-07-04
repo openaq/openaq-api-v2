@@ -5,7 +5,6 @@ from pydantic import BaseModel, Field, validator
 from fastapi import status, Request
 
 from humps import camelize
-import orjson
 
 class LogType(Enum):
     SUCCESS = "SUCCESS"
@@ -31,6 +30,10 @@ class BaseLog(BaseModel):
 
 class WarnLog(BaseLog):
     type = LogType.WARNING
+
+
+class InfrastructureErrorLog(BaseLog):
+    type = LogType.INFRASTRUCTURE_ERROR
 
 
 class HTTPLog(BaseLog):
