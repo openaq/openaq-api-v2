@@ -49,6 +49,13 @@ logging.basicConfig(
     level=settings.LOG_LEVEL.upper(),
     force=True,
 )
+# When debuging we dont want to debug these libraries
+logging.getLogger('boto3').setLevel(logging.WARNING)
+logging.getLogger('botocore').setLevel(logging.WARNING)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
+logging.getLogger('aiocache').setLevel(logging.WARNING)
+logging.getLogger('uvicorn').setLevel(logging.WARNING)
+
 logger = logging.getLogger('main')
 
 # this is instead of importing settings elsewhere
