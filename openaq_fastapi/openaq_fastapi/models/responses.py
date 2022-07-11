@@ -35,17 +35,17 @@ class Date(BaseModel):
 
 
 class Coordinates(BaseModel):
-    latitude: float
-    longitude: float
+    latitude: Union[float, None]
+    longitude: Union[float, None]
 
 
 class Source(BaseModel):
-    url: Union[str, None] = None
+    url: Union[str, None]
     name: str
-    id: Union[str, None] = None
-    readme: Union[str, None] = None
-    organization: Union[str, None] = None
-    lifecycle_stage: Union[str, None] = None
+    id: Union[str, None]
+    readme: Union[str, None]
+    organization: Union[str, None]
+    lifecycle_stage: Union[str, None]
 
 class Manufacturer(BaseModel):
     model_name: str = Field(..., alias='modelName')
@@ -62,7 +62,7 @@ class Parameter(BaseModel):
     last_updated: str = Field(..., alias='lastUpdated')
     parameter_id: int = Field(..., alias='parameterId')
     first_updated: str = Field(..., alias='firstUpdated')
-    manufacturers: Union[List[Manufacturer], None] = None
+    manufacturers: Union[List[Manufacturer], None]
 
 
 # Abstract class for all responses
@@ -144,8 +144,8 @@ class LatestMeasurementRow(BaseModel):
 
 class LatestRowV1(BaseModel):
     location: str
-    city: str
-    country: str
+    city: Union[str, None]
+    country: Union[str, None]
     coordinates: Coordinates
     measurements: List[LatestMeasurementRow]
 
@@ -163,9 +163,9 @@ class LatestMeasurement(BaseModel):
 
 
 class LatestRow(BaseModel):
-    location: str
-    city: str
-    country: str
+    location: Union[str, None]
+    city: Union[str, None]
+    country: Union[str, None]
     coordinates: Union[Coordinates, None]
     measurements: List[LatestMeasurement]
 
@@ -207,20 +207,20 @@ class LocationsResponseV1(OpenAQResult):
 class LocationsRow(BaseModel):
     id: int
     city: Union[str, None]
-    name: str
+    name: Union[str, None]
     entity: str
-    country: str
+    country: Union[str, None]
     sources: Union[List[Source], None]
     is_mobile: bool = Field(..., alias='isMobile')
-    is_analysis: Union[bool, None] = Field(..., alias='isAnalysis')
+    is_analysis: Union[bool, None] = Field(None, alias='isAnalysis')
     parameters: List[Parameter]
     sensor_type: str = Field(..., alias='sensorType')
-    coordinates: Union[Coordinates, None] = None
+    coordinates: Union[Coordinates, None]
     last_updated: str = Field(..., alias='lastUpdated')
     first_updated: str = Field(..., alias='firstUpdated')
     measurements: int
-    bounds: Union[List[float], None] = None
-    manufacturers: Union[List[Manufacturer], None] = None
+    bounds: Union[List[float], None]
+    manufacturers: Union[List[Manufacturer], None]
 
 
 class LocationsResponse(OpenAQResult):
@@ -242,8 +242,8 @@ class MeasurementsRowV1(BaseModel):
     date: Date
     unit: str
     coordinates: Coordinates
-    country: str
-    city: str
+    country: Union[str, None]
+    city: Union[str, None]
 
 
 class MeasurementsResponseV1(OpenAQResult):
@@ -260,10 +260,10 @@ class MeasurementsRow(BaseModel):
     date: Date
     unit: str
     coordinates: Coordinates
-    country: str
+    country: Union[str, None]
     city: Union[str, None]
     is_mobile: bool = Field(..., alias='isMobile')
-    is_analysis: Union[bool, None] = Field(..., alias='isAnalysis')
+    is_analysis: Union[bool, None] = Field(None, alias='isAnalysis')
     entity: str
     sensor_type: str = Field(..., alias='sensorType')
 
@@ -285,8 +285,8 @@ class ParametersRow(BaseModel):
     display_name: str = Field(..., alias='displayName')
     description: str
     preferred_unit: str = Field(..., alias='preferredUnit')
-    is_core: Union[bool, None] = Field(..., alias='isCore')
-    max_color_value: Union[float, None] # not camel case in output
+    is_core: Union[bool, None] = Field(None, alias='isCore')
+    max_color_value: Union[float, None] = None # not camel case in output
 
 
 class ParametersResponse(OpenAQResult):
@@ -300,10 +300,10 @@ class ParametersResponse(OpenAQResult):
 class ProjectsSource(BaseModel):
     id: str
     name: str
-    readme: Union[str, None] = None
-    data_avg_dur: Union[str, None] = None
-    organization: Union[str, None] = None
-    lifecycle_stage: Union[str, None] = None
+    readme: Union[str, None]
+    data_avg_dur: Union[str, None]
+    organization: Union[str, None]
+    lifecycle_stage: Union[str, None]
 
 
 class ProjectsRow(BaseModel):
@@ -311,9 +311,9 @@ class ProjectsRow(BaseModel):
     name: str
     subtitle: str
     is_mobile: bool = Field(..., alias='isMobile')
-    is_analysis: bool = Field(..., alias='isAnalysis')
+    is_analysis: Union[bool, None] = Field(None, alias='isAnalysis')
     entity: Union[str, None]
-    sensor_type: Union[str, None] = Field(..., alias='sensorType')
+    sensor_type: Union[str, None] = Field(None, alias='sensorType')
     locations: int
     location_ids: List[int] = Field(..., alias='locationIds')
     countries: List[str]
@@ -335,11 +335,11 @@ class SourcesRowV1(BaseModel):
     url: str
     adapter: str
     name: str
-    city: Union[str, None] = None
+    city: Union[str, None]
     country: str
-    description: Union[str, None] = None
+    description: Union[str, None]
     source_url: AnyUrl = Field(..., alias='sourceURL')
-    resolution: Union[str, None] = None
+    resolution: Union[str, None]
     contacts: List[str]
     active: bool
 
@@ -350,10 +350,10 @@ class SourcesResponseV1(OpenAQResult):
 # /v2/sources
 
 class Datum(BaseModel):
-    url: Union[str, None] = None
-    data_avg_dur: Union[str, None] = None
-    organization: Union[str, None] = None
-    lifecycle_stage: Union[str, None] = None
+    url: Union[str, None] 
+    data_avg_dur: Union[str, None] 
+    organization: Union[str, None]
+    lifecycle_stage: Union[str, None] 
 
 
 class SourcesRow(BaseModel):
@@ -362,7 +362,7 @@ class SourcesRow(BaseModel):
     source_id: int = Field(..., alias='sourceId')
     locations: int
     source_name: str = Field(..., alias='sourceName')
-    source_slug: Union[str, None] = Field(..., alias='sourceSlug')
+    source_slug: Union[str, None] = Field(None, alias='sourceSlug')
 
 class SourcesResponse(OpenAQResult):
     results: List[SourcesRow]

@@ -1,7 +1,7 @@
 from enum import Enum
 import logging
 import os
-from typing import Optional
+from typing import Union
 import jq
 
 import orjson as json
@@ -85,34 +85,34 @@ class Measurements(
 ):
     order_by: MeasOrder = Query("datetime")
     sort: Sort = Query("desc")
-    isMobile: Optional[bool] = Query(
+    isMobile: Union[bool, None] = Query(
         None,
         description="Location is mobile",
         example="?isMobile=false"
     )
-    isAnalysis: Optional[bool] =  Query(
+    isAnalysis: Union[bool, None] =  Query(
         None,
         description="Data is the product of a previous analysis/aggregation and not raw measurements",
         example="?isAnalysis=false"
     )
-    project: Optional[int] = Query(None)
-    entity: Optional[EntityTypes] = Query(None)
-    sensorType: Optional[SensorTypes] =  Query(
+    project: Union[int, None] = Query(None)
+    entity: Union[EntityTypes, None] = Query(None)
+    sensorType: Union[SensorTypes, None] =  Query(
         None,
         description="Filter by sensor type (e.g. reference grade, low-cost sensor)",
         example="?sensorType=reference%20grade"
     )
-    value_from: Optional[float] =  Query(
+    value_from: Union[float, None] =  Query(
         None,
         description="",
         example=""
     )
-    value_to: Optional[float] =  Query(
+    value_to: Union[float, None] =  Query(
         None,
         description="",
         example=""
     )
-    include_fields: Optional[str] =  Query(
+    include_fields: Union[str, None] =  Query(
         None,
         description="Additional fields to include in response (e.g. )",
         example="?include_fields"
@@ -174,7 +174,7 @@ class Measurements(
 async def measurements_get(
     db: DB = Depends(),
     m: Measurements = Depends(Measurements.depends()),
-    format: Optional[str] = None,
+    format: Union[str, None] = None,
 ):
     count = None
     date_from = m.date_from
@@ -477,7 +477,7 @@ async def measurements_get(
 async def measurements_get_v1(
     db: DB = Depends(),
     m: Measurements = Depends(Measurements.depends()),
-    format: Optional[str] = None,
+    format: Union[str, None] = None,
 ):
     m.entity = "government"
     data = await measurements_get(db, m, "json")

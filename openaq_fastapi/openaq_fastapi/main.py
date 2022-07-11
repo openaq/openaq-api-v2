@@ -5,21 +5,30 @@ import time
 from typing import Any, List
 
 import orjson
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from mangum import Mangum
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, validator
 from starlette.responses import JSONResponse, RedirectResponse
 
 from openaq_fastapi.db import db_pool
+
+from openaq_fastapi.models.logging import (
+    InfrastructureErrorLog,
+    ModelValidationError,
+    UnprocessableEntityLog,
+    WarnLog,
+)
+
 from openaq_fastapi.middleware import (
     CacheControlMiddleware,
-    GetHostMiddleware,
     StripParametersMiddleware,
     TotalTimeMiddleware,
+    RateLimiterMiddleWare,
+    LoggingMiddleware
 )
 from openaq_fastapi.routers.averages import router as averages_router
 from openaq_fastapi.routers.cities import router as cities_router
@@ -68,6 +77,25 @@ app = FastAPI(
     docs_url="/docs",
 )
 
+redis_client = None # initialize for generalize_schema.py
+
+if settings.RATE_LIMITING:
+    logger.debug("Connecting to redis")
+    import redis
+    try:
+        redis_client = redis.RedisCluster(
+            host=settings.REDIS_HOST,
+            port=settings.REDIS_PORT,
+            decode_responses=True,
+            skip_full_coverage_check=True,
+            socket_timeout=5
+        )
+    except Exception as e:
+        logging.error(InfrastructureErrorLog(
+            detail=f"failed to connect to redis: {e}"
+        ))
+    logger.debug("Redis connected")
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -79,8 +107,21 @@ app.add_middleware(
 app.add_middleware(StripParametersMiddleware)
 app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
 app.add_middleware(TotalTimeMiddleware)
-# app.add_middleware(GetHostMiddleware)
+app.add_middleware(LoggingMiddleware)
 
+if settings.RATE_LIMITING == True:
+    if redis_client:
+        app.add_middleware(
+            RateLimiterMiddleWare,
+            redis_client=redis_client,
+            rate_amount=settings.RATE_AMOUNT,
+            rate_amount_key=settings.RATE_AMOUNT_KEY,
+            rate_time=datetime.timedelta(minutes=settings.RATE_TIME)
+        )
+    else:
+        logger.warning(WarnLog(
+            detail="valid redis client not provided but RATE_LIMITING set to TRUE"
+        ).json(by_alias=True))
 
 class OpenAQValidationResponseDetail(BaseModel):
     loc: List[str] = None
@@ -93,12 +134,23 @@ class OpenAQValidationResponse(BaseModel):
 
 
 @app.exception_handler(RequestValidationError)
-@app.exception_handler(ValidationError)
-async def openaq_exception_handler(request, exc):
+async def openaq_request_validation_exception_handler(request: Request, exc: RequestValidationError):
     detail = orjson.loads(exc.json())
-    logger.debug(f"{detail}")
+    logger.info(UnprocessableEntityLog(
+        request=request,
+        detail=exc.json()
+    ).json(by_alias=True))
     detail = OpenAQValidationResponse(detail=detail)
     return ORJSONResponse(status_code=422, content=jsonable_encoder(detail))
+
+
+@app.exception_handler(ValidationError)
+async def openaq_exception_handler(request: Request, exc: ValidationError):
+    logger.error(ModelValidationError(
+        request=request,
+        detail=exc.json()
+    ).json(by_alias=True))
+    return ORJSONResponse(status_code=500, content={"message":"internal server error"})
 
 
 @app.on_event("startup")
@@ -107,7 +159,7 @@ async def startup_event():
     Application startup:
     register the database
     """
-    logger.debug(f"Connecting to database")
+    logger.debug("Connecting to database")
     app.state.pool = await db_pool(None)
     logger.debug("Connection established")
 
@@ -137,8 +189,6 @@ def favico():
         "https://openaq.org/assets/graphics/meta/favicon.png"
     )
 
-
-# app.include_router(nodes_router)
 
 app.include_router(averages_router)
 app.include_router(cities_router)

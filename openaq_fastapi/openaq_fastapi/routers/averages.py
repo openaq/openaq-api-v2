@@ -2,7 +2,7 @@ import logging
 
 from dateutil.tz import UTC
 from fastapi import APIRouter, Depends, Query
-from typing import Optional, List
+from typing import Union, List
 from ..db import DB
 from ..models.queries import (
     APIBase,
@@ -26,9 +26,9 @@ router = APIRouter()
 class Averages(APIBase, Country, Project, Measurands, DateRange):
     spatial: Spatial = Query(...)
     temporal: Temporal = Query(...)
-    location: Optional[List[str]] = None
-    group: Optional[bool] = False
-    sort: Optional[Sort] = Query("desc", description="Define sort order.")
+    location: Union[List[str], None] = None
+    group: Union[bool, None] = False
+    sort: Union[Sort, None] = Query("desc", description="Define sort order.")
 
     def where(self):
         wheres = []
