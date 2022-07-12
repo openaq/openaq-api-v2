@@ -1,5 +1,6 @@
 import datetime
 import logging
+import traceback
 from pathlib import Path
 import time
 from typing import Any, List
@@ -143,6 +144,7 @@ class OpenAQValidationResponse(BaseModel):
 @app.exception_handler(RequestValidationError)
 async def openaq_request_validation_exception_handler(request: Request, exc: RequestValidationError):
     detail = orjson.loads(exc.json())
+    logger.debug(traceback.format_exc())
     logger.info(UnprocessableEntityLog(
         request=request,
         detail=exc.json()
@@ -153,6 +155,7 @@ async def openaq_request_validation_exception_handler(request: Request, exc: Req
 
 @app.exception_handler(ValidationError)
 async def openaq_exception_handler(request: Request, exc: ValidationError):
+    logger.debug(traceback.format_exc())
     logger.error(ModelValidationError(
         request=request,
         detail=exc.json()
