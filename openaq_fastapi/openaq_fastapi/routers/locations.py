@@ -454,9 +454,9 @@ SELECT loc.location
 , loc.city
 , loc.coordinates
 , COALESCE(meas.measurements, '[]') as measurements
-, n
-FROM loc, nodes
-LEFT JOIN meas ON (meas.id = id)
+, (SELECT n FROM nodes) as n
+FROM loc
+JOIN meas ON (meas.id = loc.id)
     """
     data = await db.fetch(sql, qparams)
     if len(data):
