@@ -97,6 +97,7 @@ class DB:
             except asyncpg.exceptions.UndefinedColumnError as e:
                 raise ValueError(f"{e}")
             except asyncpg.exceptions.DataError as e:
+                logger.error("Query: %s \nArgs:%s\n", query, kwargs)
                 raise ValueError(f"{e}")
             except asyncpg.exceptions.CharacterNotInRepertoireError as e:
                 raise ValueError(f"{e}")
