@@ -141,10 +141,12 @@ class DB:
                 if isinstance(rows[0][1], list):
                     results = rows[0][1]
                 elif isinstance(rows[0][1], dict):
-                    results = [rows[0][1]]
+                    results = [
+                        r[1] for r in rows
+                    ]
                 elif isinstance(rows[0][1], str):
                     results = [
-                        orjson.loads(r[1]) for r in rows if isinstance(r[1], str)
+                        orjson.loads(r[1]) for r in rows
                     ]
 
         meta = Meta(
