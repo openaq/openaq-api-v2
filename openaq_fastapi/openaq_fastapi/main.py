@@ -1,5 +1,6 @@
 import datetime
 import logging
+import traceback
 from pathlib import Path
 import time
 from typing import Any, List
@@ -49,6 +50,13 @@ logging.basicConfig(
     level=settings.LOG_LEVEL.upper(),
     force=True,
 )
+# When debuging we dont want to debug these libraries
+logging.getLogger('boto3').setLevel(logging.WARNING)
+logging.getLogger('botocore').setLevel(logging.WARNING)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
+logging.getLogger('aiocache').setLevel(logging.WARNING)
+logging.getLogger('uvicorn').setLevel(logging.WARNING)
+
 logger = logging.getLogger('main')
 
 # this is instead of importing settings elsewhere
@@ -121,7 +129,7 @@ if settings.RATE_LIMITING == True:
     else:
         logger.warning(WarnLog(
             detail="valid redis client not provided but RATE_LIMITING set to TRUE"
-        ).json(by_alias=True))
+        ))
 
 class OpenAQValidationResponseDetail(BaseModel):
     loc: List[str] = None
@@ -136,20 +144,22 @@ class OpenAQValidationResponse(BaseModel):
 @app.exception_handler(RequestValidationError)
 async def openaq_request_validation_exception_handler(request: Request, exc: RequestValidationError):
     detail = orjson.loads(exc.json())
+    logger.debug(traceback.format_exc())
     logger.info(UnprocessableEntityLog(
         request=request,
         detail=exc.json()
-    ).json(by_alias=True))
+    ))
     detail = OpenAQValidationResponse(detail=detail)
     return ORJSONResponse(status_code=422, content=jsonable_encoder(detail))
 
 
 @app.exception_handler(ValidationError)
 async def openaq_exception_handler(request: Request, exc: ValidationError):
+    logger.debug(traceback.format_exc())
     logger.error(ModelValidationError(
         request=request,
         detail=exc.json()
-    ).json(by_alias=True))
+    ))
     return ORJSONResponse(status_code=500, content={"message":"internal server error"})
 
 

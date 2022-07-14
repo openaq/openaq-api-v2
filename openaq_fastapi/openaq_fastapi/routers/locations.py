@@ -250,20 +250,19 @@ async def locations_get(
 
         ;
         """
-
     output = await db.fetchOpenAQResult(q, qparams)
     return output
 
 
 @router.get(
-    "/v2/latest/{location_id}", 
-    response_model=LatestResponse, 
+    "/v2/latest/{location_id}",
+    response_model=LatestResponse,
     summary="Get latest measurements by location ID",
     description="Provides latest measurements for a locations by location ID",
     tags=["v2"]
 )
 @router.get(
-    "/v2/latest", 
+    "/v2/latest",
     response_model=LatestResponse,
     summary="Get latest measurements",
     description="Provides a list of locations with latest measurements",
@@ -272,11 +271,12 @@ async def locations_get(
 async def latest_get(
     db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
 ):
+
     data = await locations_get(db, locations)
     meta = data.meta
     res = data.results
     if len(res) == 0:
-        return data
+        return res
 
     latest_jq = jq.compile(
         """
@@ -328,6 +328,7 @@ async def v1_base(
     q = f"""
         WITH t1 AS (
             SELECT *,
+            parameters as measurements,
             json->'pvals'->'site_names' as locations,
             json->'pvals'->'cities' as cities,
             'government' as "sourceType",
@@ -347,7 +348,6 @@ async def v1_base(
         nodes AS (
             SELECT count(distinct id) as nodes
             FROM locations_base_v2
-
             WHERE
             {locations.where()}
             {lastupdateq}
@@ -367,74 +367,119 @@ async def v1_base(
         ;
         """
 
-    logger.debug(f"**** {qparams}")
-
     data = await db.fetchOpenAQResult(q, qparams)
     return data
 
 
 @router.get(
-    "/v1/latest/{location_id}", 
-    response_model=LatestResponseV1, 
+    "/v1/latest/{location_id}",
+    response_model=LatestResponseV1,
     summary="Get latest measurements by location ID",
     tags=["v1"]
 )
 @router.get(
-    "/v1/latest", 
-    response_model=LatestResponseV1, 
+    "/v1/latest",
+    response_model=LatestResponseV1,
     summary="Get latest measurements",
     tags=["v1"]
 )
 async def latest_v1_get(
-    db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
+        db: DB = Depends(),
+        locations: Locations = Depends(Locations.depends()),
 ):
-    data = await v1_base(db, locations)
-    meta = data.meta
-    res = data.results
-    if len(res) == 0:
-        return data
+    found = 0
+    locations.entity = "government"
+    order_by = locations.order_by
+    if order_by == "location":
+        order_by = "name"
+    elif order_by == "count":
+        order_by = "measurements"
 
-    latest_jq = jq.compile(
-        """
-        .[] | . as $loc |
-            {
-                location: .name,
-                city: .city,
-                country: .country,
-                coordinates: .coordinates,
-                measurements: [
-                    .parameters[] |
-                    . as $p | {
-                        parameter: .parameter,
-                        value: .lastValue,
-                        lastUpdated: .lastUpdated,
-                        unit: .unit,
-                        sourceName: $loc.sourceName,
-                        averagingPeriod: {
-                            value: $loc.systems[].sensors[]
-                                | select(.sensors_id==$p.id)
-                                | .data_averaging_period_seconds,
-                            unit: "seconds"
-                            }
-                    }
-                ]
-            }
+    if order_by == "random":
+        order_by = " random() "
+        lastupdateq = """
+            AND "lastUpdated" > now() - '2 weeks'::interval
+            """
+    else:
+        order_by = f'"{order_by}"'
+        lastupdateq = ""
 
-        """
+    qparams = locations.params()
+
+    logger.debug(qparams)
+    sql = f"""
+  -- start with getting locations with limit
+  WITH loc AS (
+    SELECT id
+    , name as location
+    , city
+    , country
+    , json->'pvals'->>'source_names' as source_name
+    , json_build_object(
+    'value', (json->'sensor_systems'->0->'sensors'->0->>'data_averaging_period_seconds')::int
+    , 'unit', 'seconds'
+    ) as "averagingPeriod"
+    , parameters
+    , case WHEN "isMobile" then null else coordinates end as coordinates
+    FROM locations_base_v2
+    WHERE
+    {locations.where()}
+    {lastupdateq}
+    ORDER BY {order_by} {locations.sort} nulls last
+    LIMIT :limit
+    OFFSET :offset
+  -- but also count locations without the limit
+  ), nodes AS (
+    SELECT count(distinct id) as n
+    FROM locations_base_v2
+    WHERE
+    {locations.where()}
+    {lastupdateq}
+  -- and then reshape the parameters data
+  ), meas AS (
+    SELECT loc.id
+    , json_agg(jsonb_build_object(
+    'parameter', m.parameter
+    , 'unit', m.unit
+    , 'value', m."lastValue"
+    , 'lastUpdated', m."lastUpdated"
+    , 'sourceName', loc.source_name
+    , 'averagingPeriod', loc."averagingPeriod"
+    )) as measurements
+    FROM loc, jsonb_to_recordset(loc.parameters) as m(parameter text, "lastValue" float, "lastUpdated" timestamptz, unit text)
+    GROUP BY loc.id)
+  -- and finally we return it all
+SELECT loc.location
+, loc.country
+, loc.city
+, loc.coordinates
+, COALESCE(meas.measurements, '[]') as measurements
+, (SELECT n FROM nodes) as n
+FROM loc
+JOIN meas ON (meas.id = loc.id)
+    """
+    data = await db.fetch(sql, qparams)
+    if len(data):
+        found = data[0][5]
+
+    return LatestResponseV1(
+        meta={
+            'found': found,
+            'page': qparams['page'],
+            'limit': qparams['limit']
+        },
+        results=data
     )
 
-    return converter(meta, res, latest_jq)
-
-
 @router.get(
-    "/v1/locations/{location_id}", 
-    response_model=LocationsResponseV1, 
+    "/v1/locations/{location_id}",
+    response_model=LocationsResponseV1,
     summary="Get location by ID",
     tags=["v1"]
 )
 @router.get(
-    "/v1/locations", 
-    response_model=LocationsResponseV1, 
+    "/v1/locations",
+    response_model=LocationsResponseV1,
     summary="Get locations",
     tags=["v1"])
 async def locationsv1_get(

@@ -1,8 +1,7 @@
 from datetime import date, datetime
 from typing import List, Union
 
-from pydantic import AnyUrl, Field
-from pydantic.main import BaseModel
+from pydantic import BaseModel, AnyUrl, Field, validator
 from pydantic.typing import Any
 import orjson
 from starlette.responses import JSONResponse
@@ -96,7 +95,7 @@ class AveragesResponse(OpenAQResult):
 
 
 # /v2/countries
- 
+
 class CountriesRow(BaseModel):
     code: str
     name: str
@@ -120,7 +119,7 @@ class CityRow(BaseModel):
     locations: int
     first_updated: str = Field(..., alias='firstUpdated')
     last_updated: str = Field(..., alias='lastUpdated')
-    parameters: List[str] 
+    parameters: List[str]
 
 class CitiesResponse(OpenAQResult):
     results: List[CityRow]
@@ -153,7 +152,7 @@ class LatestResponseV1(OpenAQResult):
     results: List[LatestRowV1]
 
 
-# /v2/latest 
+# /v2/latest
 
 class LatestMeasurement(BaseModel):
     parameter: str
@@ -169,8 +168,10 @@ class LatestRow(BaseModel):
     coordinates: Union[Coordinates, None]
     measurements: List[LatestMeasurement]
 
+
 class LatestResponse(OpenAQResult):
     results: List[LatestRow]
+
 
 
 # /v1/locations
@@ -350,10 +351,10 @@ class SourcesResponseV1(OpenAQResult):
 # /v2/sources
 
 class Datum(BaseModel):
-    url: Union[str, None] 
-    data_avg_dur: Union[str, None] 
+    url: Union[str, None]
+    data_avg_dur: Union[str, None]
     organization: Union[str, None]
-    lifecycle_stage: Union[str, None] 
+    lifecycle_stage: Union[str, None]
 
 
 class SourcesRow(BaseModel):
