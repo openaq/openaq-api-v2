@@ -58,6 +58,7 @@ async def db_pool(pool):
             decoder=orjson.loads,
             schema='pg_catalog'
         )
+
     if pool is None:
         pool = await asyncpg.create_pool(
             settings.DATABASE_READ_URL,

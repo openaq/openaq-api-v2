@@ -129,7 +129,7 @@ if settings.RATE_LIMITING == True:
     else:
         logger.warning(WarnLog(
             detail="valid redis client not provided but RATE_LIMITING set to TRUE"
-        ).json(by_alias=True))
+        ))
 
 class OpenAQValidationResponseDetail(BaseModel):
     loc: List[str] = None
@@ -148,7 +148,7 @@ async def openaq_request_validation_exception_handler(request: Request, exc: Req
     logger.info(UnprocessableEntityLog(
         request=request,
         detail=exc.json()
-    ).json(by_alias=True))
+    ))
     detail = OpenAQValidationResponse(detail=detail)
     return ORJSONResponse(status_code=422, content=jsonable_encoder(detail))
 
@@ -159,7 +159,7 @@ async def openaq_exception_handler(request: Request, exc: ValidationError):
     logger.error(ModelValidationError(
         request=request,
         detail=exc.json()
-    ).json(by_alias=True))
+    ))
     return ORJSONResponse(status_code=500, content={"message":"internal server error"})
 
 

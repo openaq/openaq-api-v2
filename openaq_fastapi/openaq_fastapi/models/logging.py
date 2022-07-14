@@ -23,10 +23,15 @@ class BaseLog(BaseModel):
     type: LogType
     detail: Union[str, None]
 
+    def json(self, **kwargs):
+        kwargs['by_alias'] = True
+        return super().json(**kwargs)
+
     class Config:
         alias_generator = camelize
         arbitrary_types_allowed = True
         allow_population_by_field_name = True
+
 
 class WarnLog(BaseLog):
     type = LogType.WARNING
