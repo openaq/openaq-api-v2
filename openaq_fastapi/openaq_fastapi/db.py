@@ -111,8 +111,9 @@ class DB:
                     raise HTTPException(status_code=422, detail=f"{e}")
                 raise HTTPException(status_code=500, detail=f"{e}")
         logger.debug(
-            "query took: %s\n -- results_firstrow: %s",
+            "query took: %s and returned:%s\n -- results_firstrow: %s",
             time.time() - start,
+            len(r),
             str(r and r[0])[0:500],
         )
         return r
@@ -133,6 +134,7 @@ class DB:
         rows = await self.fetch(query, kwargs)
         found = 0
         results = []
+
         if len(rows) > 0:
             if 'count' in rows[0].keys():
                 found = rows[0]["count"]

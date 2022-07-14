@@ -41,15 +41,16 @@ setup(
         "dateparser",
         "pyhumps",
         "ujson",
+        "redis",
     ],
     extras_require={
         "dev": [
             "black",
             "flake8",
             "pytest",
-            "requests",
-            "schemathesis",
-            "hypothesis<6.0",
+            "requests<2.28, >=2.22",
+            "schemathesis>3",
+            "hypothesis>6",
         ]
     },
     entry_points={
@@ -62,7 +63,9 @@ setup(
     package_data={
         "": ["*.sql"],
     },
-    package_dir={
-        'static': 'openaq_fastapi/static',
-    },
+    data_files=[
+        'openaq_fastapi/static/index.html',
+        'openaq_fastapi/static/favicon.png',
+        'openaq_fastapi/static/openaq-logo.svg',
+    ],
 )
