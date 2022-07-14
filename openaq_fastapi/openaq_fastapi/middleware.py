@@ -93,7 +93,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 request=request,
                 type=LogType.SUCCESS,
                 http_code=response.status_code
-            ))
+            ).json())
         return response
 
 
@@ -149,7 +149,7 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
             if not self.check_valid_key(auth):
                 logging.info(UnauthorizedLog(
                     request=request
-                ))
+                ).json())
                 return JSONResponse(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     content={"message": "invalid credentials"}
@@ -159,7 +159,7 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         if self.limited_path(route) and self.request_is_limited(key, limit):
             logging.info(TooManyRequestsLog(
                     request=request
-            ))
+            ).json())
             return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 content={"message": "Too many requests"}
