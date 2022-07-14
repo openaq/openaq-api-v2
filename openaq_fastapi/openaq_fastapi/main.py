@@ -56,6 +56,7 @@ logging.getLogger('botocore').setLevel(logging.WARNING)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
 logging.getLogger('aiocache').setLevel(logging.WARNING)
 logging.getLogger('uvicorn').setLevel(logging.WARNING)
+logging.getLogger('mangum').setLevel(logging.WARNING)
 
 logger = logging.getLogger('main')
 
@@ -148,7 +149,7 @@ async def openaq_request_validation_exception_handler(request: Request, exc: Req
     logger.info(UnprocessableEntityLog(
         request=request,
         detail=exc.json()
-    ))
+    ).json())
     detail = OpenAQValidationResponse(detail=detail)
     return ORJSONResponse(status_code=422, content=jsonable_encoder(detail))
 
@@ -159,7 +160,7 @@ async def openaq_exception_handler(request: Request, exc: ValidationError):
     logger.error(ModelValidationError(
         request=request,
         detail=exc.json()
-    ))
+    ).json())
     return ORJSONResponse(status_code=500, content={"message":"internal server error"})
 
 
