@@ -95,12 +95,11 @@ class DB:
             try:
                 r = await con.fetch(rquery, *args)
             except asyncpg.exceptions.UndefinedColumnError as e:
-                raise ValueError(f"{e}")
+                raise ValueError(f"{e}") from e
             except asyncpg.exceptions.DataError as e:
-                logger.error("Query: %s \nArgs:%s\n", query, kwargs)
-                raise ValueError(f"{e}")
+                raise ValueError(f"{e}") from e
             except asyncpg.exceptions.CharacterNotInRepertoireError as e:
-                raise ValueError(f"{e}")
+                raise ValueError(f"{e}") from e
             except TimeoutError:
                 raise HTTPException(
                     status_code=500,

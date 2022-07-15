@@ -202,14 +202,14 @@ class HasGeo(OBaseModel):
 
 class Geo(OBaseModel):
     coordinates: Union[str, None] = Query(
-        None, 
-        regex=r"^-?\d{1,2}\.?\d{0,8},-?1?\d{1,2}\.?\d{0,8}$", 
-        description="Coordinate pair in form lat,lng. Up to 8 decimal points of precision e.g. 38.907,-77.037", 
+        None,
+        regex=r"^-?\d{1,2}\.?\d{0,8},-?1?\d{1,2}\.?\d{0,8}$",
+        description="Coordinate pair in form lat,lng. Up to 8 decimal points of precision e.g. 38.907,-77.037",
         example="coordinates=38.907,-77.037"
     )
     lat: Union[confloat(ge=-90, le=90), None] = None
     lon: Union[confloat(ge=-180, le=180), None] = None
-    radius: conint(gt=0, le=100000) =  Query(
+    radius: conint(gt=0, le=100000) = Query(
         1000,
         description="Search radius from coordinates as center in meters. Maximum of 100,000 (100km) defaults to 1000 (1km)",
         exmaple="radius=10000"
@@ -221,8 +221,8 @@ class Geo(OBaseModel):
         if coords is not None and "," in coords:
             lat, lon = coords.split(",")
             if lat and lon:
-                values["lat"] = lat
-                values["lon"] = lon
+                values["lat"] = float(lat)
+                values["lon"] = float(lon)
         return values
 
     def where_geo(self):
@@ -241,8 +241,8 @@ class Measurands(OBaseModel):
         example="parameter_id=2"
     )
     parameter: Union[List[Union[int, str]], None] = Query(
-        None, 
-        gt=0, 
+        None,
+        gt=0,
         le=maxint,
         description="(optional) A parameter name or ID by which to filter measurement results. e.g. parameter=pm25 or parameter=pm25&parameter=pm10",
         example="parameter=pm25 or parameter=pm25&parameter=pm10"
@@ -280,7 +280,7 @@ class Paging(OBaseModel):
     page: int = Query(
         1,
         gt=0,
-        le=6000, 
+        le=6000,
         description="Paginate through results. e.g. page=1 will return first page of results",
         example="page=1"
     )
@@ -319,7 +319,7 @@ class Temporal(str, Enum):
 
 class APIBase(Paging):
     sort: Union[Sort, None] = Query(
-        "asc", 
+        "asc",
         description="Define sort order.",
         exmaple="sort=asc"
 
