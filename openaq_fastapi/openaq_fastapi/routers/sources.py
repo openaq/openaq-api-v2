@@ -51,8 +51,8 @@ class Sources(SourceName, APIBase):
 
 
 @router.get(
-    "/v2/sources", 
-    response_model=SourcesResponse, 
+    "/v2/sources",
+    response_model=SourcesResponse,
     summary="Sources",
     description="Provides a list of sources",
     tags=["v2"]
@@ -122,8 +122,8 @@ class SourcesV1(APIBase):
 
 
 @router.get(
-    "/v1/sources", 
-    response_model=SourcesResponseV1, 
+    "/v1/sources",
+    response_model=SourcesResponseV1,
     summary="Sources",
     description="Provides a list of sources",
     tags=["v1"]
@@ -159,7 +159,7 @@ async def sources_v1_get(
 
 
 @router.get(
-    "/v2/sources/readme/{slug}", 
+    "/v2/sources/readme/{slug}",
     summary="Source Readme",
     description="Provides a readme for a given source by the source slug",
     response_class=HTMLResponse,
@@ -167,7 +167,7 @@ async def sources_v1_get(
 )
 async def readme_get(
     db: DB = Depends(),
-    slug: str = Path(...),
+    slug: str = Path(..., example='london_mobile'),
 ):
     q = """
         SELECT readme FROM sources WHERE slug=:slug
