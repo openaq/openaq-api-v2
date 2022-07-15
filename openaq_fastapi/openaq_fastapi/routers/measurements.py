@@ -165,7 +165,7 @@ class Measurements(
 
 
 @router.get(
-    "/v2/measurements", 
+    "/v2/measurements",
     summary="Get measurements",
     description="",
     response_model=MeasurementsResponse,
@@ -421,13 +421,8 @@ async def measurements_get(
                 logger.debug(f"{len(rows)} rows found")
                 rc = rc + len(rows)
                 if len(rows) > 0 and rows[0][1] is not None:
-                    results.extend(
-                        [
-                            json.loads(r[1])
-                            for r in rows
-                            if isinstance(r[1], str)
-                        ]
-                    )
+                    results.extend([r[1] for r in rows])
+
             logger.debug(
                 f"ran query... {rc} {rangestart}"
                 f" {date_from_adj}{rangeend} {date_to_adj}"
@@ -469,7 +464,7 @@ async def measurements_get(
 
 
 @router.get(
-    "/v1/measurements", 
+    "/v1/measurements",
     summary="Get a list of measurements",
     response_model=MeasurementsResponseV1,
     tags=["v1"]
@@ -481,7 +476,6 @@ async def measurements_get_v1(
 ):
     m.entity = "government"
     data = await measurements_get(db, m, "json")
-    print(data)
     meta = data.meta
     res = data.results
     if format == "csv":
