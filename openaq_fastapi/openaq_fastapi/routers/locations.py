@@ -35,6 +35,7 @@ class LocationsOrder(str, Enum):
     lastUpdated = "lastUpdated"
     count = "count"
     random = "random"
+    distance = "distance"
 
 
 class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
@@ -275,8 +276,6 @@ async def latest_get(
     data = await locations_get(db, locations)
     meta = data.meta
     res = data.results
-    if len(res) == 0:
-        return res
 
     latest_jq = jq.compile(
         """
@@ -387,6 +386,7 @@ async def latest_v1_get(
         db: DB = Depends(),
         locations: Locations = Depends(Locations.depends()),
 ):
+
     found = 0
     locations.entity = "government"
     order_by = locations.order_by
