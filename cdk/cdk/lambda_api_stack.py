@@ -192,7 +192,7 @@ class LambdaApiStack(Stack):
                 runtime=aws_lambda.Runtime.PYTHON_3_8,
                 vpc=vpc,
                 allow_public_subnet=True,
-                memory_size=memory_size,
+                memory_size=256,
                 environment=stringify_settings(lambda_env),
                 timeout=Duration.seconds(lambda_timeout),
                 layers=[
@@ -205,6 +205,8 @@ class LambdaApiStack(Stack):
                 max_batching_window=Duration.minutes(1),
                 report_batch_item_failures=True
             ))
+
+            log_bucket.grant_read(log_lambda)
 
             origin_url = Fn.select(2, Fn.split("/", api_url)) # required to split url into compatible format for dist
 

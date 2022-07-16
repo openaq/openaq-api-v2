@@ -3,6 +3,7 @@ import csv
 import gzip
 import datetime 
 import logging
+import json
 
 import boto3
 
@@ -45,8 +46,12 @@ def parse_log_file(key, bucket):
             events.clear()
 
 
+
 def handler(event, context):
-    data = event["Records"][0]["s3"]
-    key = data["object"]["key"]
-    bucket = data["bucket"]["name"]
-    parse_log_file(key, bucket)
+    records = event["Records"]
+    for record in records:
+        body = json.loads(record["body"])
+        data = body["Records"][0]["s3"]
+        key = data["object"]["key"]
+        bucket = data["bucket"]["name"]
+        parse_log_file(key, bucket)
