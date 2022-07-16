@@ -188,7 +188,7 @@ class LambdaApiStack(Stack):
                         'pytest_cache',
                     ],
                 ),
-                handler="main.handler",
+                handler="cloudfront_logs.main.handler",
                 runtime=aws_lambda.Runtime.PYTHON_3_8,
                 vpc=vpc,
                 allow_public_subnet=True,
