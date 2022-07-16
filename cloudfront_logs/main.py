@@ -45,7 +45,7 @@ def parse_log_file(key, bucket):
             events.clear()
 
 
-def lambda_handler(event, context):
+def handler(event, context):
     data = event["Records"][0]["s3"]
     key = data["object"]["key"]
     bucket = data["bucket"]["name"]

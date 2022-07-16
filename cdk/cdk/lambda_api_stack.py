@@ -176,7 +176,6 @@ class LambdaApiStack(Stack):
                 aws_s3_notifications.SqsDestination(log_event_queue)
             )
 
-
             log_lambda = aws_lambda.Function(
                 self,
                 f"api-cloudfront-logs-{env_name}-lambda",
