@@ -1,24 +1,31 @@
+from pathlib import Path
 from typing import Dict, List, Union
 
 
 from aws_cdk import (
     Environment,
+    RemovalPolicy,
     aws_ec2,
+    aws_s3,
+    aws_sqs,
     aws_lambda,
     aws_logs,
     Stack,
     Duration,
     CfnOutput,
     Fn,
+    aws_s3_notifications,
     aws_route53 as route53,
     aws_route53_targets as targets,
     aws_certificatemanager as acm,
     aws_cloudfront_origins as origins,
     aws_cloudfront as cloudfront
 )
+import aws_cdk
 from aws_cdk.aws_apigatewayv2 import CfnStage
 from aws_cdk.aws_apigatewayv2_alpha import HttpApi, HttpMethod
 from aws_cdk.aws_apigatewayv2_integrations_alpha import HttpLambdaIntegration
+from aws_cdk.aws_lambda_event_sources import SqsEventSource
 
 
 from constructs import Construct
@@ -58,7 +65,7 @@ class LambdaApiStack(Stack):
 
         openaq_api = aws_lambda.Function(
             self,
-            f"{id}-lambda",
+            f"openaq-api-{env_name}-lambda",
             code=aws_lambda.Code.from_asset(
                 path='../openaq_fastapi',
                 exclude=[
@@ -75,7 +82,7 @@ class LambdaApiStack(Stack):
             environment=stringify_settings(lambda_env),
             timeout=Duration.seconds(lambda_timeout),
             layers=[
-                create_dependencies_layer(self, f"{env_name}", 'api'),
+                create_dependencies_layer(self, f"{env_name}", 'api', Path('../openaq_fastapi/requirements.txt')),
             ],
         )
 
@@ -147,10 +154,62 @@ class LambdaApiStack(Stack):
                 enable_accept_encoding_brotli=True
             )
 
+
+            log_bucket = aws_s3.Bucket(self, f"openaq-api-dist-log-{env_name}",
+                bucket_name=f"openaq-api-dist-log-{env_name}",
+                auto_delete_objects=True,
+                public_read_access=False,
+                removal_policy=RemovalPolicy.DESTROY,
+                lifecycle_rules=[
+                    aws_s3.LifecycleRule(
+                        id=f"openaq-api-dist-log-lifecycle-rule-{env_name}",
+                        enabled=True,
+                        expiration=aws_cdk.Duration.days(60)
+                    )
+                ]
+            )
+
+            log_event_queue = aws_sqs.Queue(self, f"openaq-api-cf-log-event-queue-{env_name}")
+
+            log_bucket.add_event_notification(
+                aws_s3.EventType.OBJECT_CREATED_PUT, 
+                aws_s3_notifications.SqsDestination(log_event_queue)
+            )
+
+
+            log_lambda = aws_lambda.Function(
+                self,
+                f"api-cloudfront-logs-{env_name}-lambda",
+                code=aws_lambda.Code.from_asset(
+                    path='../cloudfront_logs',
+                    exclude=[
+                        'venv',
+                        '__pycache__',
+                        'pytest_cache',
+                    ],
+                ),
+                handler="main.handler",
+                runtime=aws_lambda.Runtime.PYTHON_3_8,
+                vpc=vpc,
+                allow_public_subnet=True,
+                memory_size=memory_size,
+                environment=stringify_settings(lambda_env),
+                timeout=Duration.seconds(lambda_timeout),
+                layers=[
+                    create_dependencies_layer(self, f"{env_name}", 'cloudfront_logs', Path('../cloudfront_logs/requirements.txt')),
+                ],
+            )
+
+            log_lambda.add_event_source(SqsEventSource(log_event_queue,
+                batch_size=100,
+                max_batching_window=Duration.minutes(1),
+                report_batch_item_failures=True
+            ))
+
             origin_url = Fn.select(2, Fn.split("/", api_url)) # required to split url into compatible format for dist
 
             dist = cloudfront.Distribution(self, f"openaq-api-dist-{env_name}",
-                    default_behavior=cloudfront.BehaviorOptions(
+                default_behavior=cloudfront.BehaviorOptions(
                     origin=origins.HttpOrigin(
                         origin_url
                     ),
@@ -162,7 +221,8 @@ class LambdaApiStack(Stack):
                 domain_names=[domain_name],
                 certificate=cert,
                 web_acl_id=web_acl_id,
-                enable_logging=True
+                enable_logging=True,
+                log_bucket=log_bucket
             )
 
             route53.ARecord(self, f"openaq-api-alias-record-{env_name}",

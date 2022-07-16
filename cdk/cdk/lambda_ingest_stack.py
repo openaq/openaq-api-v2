@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Dict
 
 from aws_cdk import (
@@ -57,7 +58,8 @@ class LambdaIngestStack(Stack):
                 create_dependencies_layer(
                     self,
                     f"{env_name}",
-                    'ingest'
+                    'ingest',
+                    Path('../openaq_fastapi/requirements.txt')
                 ),
             ],
         )

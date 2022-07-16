@@ -1,0 +1,10 @@
+boto3==1.24.28
+botocore==1.27.28
+jmespath==1.0.1
+pydantic==1.9.1
+pyhumps==3.7.2
+python-dateutil==2.8.2
+s3transfer==0.6.0
+six==1.16.0
+typing_extensions==4.3.0
+urllib3==1.26.10
