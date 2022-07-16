@@ -37,15 +37,15 @@ def parse_log_file(key, bucket):
                 cloudfront_log = CloudfrontLog(**log)
                 events.append(CloudwatchLog(timestamp=int(round(timestamp * 1000)), message=cloudfront_log.json()).json())
             cloudwatch_client.put_log_events(
-                logGroupName='string',
-                logStreamName='string',
+                logGroupName='openaq-api/cloudfront-logs',
+                logStreamName='logs',
                 logEvents=[events],
                 sequenceToken='string'
             )
             events.clear()
 
 
-def lambda_handler(event, context):
+def handler(event, context):
     data = event["Records"][0]["s3"]
     key = data["object"]["key"]
     bucket = data["bucket"]["name"]
