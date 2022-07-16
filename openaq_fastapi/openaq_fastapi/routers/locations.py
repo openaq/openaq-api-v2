@@ -40,7 +40,8 @@ class LocationsOrder(str, Enum):
 
 class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
     order_by: LocationsOrder = Query(
-        "lastUpdated", description="Order by a field"
+        "lastUpdated",
+        description="Order by a field",
     )
     sort: Union[Sort, None] = Query("desc", description="Sort Direction")
     isMobile: Union[bool, None] = Query(None, description="Location is mobile")
@@ -67,6 +68,22 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
         None, description="Manufacturer of Sensor"
     )
     dumpRaw: Union[bool, None] = False
+
+    def order(self):
+        stm = self.order_by
+        if stm == "location":
+            stm = "name"
+        elif stm == "distance":
+            stm = "st_distance(st_makepoint(:lon,:lat)::geography, geog)"
+        elif stm == "count":
+            stm = "measurements"
+
+        if stm == "random":
+            stm = " random() "
+        elif self.order_by != "distance":
+            stm = f'"{stm}"'
+
+        return f"{stm} {self.sort} nulls last"
 
     def where(self):
         wheres = []
@@ -156,6 +173,8 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
                     )
         wheres.append(self.where_geo())
         wheres.append(" id not in (61485,61505,61506) ")
+        if self.order_by == 'random':
+            wheres.append("\"lastUpdated\" > now() - '2 weeks'::interval")
         wheres = [w for w in wheres if w is not None]
         if len(wheres) > 0:
             return (" AND ").join(wheres)
@@ -179,20 +198,6 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
 async def locations_get(
     db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
 ):
-    order_by = locations.order_by
-    if order_by == "location":
-        order_by = "name"
-    elif order_by == "count":
-        order_by = "measurements"
-
-    if order_by == "random":
-        order_by = " random() "
-        lastupdateq = """
-            AND "lastUpdated" > now() - '2 weeks'::interval AND entity='government'
-            """
-    else:
-        order_by = f'"{order_by}"'
-        lastupdateq = ""
 
     qparams = locations.params()
 
@@ -225,8 +230,7 @@ async def locations_get(
             FROM locations_base_v2
             WHERE
             {locations.where()}
-            {lastupdateq}
-            ORDER BY {order_by} {locations.sort} nulls last
+            ORDER BY {locations.order()}
             LIMIT :limit
             OFFSET :offset
         ),
@@ -235,7 +239,6 @@ async def locations_get(
             FROM locations_base_v2
             WHERE
             {locations.where()}
-            {lastupdateq}
         ),
         t2 AS (
         SELECT
@@ -306,22 +309,6 @@ async def v1_base(
     db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
 ):
     locations.entity = "government"
-
-    order_by = locations.order_by
-    if order_by == "location":
-        order_by = "name"
-    elif order_by == "count":
-        order_by = "measurements"
-
-    if order_by == "random":
-        order_by = " random() "
-        lastupdateq = """
-            AND "lastUpdated" > now() - '2 weeks'::interval
-            """
-    else:
-        order_by = f'"{order_by}"'
-        lastupdateq = ""
-
     qparams = locations.params()
 
     q = f"""
@@ -339,8 +326,7 @@ async def v1_base(
             FROM locations_base_v2
             WHERE
             {locations.where()}
-            {lastupdateq}
-            ORDER BY {order_by} {locations.sort} nulls last
+            ORDER BY {locations.order()}
             LIMIT :limit
             OFFSET :offset
         ),
@@ -349,7 +335,6 @@ async def v1_base(
             FROM locations_base_v2
             WHERE
             {locations.where()}
-            {lastupdateq}
         ),
         t2 AS (
         SELECT
@@ -389,24 +374,9 @@ async def latest_v1_get(
 
     found = 0
     locations.entity = "government"
-    order_by = locations.order_by
-    if order_by == "location":
-        order_by = "name"
-    elif order_by == "count":
-        order_by = "measurements"
-
-    if order_by == "random":
-        order_by = " random() "
-        lastupdateq = """
-            AND "lastUpdated" > now() - '2 weeks'::interval
-            """
-    else:
-        order_by = f'"{order_by}"'
-        lastupdateq = ""
-
+    order_by = locations.order()
     qparams = locations.params()
 
-    logger.debug(qparams)
     sql = f"""
   -- start with getting locations with limit
   WITH loc AS (
@@ -424,8 +394,7 @@ async def latest_v1_get(
     FROM locations_base_v2
     WHERE
     {locations.where()}
-    {lastupdateq}
-    ORDER BY {order_by} {locations.sort} nulls last
+    ORDER BY {locations.order()}
     LIMIT :limit
     OFFSET :offset
   -- but also count locations without the limit
@@ -434,7 +403,6 @@ async def latest_v1_get(
     FROM locations_base_v2
     WHERE
     {locations.where()}
-    {lastupdateq}
   -- and then reshape the parameters data
   ), meas AS (
     SELECT loc.id
