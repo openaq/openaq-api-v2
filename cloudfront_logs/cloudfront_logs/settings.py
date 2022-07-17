@@ -6,7 +6,7 @@ from os import environ
 
 class Settings(BaseSettings):
     ENV: str = "staging"
-
+    
     class Config:
         parent = Path(__file__).resolve().parent.parent.parent
         if 'DOTENV' in environ:
