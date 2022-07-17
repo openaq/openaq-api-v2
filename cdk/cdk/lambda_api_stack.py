@@ -185,7 +185,7 @@ class LambdaApiStack(Stack):
 
             cloudfront_access_log_group.add_stream(
                 f"openaq-api-{env_name}-cloudfront-access-log-stream",
-                f"openaq-api-{env_name}-cloudfront-access-log-stream",
+                log_stream_name=f"openaq-api-{env_name}-cloudfront-access-log-stream",
             )
 
             log_lambda = aws_lambda.Function(
