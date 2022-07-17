@@ -176,7 +176,6 @@ class LambdaApiStack(Stack):
                 aws_s3_notifications.SqsDestination(log_event_queue)
             )
 
-
             log_lambda = aws_lambda.Function(
                 self,
                 f"api-cloudfront-logs-{env_name}-lambda",
@@ -191,7 +190,7 @@ class LambdaApiStack(Stack):
                 handler="cloudfront_logs.main.handler",
                 runtime=aws_lambda.Runtime.PYTHON_3_8,
                 allow_public_subnet=True,
-                memory_size=256,
+                memory_size=512,
                 environment=stringify_settings(lambda_env),
                 timeout=Duration.seconds(lambda_timeout),
                 layers=[
@@ -200,7 +199,7 @@ class LambdaApiStack(Stack):
             )
 
             log_lambda.add_event_source(SqsEventSource(log_event_queue,
-                batch_size=100,
+                batch_size=10,
                 max_batching_window=Duration.minutes(1),
                 report_batch_item_failures=True
             ))
