@@ -180,6 +180,7 @@ class LambdaApiStack(Stack):
             cloudfront_access_log_group = aws_logs.LogGroup(
                 self,
                 f"openaq-api-{env_name}-cloudfront-access-log",
+                log_group_name = f"openaq-api-{env_name}-cloudfront-access-log",
                 retention=aws_logs.RetentionDays.ONE_YEAR
             )
 
