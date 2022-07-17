@@ -43,6 +43,7 @@ class LambdaApiStack(Stack):
         env: Environment,
         env_name: str,
         lambda_env: Dict,
+        cloudfront_logs_lambda_env: Dict,
         memory_size: int,
         lambda_timeout: int,
         vpc_id: str,
@@ -164,7 +165,7 @@ class LambdaApiStack(Stack):
                     aws_s3.LifecycleRule(
                         id=f"openaq-api-dist-log-lifecycle-rule-{env_name}",
                         enabled=True,
-                        expiration=aws_cdk.Duration.days(60)
+                        expiration=aws_cdk.Duration.days(7)
                     )
                 ]
             )
@@ -176,9 +177,20 @@ class LambdaApiStack(Stack):
                 aws_s3_notifications.SqsDestination(log_event_queue)
             )
 
+            cloudfront_access_log_group = aws_logs.LogGroup(
+                self,
+                f"openaq-api-{env_name}-cloudfront-access-log",
+                retention=aws_logs.RetentionDays.ONE_YEAR
+            )
+
+            cloudfront_access_log_group.add_stream(
+                f"openaq-api-{env_name}-cloudfront-access-log-stream",
+                f"openaq-api-{env_name}-cloudfront-access-log-stream",
+            )
+
             log_lambda = aws_lambda.Function(
                 self,
-                f"api-cloudfront-logs-{env_name}-lambda",
+                f"openaq-api-cloudfront-logs-{env_name}-lambda",
                 code=aws_lambda.Code.from_asset(
                     path='../cloudfront_logs',
                     exclude=[
@@ -191,7 +203,7 @@ class LambdaApiStack(Stack):
                 runtime=aws_lambda.Runtime.PYTHON_3_8,
                 allow_public_subnet=True,
                 memory_size=512,
-                environment=stringify_settings(lambda_env),
+                environment=stringify_settings(cloudfront_logs_lambda_env),
                 timeout=Duration.seconds(lambda_timeout),
                 layers=[
                     create_dependencies_layer(self, f"{env_name}", 'cloudfront_logs', Path('../cloudfront_logs/requirements.txt')),

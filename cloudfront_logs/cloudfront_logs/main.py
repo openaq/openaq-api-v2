@@ -14,6 +14,7 @@ import boto3
 from pydantic import ValidationError
 
 from .models import CloudfrontLog, CloudwatchLog
+from .settings import settings
 
 s3_client = boto3.client('s3')
 logs_client = boto3.client('logs')
@@ -26,9 +27,8 @@ logging.basicConfig(
 logger = logging.getLogger('main')
 
 
-log_group_name = "api-dist-staging-log-group"
-log_stream_name = "api-dist-staging-log-"
-
+log_group_name = f"openaq-api-{settings.ENV}-cloudfront-access-log"
+log_stream_name = f"openaq-api-{settings.ENV}-cloudfront-access-log-stream"
 
 def put_log(records: List[CloudwatchLog], *sequence_token):
     records = sorted(records, key=itemgetter('timestamp'))
@@ -39,7 +39,7 @@ def put_log(records: List[CloudwatchLog], *sequence_token):
     }
     try:
         if not sequence_token:
-            logger.warn("no sequence token provided in args")
+            logger.debug("no sequence token provided in args")
         else:
             put_log_events_kwargs['sequenceToken'] = sequence_token[0]
             
@@ -49,7 +49,7 @@ def put_log(records: List[CloudwatchLog], *sequence_token):
 
     except (logs_client.exceptions.InvalidSequenceTokenException, logs_client.exceptions.DataAlreadyAcceptedException) as e:
 
-        logger.error(e.response['Error']['Code'])
+        logger.debug(e.response['Error']['Code'])
         if e.response['Error']['Code'] == 'DataAlreadyAcceptedException':
             error_msg = e.response['Error']['Message']
             sequence_token = error_msg[len('The given batch of log events has already been accepted. The next batch can be sent with sequenceToken: '):]

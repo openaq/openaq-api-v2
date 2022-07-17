@@ -19,6 +19,10 @@ p = os.path.abspath('../openaq_fastapi')
 sys.path.insert(1, p)
 from openaq_fastapi.settings import settings as lambda_env
 
+p = os.path.abspath('../cloudfront_logs')
+sys.path.insert(1, p)
+from cloudfront_logs.settings import settings as cloudfront_logs_lambda_env
+
 app = aws_cdk.App()
 
 env = Environment(account=settings.CDK_ACCOUNT, region=settings.CDK_REGION)
@@ -28,6 +32,7 @@ api = LambdaApiStack(
     f"openaq-api-{settings.ENV}",
     env_name=settings.ENV,
     lambda_env=lambda_env,
+    cloudfront_logs_lambda_env=cloudfront_logs_lambda_env,
     vpc_id=settings.VPC_ID,
     hosted_zone_name=settings.HOSTED_ZONE_NAME,
     hosted_zone_id=settings.HOSTED_ZONE_ID,
