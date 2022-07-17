@@ -179,14 +179,14 @@ class LambdaApiStack(Stack):
 
             cloudfront_access_log_group = aws_logs.LogGroup(
                 self,
-                f"openaq-api-{env_name}-cloudfront-access-log",
-                log_group_name = f"openaq-api-{env_name}-cloudfront-access-log",
+                f"openaq-api-{env_name}-cf-access-log",
+                log_group_name = f"openaq-api-{env_name}-cf-access-log",
                 retention=aws_logs.RetentionDays.ONE_YEAR
             )
 
             cloudfront_access_log_group.add_stream(
-                f"openaq-api-{env_name}-cloudfront-access-log-stream",
-                log_stream_name=f"openaq-api-{env_name}-cloudfront-access-log-stream",
+                f"openaq-api-{env_name}-cf-access-log-stream",
+                log_stream_name=f"openaq-api-{env_name}-cf-access-log-stream",
             )
 
             log_lambda = aws_lambda.Function(

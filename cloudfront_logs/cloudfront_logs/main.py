@@ -27,8 +27,8 @@ logging.basicConfig(
 logger = logging.getLogger('main')
 
 
-log_group_name = f"openaq-api-{settings.ENV}-cloudfront-access-log"
-log_stream_name = f"openaq-api-{settings.ENV}-cloudfront-access-log-stream"
+log_group_name = f"openaq-api-{settings.ENV}-cf-access-log"
+log_stream_name = f"openaq-api-{settings.ENV}-cf-access-log-stream"
 
 def put_log(records: List[CloudwatchLog], *sequence_token):
     records = sorted(records, key=itemgetter('timestamp'))
