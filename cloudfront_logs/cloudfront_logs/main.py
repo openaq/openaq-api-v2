@@ -31,7 +31,7 @@ log_stream_name = "api-dist-staging-log-"
 
 
 def put_log(records: List[CloudwatchLog], *sequence_token):
-    records = sorted(records,key=itemgetter('timestamp'))
+    records = sorted(records, key=itemgetter('timestamp'))
     put_log_events_kwargs = {
         'logGroupName': log_group_name,
         'logStreamName': log_stream_name,
@@ -179,7 +179,7 @@ def parse_log_file(key: str, bucket: str):
                     timestamp = time_in_ms,
                     message = message.json(by_alias=True)
                 )
-                records.insert(len(records), cloudwatch_log)
+                records.insert(len(records), cloudwatch_log.dict())
 
             except Exception as e:
                 logger.error(f'error adding Log Record to List: {e}')
