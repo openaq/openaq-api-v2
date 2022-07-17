@@ -190,7 +190,6 @@ class LambdaApiStack(Stack):
                 ),
                 handler="cloudfront_logs.main.handler",
                 runtime=aws_lambda.Runtime.PYTHON_3_8,
-                vpc=vpc,
                 allow_public_subnet=True,
                 memory_size=256,
                 environment=stringify_settings(lambda_env),
