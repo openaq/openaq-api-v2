@@ -1,4 +1,5 @@
 from os import environ
+from pathlib import Path
 import subprocess
 
 from aws_cdk import aws_lambda
@@ -16,10 +17,11 @@ def create_dependencies_layer(
         self,
         env_name: str,
         function_name: str,
+        requirements_path: Path
 ) -> aws_lambda.LayerVersion:
-    requirements_file = '../openaq_fastapi/requirements.txt'
+    requirements_file = str(requirements_path.resolve())
     output_dir = f'../.build/{function_name}'
-    layer_id = f'openaq-api-{env_name}-dependencies'
+    layer_id = f'openaq-{function_name}-{env_name}-dependencies'
 
     if not environ.get('SKIP_PIP'):
         print(f'Building {layer_id} from {requirements_file} into {output_dir}')

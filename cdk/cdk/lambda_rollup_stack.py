@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Dict
 
 from aws_cdk import (
@@ -51,7 +52,8 @@ class LambdaRollupStack(Stack):
                 create_dependencies_layer(
                     self,
                     f"{env_name}",
-                    'api' # just use the same layer for now
+                    'api', # just use the same layer for now
+                    Path('../openaq_fastapi/requirements.txt')
                 ),
             ],
         )
