@@ -128,7 +128,7 @@ class CitiesResponse(OpenAQResult):
 # /v1/latest
 
 class AveragingPeriodV1(BaseModel):
-    value: int
+    value: Union[int, None]
     unit: str
 
 
@@ -209,7 +209,7 @@ class LocationsRow(BaseModel):
     id: int
     city: Union[str, None]
     name: Union[str, None]
-    entity: str
+    entity: Union[str, None]
     country: Union[str, None]
     sources: Union[List[Source], None]
     is_mobile: bool = Field(..., alias='isMobile')
