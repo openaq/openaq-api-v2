@@ -260,7 +260,7 @@ class MeasurementsRow(BaseModel):
     value: float
     date: Date
     unit: str
-    coordinates: Coordinates
+    coordinates: Union[Coordinates, None]
     country: Union[str, None]
     city: Union[str, None]
     is_mobile: bool = Field(..., alias='isMobile')
