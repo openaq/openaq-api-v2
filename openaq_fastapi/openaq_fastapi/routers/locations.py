@@ -384,7 +384,7 @@ async def latest_v1_get(
     , name as location
     , city
     , country
-    , json->'pvals'->>'source_names' as source_name
+    , json->>'source_name' as source_name
     , json_build_object(
     'value', (json->'sensor_systems'->0->'sensors'->0->>'data_averaging_period_seconds')::int
     , 'unit', 'seconds'
