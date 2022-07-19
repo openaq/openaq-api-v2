@@ -21,11 +21,15 @@ logs_client = boto3.client('logs')
 
 logging.basicConfig(
     format='[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s',
-    level=logging.INFO,
+    level=settings.CF_LOGS_LOG_LEVEL.upper(),
     force=True,
 )
 logger = logging.getLogger('main')
 
+# When debuging we dont want to debug these libraries
+logging.getLogger('boto3').setLevel(logging.WARNING)
+logging.getLogger('botocore').setLevel(logging.WARNING)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 log_group_name = f"openaq-api-{settings.ENV}-cf-access-log"
 log_stream_name = f"openaq-api-{settings.ENV}-cf-access-log-stream"
@@ -190,6 +194,7 @@ def parse_log_file(key: str, bucket: str):
 
 
 def handler(event, context):
+    logger.debug(event)
     records = event["Records"]
     for record in records:
         body = json.loads(record["body"])
