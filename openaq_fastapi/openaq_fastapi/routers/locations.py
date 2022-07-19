@@ -43,29 +43,49 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
         "lastUpdated",
         description="Order by a field",
     )
-    sort: Union[Sort, None] = Query("desc", description="Sort Direction")
-    isMobile: Union[bool, None] = Query(None, description="Location is mobile")
+    sort: Union[Sort, None] = Query(
+        "desc", 
+        description="Sort Direction e.g. sort=desc",
+        example="desc"
+    )
+    isMobile: Union[bool, None] = Query(
+        None, 
+        description="Location is mobile e.g. ?isMobile=true",
+        example="true"
+    )
     isAnalysis: Union[bool, None] = Query(
         None,
         description=(
             "Data is the product of a previous "
-            "analysis/aggregation and not raw measurements"
+            "analysis/aggregation and not raw measurements "
+            "e.g. ?isAnalysis=true "
         ),
+        example="true"
     )
     sourceName: Union[List[str], None] = Query(
-        None, description="Name of the data source"
+        None, 
+        description="Name of the data source e.g. ?sourceName=Houston%20Mobile",
+        example="Houston%20Mobile"
     )
     entity: Union[EntityTypes, None] = Query(
-        None, description="Source entity type."
+        None, 
+        description="Source entity type. e.g. ?entity=government",
+        example="government"
     )
     sensorType: Union[SensorTypes, None] = Query(
-        None, description="Type of Sensor"
+        None, 
+        description="Type of Sensor e.g. ?sensorType=reference%20grade",
+        example="reference%20grade"
     )
     modelName: Union[List[str], None] = Query(
-        None, description="Model Name of Sensor"
+        None, 
+        description="Model Name of Sensor e.g. ?modelName=AE33",
+        example="AE33"
     )
     manufacturerName: Union[List[str], None] = Query(
-        None, description="Manufacturer of Sensor"
+        None, 
+        description="Manufacturer of Sensor e.g. ?manufacturer=Ecotech",
+        example="Ecotech"
     )
     dumpRaw: Union[bool, None] = False
 

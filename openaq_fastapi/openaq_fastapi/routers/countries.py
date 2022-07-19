@@ -23,8 +23,16 @@ class CountriesOrder(str, Enum):
 
 
 class Countries(Country, APIBase):
-    order_by: CountriesOrder = Query("country")
-    limit: int = Query(200)
+    order_by: CountriesOrder = Query(
+        "country",
+        description="Order by a field e.g. ?order_by=country",
+        example="country"
+    )
+    limit: int = Query(
+        200,
+        description="Limit the number of results returned. e.g. limit=200 will return up to 200 results",
+        example="200"
+    )
 
     def where(self):
         wheres = []
