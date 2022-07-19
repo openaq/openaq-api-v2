@@ -21,7 +21,11 @@ class CitiesOrder(str, Enum):
 
 
 class Cities(City, Country, APIBase):
-    order_by: CitiesOrder = Query("city", description="Order by a field")
+    order_by: CitiesOrder = Query(
+        "city", 
+        description="Order by a field e.g. ?order_by=city",
+        example="city"
+    )
     entity: Union[str, None] = None
 
     def where(self):
