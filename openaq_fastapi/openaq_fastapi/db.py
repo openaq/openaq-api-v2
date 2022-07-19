@@ -148,7 +148,7 @@ class DB:
                     ]
                 elif isinstance(rows[0][1], str):
                     results = [
-                        r[1] for r in rows
+                        orjson.loads(r[1]) for r in rows
                     ]
 
         meta = Meta(

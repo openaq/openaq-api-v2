@@ -87,20 +87,20 @@ class Measurements(
     sort: Sort = Query("desc")
     isMobile: Union[bool, None] = Query(
         None,
-        description="Location is mobile e.g. ?isMobile=true",
-        example="true"
+        description="Location is mobile",
+        example="?isMobile=false"
     )
     isAnalysis: Union[bool, None] =  Query(
         None,
-        description="Data is the product of a previous analysis/aggregation and not raw measurements e.g. ?isAnalysis=false",
-        example="true"
+        description="Data is the product of a previous analysis/aggregation and not raw measurements",
+        example="?isAnalysis=false"
     )
     project: Union[int, None] = Query(None)
     entity: Union[EntityTypes, None] = Query(None)
     sensorType: Union[SensorTypes, None] =  Query(
         None,
-        description="Filter by sensor type (i,e. reference grade, low-cost sensor) e.g. ?sensorType=reference%20grade",
-        example="reference%20grade"
+        description="Filter by sensor type (e.g. reference grade, low-cost sensor)",
+        example="?sensorType=reference%20grade"
     )
     value_from: Union[float, None] =  Query(
         None,
@@ -114,8 +114,8 @@ class Measurements(
     )
     include_fields: Union[str, None] =  Query(
         None,
-        description="Additional fields to include in response e.g. ?include_fields=sourceName",
-        example="sourceName"
+        description="Additional fields to include in response (e.g. )",
+        example="?include_fields"
     )
 
     def where(self):

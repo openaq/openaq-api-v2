@@ -30,8 +30,8 @@ class SourcesOrder(str, Enum):
 class Sources(SourceName, APIBase):
     order_by: SourcesOrder = Query(
         "sourceName",
-        description="Field by which to order the results e.g. ?order_by=sourceName or ?order_by=firstUpdated",
-        example="sourceName"
+        description="Field by which to order the results",
+        example="?order_by=sourceName or ?order_by=firstUpdated"
     )
 
     def where(self):
