@@ -273,7 +273,7 @@ class Paging(OBaseModel):
     limit: int = Query(
         100,
         gt=0,
-        le=1000,
+        le=100000,
         description="Change the number of results returned. e.g. limit=1000 will return up to 1000 results",
         example="1000"
     )
@@ -287,15 +287,15 @@ class Paging(OBaseModel):
     offset: int = Query(
         0,
         ge=0,
-        le=101000,
+        le=10000,
     )
 
     @validator("offset", check_fields=False)
     def check_offset(cls, v, values, **kwargs):
-        logger.debug("checking offset")
         offset = values["limit"] * (values["page"] - 1)
-        # if offset + values["limit"] > 100000:
-        #     raise ValueError("offset + limit must be < 100000")
+        logger.debug(f"checking offset: {offset}")
+        if offset + values["limit"] > 100000:
+            raise ValueError("offset + limit must be < 100000")
         return offset
 
 
