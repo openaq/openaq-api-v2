@@ -117,7 +117,7 @@ class Country(OBaseModel):
         min_length=2,
         max_length=2,
         regex="[a-zA-Z][a-zA-Z]",
-        description="Limit results by a certain country using two letter country code. (e.g. US)",
+        description="Limit results by a certain country using two letter country code. e.g. US",
         example="US"
     )
     country: Union[List[str],None] = Query(
@@ -125,7 +125,7 @@ class Country(OBaseModel):
         min_length=2,
         max_length=2,
         regex="[a-zA-Z][a-zA-Z]",
-        description="Limit results by a certain country using two letter country code. (e.g. ?country=US or ?country=US&country=MX)",
+        description="Limit results by a certain country using two letter country code. e.g. ?country=US or ?country=US&country=MX",
         example="US"
     )
 
@@ -211,8 +211,8 @@ class Geo(OBaseModel):
     lon: Union[confloat(ge=-180, le=180), None] = None
     radius: conint(gt=0, le=100000) = Query(
         1000,
-        description="Search radius from coordinates as center in meters. Maximum of 100,000 (100km) defaults to 1000 (1km)",
-        exmaple="radius=10000"
+        description="Search radius from coordinates as center in meters. Maximum of 100,000 (100km) defaults to 1000 (1km) e.g. radius=10000",
+        example="10000"
     )
 
     @root_validator(pre=True)
@@ -274,7 +274,7 @@ class Paging(OBaseModel):
         100,
         gt=0,
         le=100000,
-        description="Change the number of results returned. e.g. limit=1000 will return up to 1000 results",
+        description="Limit the number of results returned. e.g. limit=1000 will return up to 1000 results",
         example="1000"
     )
     page: int = Query(
@@ -320,9 +320,8 @@ class Temporal(str, Enum):
 class APIBase(Paging):
     sort: Union[Sort, None] = Query(
         "asc",
-        description="Define sort order.",
-        exmaple="sort=asc"
-
+        description="Define sort order. e.g. ?sort=asc",
+        exmaple="asc"
     )
 
 

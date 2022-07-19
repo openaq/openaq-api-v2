@@ -64,8 +64,8 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
     )
     sourceName: Union[List[str], None] = Query(
         None, 
-        description="Name of the data source",
-        example=""
+        description="Name of the data source e.g. ?sourceName=Houston%20Mobile",
+        example="Houston%20Mobile"
     )
     entity: Union[EntityTypes, None] = Query(
         None, 
@@ -79,13 +79,13 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
     )
     modelName: Union[List[str], None] = Query(
         None, 
-        description="Model Name of Sensor",
-        example=""
+        description="Model Name of Sensor e.g. ?modelName=AE33",
+        example="AE33"
     )
     manufacturerName: Union[List[str], None] = Query(
         None, 
-        description="Manufacturer of Sensor",
-        example=""
+        description="Manufacturer of Sensor e.g. ?manufacturer=Ecotech",
+        example="Ecotech"
     )
     dumpRaw: Union[bool, None] = False
 
