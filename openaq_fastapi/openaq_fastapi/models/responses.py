@@ -204,6 +204,9 @@ class LocationsResponseV1(OpenAQResult):
     results: List[LocationsRowV1]
 
 # /v2/locations
+def warn_on_null(v):
+    logger.debug(v)
+
 
 class LocationsRow(BaseModel):
     id: int
@@ -215,7 +218,7 @@ class LocationsRow(BaseModel):
     is_mobile: bool = Field(..., alias='isMobile')
     is_analysis: Union[bool, None] = Field(None, alias='isAnalysis')
     parameters: List[Parameter]
-    sensor_type: str = Field(..., alias='sensorType')
+    sensor_type: Union[str, None] = Field(None, alias='sensorType')
     coordinates: Union[Coordinates, None]
     last_updated: str = Field(..., alias='lastUpdated')
     first_updated: str = Field(..., alias='firstUpdated')
@@ -223,6 +226,13 @@ class LocationsRow(BaseModel):
     bounds: Union[List[float], None]
     manufacturers: Union[List[Manufacturer], None]
 
+    @validator("is_nullable", check_fields=False)
+    def check_nullable(cls, v, values, **kwargs):
+        not_nullable = ['entity']
+        offset = values["limit"] * (values["page"] - 1)
+        # if offset + values["limit"] > 100000:
+        #     raise ValueError("offset + limit must be < 100000")
+        return offset
 
 class LocationsResponse(OpenAQResult):
     results: List[LocationsRow]
