@@ -18,7 +18,7 @@ from pydantic import (
     root_validator,
 )
 
-logger = logging.getLogger("models")
+logger = logging.getLogger("queries")
 
 maxint = 2147483647
 
@@ -273,25 +273,29 @@ class Paging(OBaseModel):
     limit: int = Query(
         100,
         gt=0,
-        le=100000,
+        le=1000,
         description="Change the number of results returned. e.g. limit=1000 will return up to 1000 results",
         example="limit=1000"
     )
     page: int = Query(
         1,
         gt=0,
-        le=6000,
+       # le=6000,
         description="Paginate through results. e.g. page=1 will return first page of results",
-        example="page=1"
+        example="1"
     )
-    offset: int = Query(0, ge=0, le=10000)
+    offset: int = Query(
+        0,
+        ge=0,
+        le=101000,
+    )
 
     @validator("offset", check_fields=False)
     def check_offset(cls, v, values, **kwargs):
         logger.debug("checking offset")
         offset = values["limit"] * (values["page"] - 1)
-        if offset + values["limit"] > 100000:
-            raise ValueError("offset + limit must be < 100000")
+        # if offset + values["limit"] > 100000:
+        #     raise ValueError("offset + limit must be < 100000")
         return offset
 
 
