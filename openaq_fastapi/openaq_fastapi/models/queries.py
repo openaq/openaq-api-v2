@@ -107,7 +107,7 @@ class City(OBaseModel):
     city: Union[List[str], None] = Query(
         None,
         description="Limit results by a certain city or cities. (e.g. ?city=Chicago or ?city=Chicago&city=Boston)",
-        example="?city=Chicago or ?city=Chicago&city=Boston"
+        example="Chicago"
     )
 
 
@@ -117,16 +117,16 @@ class Country(OBaseModel):
         min_length=2,
         max_length=2,
         regex="[a-zA-Z][a-zA-Z]",
-        description="Limit results by a certain country using two letter country code. (e.g. /US)",
-        example="/US"
+        description="Limit results by a certain country using two letter country code. e.g. US",
+        example="US"
     )
     country: Union[List[str],None] = Query(
         None,
         min_length=2,
         max_length=2,
         regex="[a-zA-Z][a-zA-Z]",
-        description="Limit results by a certain country using two letter country code. (e.g. ?country=US or ?country=US&country=MX)",
-        example="?country=US or ?country=US&country=MX"
+        description="Limit results by a certain country using two letter country code. e.g. ?country=US or ?country=US&country=MX",
+        example="US"
     )
 
     @validator("country", check_fields=False)
@@ -211,8 +211,8 @@ class Geo(OBaseModel):
     lon: Union[confloat(ge=-180, le=180), None] = None
     radius: conint(gt=0, le=100000) = Query(
         1000,
-        description="Search radius from coordinates as center in meters. Maximum of 100,000 (100km) defaults to 1000 (1km)",
-        exmaple="radius=10000"
+        description="Search radius from coordinates as center in meters. Maximum of 100,000 (100km) defaults to 1000 (1km) e.g. radius=10000",
+        example="10000"
     )
 
     @root_validator(pre=True)
@@ -237,15 +237,15 @@ class Geo(OBaseModel):
 class Measurands(OBaseModel):
     parameter_id: Union[int, None] = Query(
         None,
-        description="(optional) A parameter ID to filter measurement results. e.g. parameter_id=2 parameter ID 2 (i.e. PM2.5) will limit measurement results to only PM2.5 measurements",
-        example="parameter_id=2"
+        description="(optional) A parameter ID to filter measurement results. e.g. parameter_id=2 (i.e. PM2.5) will limit measurement results to only PM2.5 measurements",
+        example="2"
     )
     parameter: Union[List[Union[int, str]], None] = Query(
         None,
         gt=0,
         le=maxint,
         description="(optional) A parameter name or ID by which to filter measurement results. e.g. parameter=pm25 or parameter=pm25&parameter=pm10",
-        example="parameter=pm25 or parameter=pm25&parameter=pm10"
+        example="pm25"
     )
     measurand: Union[List[str], None] = Query(
         None,
@@ -275,12 +275,12 @@ class Paging(OBaseModel):
         gt=0,
         le=1000,
         description="Change the number of results returned. e.g. limit=1000 will return up to 1000 results",
-        example="limit=1000"
+        example="1000"
     )
     page: int = Query(
         1,
         gt=0,
-       # le=6000,
+        le=6000,
         description="Paginate through results. e.g. page=1 will return first page of results",
         example="1"
     )
@@ -324,9 +324,8 @@ class Temporal(str, Enum):
 class APIBase(Paging):
     sort: Union[Sort, None] = Query(
         "asc",
-        description="Define sort order.",
-        exmaple="sort=asc"
-
+        description="Define sort order. e.g. ?sort=asc",
+        exmaple="asc"
     )
 
 
