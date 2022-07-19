@@ -168,10 +168,13 @@ def parse_log_file(key: str, bucket: str):
             if  payload_size >= 1048576 or line_count >= 10000 :
                 try:
                     logger.info(f'payload OR records at limit, sending batch to CW Events payload: {payload_size} line count: {line_count}')
-                    if sequence_token is not  None:
-                        sequence_token = put_log(records, sequence_token)
-                    else:
-                        sequence_token = put_log(records)
+                    records = sorted(records, key=itemgetter('timestamp'))
+                    records_parts = [records[:len(records)//2], records[len(records)//2:]]
+                    for item in records_parts:
+                        if sequence_token is not  None:
+                            sequence_token = put_log(item, sequence_token)
+                        else:
+                            sequence_token = put_log(item)
                     records = []
                     records_byte_size = line_byte_size
                 except Exception as e:
