@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     API_LAMBDA_MEMORY_SIZE: int = 1536
     API_LAMBDA_TIMEOUT: int = 30  # lambda timeout in seconds
     CF_LOGS_LAMBDA_MEMORY_SIZE: int = 1792
-    CF_LOG_LAMBDA_TIMEOUT: int = 120  # lambda timeout in seconds
+    CF_LOG_LAMBDA_TIMEOUT: int = 180  # lambda timeout in seconds
 
     class Config:
         parent = Path(__file__).resolve().parent.parent
