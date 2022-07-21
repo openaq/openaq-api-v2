@@ -6,6 +6,7 @@ from os import environ
 
 class Settings(BaseSettings):
     ENV: str = "staging"
+    CF_LOGS_LOG_LEVEL: str = "INFO"
     
     class Config:
         parent = Path(__file__).resolve().parent.parent.parent

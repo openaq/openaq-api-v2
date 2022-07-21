@@ -1,5 +1,5 @@
 from typing import List
-from pydantic import BaseSettings, validator
+from pydantic import BaseSettings
 from pathlib import Path
 from os import environ
 
@@ -14,9 +14,9 @@ class Settings(BaseSettings):
     API_CACHE_TIMEOUT: int = 900
     FETCH_ASCENDING: bool = False
     ROLLUP_LAMBDA_TIMEOUT: int = 900
-    ROLLUP_LAMBDA_MEMORY_SIZE: int = 1512
+    ROLLUP_LAMBDA_MEMORY_SIZE: int = 1536
     INGEST_LAMBDA_TIMEOUT: int = 900
-    INGEST_LAMBDA_MEMORY_SIZE: int = 1512
+    INGEST_LAMBDA_MEMORY_SIZE: int = 1536
     PIPELINE_LIMIT: int = 10
     METADATA_LIMIT: int = 10
     REALTIME_LIMIT: int = 10
@@ -30,10 +30,10 @@ class Settings(BaseSettings):
     LOG_BUCKET: str = None
     CERTIFICATE_ARN: str = None
     TOPIC_ARN: str = None
-    API_LAMBDA_MEMORY_SIZE: int = 1512
+    API_LAMBDA_MEMORY_SIZE: int = 1536
     API_LAMBDA_TIMEOUT: int = 30  # lambda timeout in seconds
-    CF_LOGS_LAMBDA_MEMORY_SIZE: int = 1512
-    CF_LOG_LAMBDA_TIMEOUT: int = 30  # lambda timeout in seconds
+    CF_LOGS_LAMBDA_MEMORY_SIZE: int = 1792
+    CF_LOG_LAMBDA_TIMEOUT: int = 180  # lambda timeout in seconds
 
     class Config:
         parent = Path(__file__).resolve().parent.parent

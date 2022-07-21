@@ -21,11 +21,15 @@ logs_client = boto3.client('logs')
 
 logging.basicConfig(
     format='[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s',
-    level=logging.INFO,
+    level=settings.CF_LOGS_LOG_LEVEL.upper(),
     force=True,
 )
 logger = logging.getLogger('main')
 
+# When debuging we dont want to debug these libraries
+logging.getLogger('boto3').setLevel(logging.WARNING)
+logging.getLogger('botocore').setLevel(logging.WARNING)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 log_group_name = f"openaq-api-{settings.ENV}-cf-access-log"
 log_stream_name = f"openaq-api-{settings.ENV}-cf-access-log-stream"
@@ -120,7 +124,6 @@ def parse_log_file(key: str, bucket: str):
     """
     records = []
     sequence_token = None
-    records_byte_size = 0
     try:
         response = s3_client.get_object(Bucket=bucket, Key=key)
         bytestream = BytesIO(response['Body'].read())
@@ -148,28 +151,20 @@ def parse_log_file(key: str, bucket: str):
             try:
                 # size is calculated as the sum of all event messages in UTF-8, plus 26 bytes for each log event.
                 line_count = len(records) +1
-                bytes_overhead = line_count * 26
 
-                line_encoded = line.strip().encode("utf-8", "ignore")
-
-                line_byte_size = (line_encoded.__sizeof__())
-
-                records_byte_size = line_byte_size + records_byte_size
-
-                payload_size = records_byte_size + bytes_overhead
+                records_size = sum([len(json.dumps(r).encode("utf-8")) for r in records])
 
             except Exception as e:
                 logger.error(f"Exception during utf8 conversion: {e}")
 
-            if  payload_size >= 1048576 or line_count >= 10000 :
+            if  records_size >= 900000 or line_count >= 9000 :
                 try:
-                    logger.info(f'payload OR records at limit, sending batch to CW Events payload: {payload_size} line count: {line_count}')
+                    logger.info(f'payload OR records at limit, sending batch to CW Events payload: {records_size} line count: {line_count}')
                     if sequence_token is not  None:
                         sequence_token = put_log(records, sequence_token)
                     else:
                         sequence_token = put_log(records)
                     records = []
-                    records_byte_size = line_byte_size
                 except Exception as e:
                     logger.error(f"Error sorting or sending records to CW Logs: {e}")
                 
@@ -190,6 +185,7 @@ def parse_log_file(key: str, bucket: str):
 
 
 def handler(event, context):
+    logger.debug(event)
     records = event["Records"]
     for record in records:
         body = json.loads(record["body"])
