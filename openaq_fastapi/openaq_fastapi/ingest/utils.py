@@ -8,15 +8,16 @@ import gzip
 import boto3
 from io import StringIO
 import psycopg2
-import typer
+# import typer
 
 from ..settings import settings
 
-app = typer.Typer()
+# app = typer.Typer()
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 s3 = boto3.client("s3")
+cw = boto3.client("cloudwatch")
 
 logger = logging.getLogger('utils')
 
@@ -55,6 +56,48 @@ class StringIteratorIO(io.TextIOBase):
                 n -= len(m)
                 line.append(m)
         return "".join(line)
+
+
+def put_metric(
+        namespace,
+        metricname,
+        value,
+        units: str = None,
+        attributes: dict = None,
+):
+    try:
+        dimensions = [
+            {
+                'Name': 'Host',
+                'Value': settings.DATABASE_HOST,
+            },
+            {
+                'Name': 'Environment',
+                'Value': 'openaq',
+            },
+        ]
+        if attributes is not None:
+            for key in attributes.keys():
+                dimensions.append({
+                    'Name': key,
+                    'Value': str(attributes[key]),
+                })
+
+        cw.put_metric_data(
+            Namespace=namespace,
+            MetricData=[
+                {
+                    'MetricName': metricname,
+                    'Dimensions': dimensions,
+                    'Unit': units,
+                    'Value': value,
+                    'StorageResolution': 1,
+                },
+            ],
+        )
+
+    except Exception as e:
+        logger.warn(f'Could not submit custom metric: {namespace}/{metricname}: {e}')
 
 
 def clean_csv_value(value):
