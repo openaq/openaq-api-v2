@@ -89,8 +89,12 @@ class LambdaApiStack(Stack):
         )
         
         if env_name == 'prod':
-            openaq_api.add_alias('prod')
-
+            aws_lambda.Alias(self,
+                "openaq_api_alias",
+                alias_name="prod",
+                version=openaq_api.current_version
+            )
+            
         api = HttpApi(
             self,
             f"{id}-endpoint",
