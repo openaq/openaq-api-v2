@@ -57,7 +57,7 @@ class Parameter(BaseModel):
     average: float
     last_value: float = Field(..., alias='lastValue')
     parameter: str
-    display_name: str = Field(..., alias='displayName')
+    display_name: Union[str, None] = Field(None, alias='displayName')
     last_updated: str = Field(..., alias='lastUpdated')
     parameter_id: int = Field(..., alias='parameterId')
     first_updated: str = Field(..., alias='firstUpdated')
@@ -293,7 +293,7 @@ class ModelsResponse(OpenAQResult):
 class ParametersRow(BaseModel):
     id: int
     name: str
-    display_name: str = Field(..., alias='displayName')
+    display_name: Union[str, None] = Field(None, alias='displayName')
     description: str
     preferred_unit: str = Field(..., alias='preferredUnit')
     is_core: Union[bool, None] = Field(None, alias='isCore')

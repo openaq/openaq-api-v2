@@ -54,7 +54,6 @@ class LambdaApiStack(Stack):
         domain_name: Union[str, None],
         cert_arn: Union[str, None],
         web_acl_id: Union[str, None],
-        
         **kwargs,
     ) -> None:
         """Lambda to handle api requests"""
