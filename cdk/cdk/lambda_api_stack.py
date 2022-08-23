@@ -87,6 +87,9 @@ class LambdaApiStack(Stack):
                 create_dependencies_layer(self, f"{env_name}", 'api', Path('../openaq_fastapi/requirements.txt')),
             ],
         )
+        
+        if env_name == 'prod':
+            openaq_api.add_alias('prod')
 
         api = HttpApi(
             self,
