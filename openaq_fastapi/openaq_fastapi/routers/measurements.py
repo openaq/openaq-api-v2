@@ -34,7 +34,7 @@ logger = logging.getLogger('measurements')
 router = APIRouter()
 
 
-def meas_csv(rows):
+def meas_csv(rows,includefields):
     output = io.StringIO()
     writer = csv.writer(output)
     header = [
@@ -50,6 +50,13 @@ def meas_csv(rows):
         "latitude",
         "longitude",
     ]
+    #include_fields in csv header
+    if includefields is not None:
+        include_fields = includefields.split(",")
+        available_fields = ["sourceName", "attribution", "averagingPeriod"]
+        for f in include_fields:
+            if f in available_fields:
+                header.append(f)
     writer.writerow(header)
     for r in rows:
         try:
@@ -66,6 +73,13 @@ def meas_csv(rows):
                 r["coordinates"]["latitude"],
                 r["coordinates"]["longitude"],
             ]
+            #include_fields in csv data
+            if includefields is not None:
+                include_fields = includefields.split(",")
+                available_fields = ["sourceName", "attribution", "averagingPeriod"]
+                for f in include_fields:
+                    if f in available_fields:
+                        row.append(r["{}".format(f)])
             writer.writerow(row)
         except Exception as e:
             logger.debug(e)
@@ -181,6 +195,7 @@ async def measurements_get(
     date_to = m.date_to
     where = m.where()
     params = m.params()
+    includes = m.include_fields
 
     rolluptype = "node"
 
@@ -322,8 +337,8 @@ async def measurements_get(
     if len(vwheres) > 0:
         vwhere = f" AND {' AND '.join(vwheres)}"
 
-    if m.include_fields is not None:
-        include_fields = m.include_fields.split(",")
+    if includes is not None:
+        include_fields = includes.split(",")
         available_fields = ["sourceName", "attribution", "averagingPeriod"]
         include_fields = [
             f',"{f}"' for f in include_fields if f in available_fields
@@ -449,7 +464,7 @@ async def measurements_get(
 
     if format == "csv":
         return Response(
-            content=meas_csv(results),
+            content=meas_csv(results,includes),
             media_type="text/csv",
             headers={
                 "Content-Disposition": "attachment;filename=measurements.csv"
@@ -478,9 +493,11 @@ async def measurements_get_v1(
     data = await measurements_get(db, m, "json")
     meta = data.meta
     res = data.results
+    includes = m.include_fields
+
     if format == "csv":
         return Response(
-            content=meas_csv(res),
+            content=meas_csv(res,includes),
             media_type="text/csv",
             headers={
                 "Content-Disposition": "attachment;filename=measurements.csv"
@@ -490,8 +507,8 @@ async def measurements_get_v1(
     if len(res) == 0:
         return data
 
-    if m.include_fields is not None:
-        include_fields = m.include_fields.split(",")
+    if includes is not None:
+        include_fields = includes.split(",")
         available_fields = ["sourceName", "attribution", "averagingPeriod"]
         include_fields = [
             f", {f}: .{f}" for f in include_fields if f in available_fields
