@@ -293,7 +293,7 @@ class ModelsResponse(OpenAQResult):
 class ParametersRow(BaseModel):
     id: int
     name: str
-    display_name: str = Field(..., alias='displayName')
+    display_name: Union[str, None] = Field(None, alias='displayName')
     description: str
     preferred_unit: str = Field(..., alias='preferredUnit')
     is_core: Union[bool, None] = Field(None, alias='isCore')
