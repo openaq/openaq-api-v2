@@ -3,7 +3,7 @@ import logging
 from datetime import date, datetime, timedelta
 from enum import Enum
 from types import FunctionType
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Union
 
 import humps
 from dateutil.parser import parse
@@ -18,8 +18,7 @@ from pydantic import (
     root_validator,
 )
 
-logger = logging.getLogger("base")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger("queries")
 
 maxint = 2147483647
 
@@ -105,35 +104,29 @@ class OBaseModel(BaseModel):
 
 
 class City(OBaseModel):
-    city: Optional[List[str]] = Query(
+    city: Union[List[str], None] = Query(
         None,
-        description="""
-        Limit results by a certain city or cities.
-        (ex. ?city=Chicago or ?city=Chicago&city=Boston)
-        """,
+        description="Limit results by a certain city or cities. (e.g. ?city=Chicago or ?city=Chicago&city=Boston)",
+        example="Chicago"
     )
 
 
 class Country(OBaseModel):
-    country_id: Optional[str] = Query(
+    country_id: Union[str, None] = Query(
         None,
         min_length=2,
         max_length=2,
         regex="[a-zA-Z][a-zA-Z]",
-        description="""
-        Limit results by a certain country using two letter country code.
-        (ex. /US)
-        """,
+        description="Limit results by a certain country using two letter country code. e.g. US",
+        example="US"
     )
-    country: Optional[List[str]] = Query(
+    country: Union[List[str],None] = Query(
         None,
         min_length=2,
         max_length=2,
         regex="[a-zA-Z][a-zA-Z]",
-        description="""
-        Limit results by a certain country using two letter country code.
-        (ex. ?country=US or ?country=US&country=MX)
-        """,
+        description="Limit results by a certain country using two letter country code. e.g. ?country=US or ?country=US&country=MX",
+        example="US"
     )
 
     @validator("country", check_fields=False)
@@ -149,9 +142,9 @@ class Country(OBaseModel):
 
 
 class SourceName(OBaseModel):
-    sourceName: Optional[List[str]] = None
-    sourceId: Optional[List[int]] = None
-    sourceSlug: Optional[List[str]] = None
+    sourceName: Union[List[str], None] = None
+    sourceId: Union[List[int], None] = None
+    sourceSlug: Union[List[str], None] = None
 
 
 class EntityTypes(str, Enum):
@@ -186,8 +179,8 @@ def id_or_name_validator(name, v, values):
 
 
 class Project(OBaseModel):
-    project_id: Optional[int] = None
-    project: Optional[List[Union[int, str]]] = Query(None, gt=0, le=maxint)
+    project_id: Union[int, None] = None
+    project: Union[List[Union[int, str]], None] = Query(None, gt=0, le=maxint)
 
     @validator("project")
     def validate_project(cls, v, values):
@@ -195,8 +188,8 @@ class Project(OBaseModel):
 
 
 class Location(OBaseModel):
-    location_id: Optional[int] = None
-    location: Optional[List[Union[int, str]]] = None
+    location_id: Union[int, None] = None
+    location: Union[List[Union[int, str]], None] = None
 
     @validator("location")
     def validate_location(cls, v, values):
@@ -208,12 +201,19 @@ class HasGeo(OBaseModel):
 
 
 class Geo(OBaseModel):
-    coordinates: Optional[str] = Field(
-        None, regex=r"^-?\d{1,2}\.?\d{0,8},-?1?\d{1,2}\.?\d{0,8}$"
+    coordinates: Union[str, None] = Query(
+        None,
+        regex=r"^-?\d{1,2}\.?\d{0,8},-?1?\d{1,2}\.?\d{0,8}$",
+        description="Coordinate pair in form lat,lng. Up to 8 decimal points of precision e.g. 38.907,-77.037",
+        example="38.907,-77.037"
     )
-    lat: Optional[confloat(ge=-90, le=90)] = None
-    lon: Optional[confloat(ge=-180, le=180)] = None
-    radius: conint(gt=0, le=100000) = 1000
+    lat: Union[confloat(ge=-90, le=90), None] = None
+    lon: Union[confloat(ge=-180, le=180), None] = None
+    radius: conint(gt=0, le=100000) = Query(
+        1000,
+        description="Search radius from coordinates as center in meters. Maximum of 100,000 (100km) defaults to 1000 (1km) e.g. radius=10000",
+        example="10000"
+    )
 
     @root_validator(pre=True)
     def addlatlon(cls, values):
@@ -221,8 +221,8 @@ class Geo(OBaseModel):
         if coords is not None and "," in coords:
             lat, lon = coords.split(",")
             if lat and lon:
-                values["lat"] = lat
-                values["lon"] = lon
+                values["lat"] = float(lat)
+                values["lon"] = float(lon)
         return values
 
     def where_geo(self):
@@ -235,10 +235,26 @@ class Geo(OBaseModel):
 
 
 class Measurands(OBaseModel):
-    parameter_id: Optional[int] = None
-    parameter: Optional[List[Union[int, str]]] = Query(None, gt=0, le=maxint)
-    measurand: Optional[List[str]] = None
-    unit: Optional[List[str]] = None
+    parameter_id: Union[int, None] = Query(
+        None,
+        description="(optional) A parameter ID to filter measurement results. e.g. parameter_id=2 (i.e. PM2.5) will limit measurement results to only PM2.5 measurements",
+        example="2"
+    )
+    parameter: Union[List[Union[int, str]], None] = Query(
+        None,
+        gt=0,
+        le=maxint,
+        description="(optional) A parameter name or ID by which to filter measurement results. e.g. parameter=pm25 or parameter=pm25&parameter=pm10",
+        example="pm25"
+    )
+    measurand: Union[List[str], None] = Query(
+        None,
+        description=""
+    )
+    unit: Union[List[str], None] = Query(
+        None,
+        description="",
+    )
 
     @validator("measurand", check_fields=False)
     def check_measurand(cls, v, values):
@@ -258,17 +274,26 @@ class Paging(OBaseModel):
         100,
         gt=0,
         le=100000,
-        description="Change the number of results returned.",
+        description="Change the number of results returned. e.g. limit=1000 will return up to 1000 results",
+        example="1000"
     )
     page: int = Query(
-        1, gt=0, le=6000, description="Paginate through results."
+        1,
+        gt=0,
+        le=6000,
+        description="Paginate through results. e.g. page=1 will return first page of results",
+        example="1"
     )
-    offset: int = Query(0, ge=0, le=10000)
+    offset: int = Query(
+        0,
+        ge=0,
+        le=10000,
+    )
 
     @validator("offset", check_fields=False)
     def check_offset(cls, v, values, **kwargs):
-        logger.debug("checking offset")
         offset = values["limit"] * (values["page"] - 1)
+        logger.debug(f"checking offset: {offset}")
         if offset + values["limit"] > 100000:
             raise ValueError("offset + limit must be < 100000")
         return offset
@@ -297,12 +322,16 @@ class Temporal(str, Enum):
 
 
 class APIBase(Paging):
-    sort: Optional[Sort] = Query("asc", description="Define sort order.")
+    sort: Union[Sort, None] = Query(
+        "asc",
+        description="Define sort order. e.g. ?sort=asc",
+        exmaple="asc"
+    )
 
 
 def fix_datetime(
     d: Union[datetime, date, str, int, None],
-    minutes_to_round_to: Optional[int] = 1,
+    minutes_to_round_to: Union[int, None] = 1,
 ):
     # Make sure that date/datetime is turned into timzone
     # aware datetime optionally rounding to

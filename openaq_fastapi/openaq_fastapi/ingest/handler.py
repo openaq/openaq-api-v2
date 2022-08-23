@@ -1,17 +1,30 @@
 import boto3
+import logging
 import psycopg2
 from ..settings import settings
 from .lcs import load_measurements_db, load_metadata_db
 from .fetch import load_db
-import math
+from time import time
+import json
 
 from datetime import datetime, timezone
 
 s3c = boto3.client("s3")
 
+logger = logging.getLogger('handler')
+logging.basicConfig(
+    format='[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s',
+    level=settings.LOG_LEVEL.upper(),
+    force=True,
+)
+
+logging.getLogger('boto3').setLevel(logging.WARNING)
+logging.getLogger('botocore').setLevel(logging.WARNING)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
+
 
 def handler(event, context):
-    print(event)
+    logger.debug(event)
     records = event.get("Records")
     if records is not None:
         try:
@@ -19,93 +32,165 @@ def handler(event, context):
                 with connection.cursor() as cursor:
                     connection.set_session(autocommit=True)
                     for record in records:
-                        bucket = record["s3"]["bucket"]["name"]
-                        key = record["s3"]["object"]["key"]
-                        print(f"{bucket} {object}")
-                        lov2 = s3c.list_objects_v2(
-                            Bucket=bucket, Prefix=key, MaxKeys=1
-                        )
-                        try:
-                            last_modified = lov2["Contents"][0]["LastModified"]
-                        except KeyError:
-                            print("could not get last modified time from obj")
-                        last_modified = datetime.now().replace(
-                            tzinfo=timezone.utc
-                        )
+                        if record['EventSource'] == 'aws:sns':
+                            keys = getKeysFromSnsRecord(record)
+                        else:
+                            keys = getKeysFromS3Record(record)
 
-                        cursor.execute(
-                            """
-                            INSERT INTO fetchlogs (key, last_modified)
-                            VALUES(%s, %s)
-                            ON CONFLICT (key) DO UPDATE
-                            SET last_modified=EXCLUDED.last_modified,
-                            completed_datetime=NULL RETURNING *;
-                            """,
-                            (key, last_modified,),
-                        )
-                        row = cursor.fetchone()
-                        connection.commit()
-                        print(f"{row}")
+                        logger.debug(keys)
+                        for obj in keys:
+                            bucket = obj['bucket']
+                            key = obj['key']
+                            logger.debug(f"{bucket}:{key}")
+                            lov2 = s3c.list_objects_v2(
+                                Bucket=bucket, Prefix=key, MaxKeys=1
+                            )
+
+                            try:
+                                last_modified = lov2["Contents"][0]["LastModified"]
+                            except KeyError:
+                                logger.error("""
+                                could not get last modified time from obj
+                                """)
+                                last_modified = datetime.now().replace(
+                                    tzinfo=timezone.utc
+                                )
+
+                            cursor.execute(
+                                """
+                                INSERT INTO fetchlogs (key, last_modified)
+                                VALUES(%s, %s)
+                                ON CONFLICT (key) DO UPDATE
+                                SET last_modified=EXCLUDED.last_modified,
+                                completed_datetime=NULL RETURNING *;
+                                """,
+                                (key, last_modified,),
+                            )
+                            row = cursor.fetchone()
+                            connection.commit()
+                            logger.info(f"ingest-handler: {row}")
         except Exception as e:
-            print(f"Exception: {e}")
+            logger.warning(f"Exception: {event}: {e}")
     elif event.get("source") and event["source"] == "aws.events":
-        print("running cron job")
         cronhandler(event, context)
+    else:
+        logger.warning(f"ingest-handler: nothing to do: {event}")
+
+
+def getKeysFromSnsRecord(record):
+    message = json.loads(record['Sns']['Message'])
+    keys = []
+    for _record in message['Records']:
+        # a hack to deal with a missing SNS event
+        key = _record["s3"]["object"]["key"]
+        key = key.replace('realtime', 'realtime-gzipped')
+        key = key.replace('ndjson', 'ndjson.gz')
+        keys.append({
+            "bucket": _record["s3"]["bucket"]["name"],
+            "key": key,
+        })
+    return keys
+
+
+def getKeysFromS3Record(record):
+    keys = [{
+        "bucket": record["s3"]["bucket"]["name"],
+        "key": record["s3"]["object"]["key"],
+    }]
+    return keys
 
 
 def cronhandler(event, context):
-    print(event)
+    start_time = time()
+    timeout = settings.INGEST_TIMEOUT  # manual timeout for testing
+    ascending = settings.FETCH_ASCENDING if 'ascending' not in event else event['ascending']
+    pipeline_limit = settings.PIPELINE_LIMIT if 'pipeline_limit' not in event else event['pipeline_limit']
+    realtime_limit = settings.REALTIME_LIMIT if 'realtime_limit' not in event else event['realtime_limit']
+    metadata_limit = settings.METADATA_LIMIT if 'metadata_limit' not in event else event['metadata_limit']
+
+    logger.info(f"Running cron job: {event['source']}, ascending: {ascending}")
     with psycopg2.connect(settings.DATABASE_WRITE_URL) as connection:
         connection.set_session(autocommit=True)
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT count(*) FROM fetchlogs WHERE completed_datetime is null and key ~*'stations';
+                SELECT count(*)
+                FROM fetchlogs
+                WHERE completed_datetime is null
+                AND key ~*'stations';
                 """,
             )
             metadata = cursor.fetchone()
             cursor.execute(
                 """
-                SELECT count(*) FROM fetchlogs WHERE completed_datetime is null and key ~*'measures';
+                SELECT count(*)
+                FROM fetchlogs
+                WHERE completed_datetime is null
+                AND key ~*'measures';
                 """,
             )
             pipeline = cursor.fetchone()
             cursor.execute(
                 """
-                SELECT count(*) FROM fetchlogs WHERE completed_datetime is null and key ~*'realtime';
+                SELECT count(*)
+                FROM fetchlogs
+                WHERE completed_datetime is null
+                AND key ~*'realtime';
                 """,
             )
             realtime = cursor.fetchone()
             for notice in connection.notices:
-                print(notice)
+                logger.debug(notice)
 
-    print(f"Processing {metadata[0]} metadata, {realtime[0]} openaq, {pipeline[0]} pipeline records")
-    if metadata is not None:
-        val = int(metadata[0])
-        cnt = 0
-        while cnt < val + 10:
-            load_metadata_db(10)
-            cnt += 10
-            print(f"loaded {cnt+10} of {val} metadata records")
+    metadata = 0 if metadata is None else metadata[0]
+    realtime = 0 if realtime is None else realtime[0]
+    pipeline = 0 if pipeline is None else pipeline[0]
+    logger.info(f"{metadata_limit}/{metadata} metadata, {realtime_limit}/{realtime} openaq, {pipeline_limit}/{pipeline} pipeline records pending")
 
-    if realtime is not None:
-        val = int(realtime[0])
-        if val>400:
-            val=400
-        cnt = 0
-        while cnt < val + 25:
-            load_db(25)
-            cnt += 25
-            print(f"loaded {cnt+25} of {val} fetch records")
+    # these exceptions are just a failsafe so that if something
+    # unaccounted for happens we can still move on to the next
+    # process. In case of this type of exception we will need to
+    # fix it asap
+    try:
+        if metadata > 0 and metadata_limit > 0:
+            cnt = 0
+            while cnt < metadata and (time() - start_time) < timeout:
+                cnt += load_metadata_db(metadata_limit, ascending)
+                logger.info(
+                    "loaded %s of %s metadata records, timer: %0.4f",
+                    cnt, metadata, time() - start_time
+                )
+    except Exception as e:
+        logger.error(f"load metadata failed: {e}")
 
-    if pipeline is not None:
-        val = int(pipeline[0])
-        if val>400:
-            val=400
-        cnt = 0
-        while cnt < val + 25:
-            load_measurements_db(25)
-            cnt += 25
-            print(f"loaded {cnt+25} of {val} pipeline records")
+    try:
+        if realtime > 0 and realtime_limit > 0:
+            cnt = 0
+            loaded = 1
+            while (
+                    loaded > 0
+                    and cnt < realtime
+                    and (time() - start_time) < timeout
+            ):
+                loaded = load_db(realtime_limit, ascending)
+                cnt += loaded
+                logger.info(
+                    "loaded %s of %s fetch records, timer: %0.4f",
+                    cnt, realtime, time() - start_time
+                )
+    except Exception as e:
+        logger.error(f"load realtime failed: {e}")
 
-    print("done loading")
+    try:
+        if pipeline > 0 and pipeline_limit > 0:
+            cnt = 0
+            while cnt < pipeline and (time() - start_time) < timeout:
+                cnt += load_measurements_db(pipeline_limit, ascending)
+                logger.info(
+                    "loaded %s of %s pipeline records, timer: %0.4f",
+                    cnt, pipeline, time() - start_time
+                )
+    except Exception as e:
+        logger.error(f"load pipeline failed: {e}")
+
+    logger.info("done processing: %0.4f seconds", time() - start_time)

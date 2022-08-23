@@ -2,7 +2,7 @@ import logging
 
 from dateutil.tz import UTC
 from fastapi import APIRouter, Depends, Query
-from typing import Optional, List
+from typing import Union, List
 from ..db import DB
 from ..models.queries import (
     APIBase,
@@ -14,7 +14,7 @@ from ..models.queries import (
     Temporal,
     Sort,
 )
-from openaq_fastapi.models.responses import OpenAQResult
+from ..models.responses import AveragesResponse, OpenAQResult
 from pydantic import root_validator
 
 logger = logging.getLogger("averages")
@@ -26,9 +26,9 @@ router = APIRouter()
 class Averages(APIBase, Country, Project, Measurands, DateRange):
     spatial: Spatial = Query(...)
     temporal: Temporal = Query(...)
-    location: Optional[List[str]] = None
-    group: Optional[bool] = False
-    sort: Optional[Sort] = Query("desc", description="Define sort order.")
+    location: Union[List[str], None] = None
+    group: Union[bool, None] = False
+    sort: Union[Sort, None] = Query("desc", description="Define sort order.")
 
     def where(self):
         wheres = []
@@ -70,7 +70,12 @@ class Averages(APIBase, Country, Project, Measurands, DateRange):
         return values
 
 
-@router.get("/v2/averages", response_model=OpenAQResult, tags=["v2"])
+@router.get(
+    "/v2/averages", 
+    response_model=AveragesResponse, 
+    summary="Get averaged values",
+    description="",
+    tags=["v2"])
 async def averages_v2_get(
     db: DB = Depends(),
     av: Averages = Depends(Averages.depends()),

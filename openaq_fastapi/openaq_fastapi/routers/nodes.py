@@ -70,7 +70,7 @@ class Nodes:
             meta["found"] = 0
             return {"meta": meta, "results": []}
         meta["found"] = rows[0]["count"]
-        json_rows = [json.loads(r[1]) for r in rows]
+        json_rows = [r[1] for r in rows]
 
         return {"meta": meta, "results": json_rows}
 

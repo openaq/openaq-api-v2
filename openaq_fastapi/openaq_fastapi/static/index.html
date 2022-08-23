@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Oxygen:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Oxygen', sans-serif;
+        }
+
+        .container {
+            margin-top: 50px;
+            display:flex;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .openaq-logo {
+            padding: 15px;
+            width: 20%;
+            height: auto;
+        }
+
+        .links-list {
+            margin: 0;
+            padding: 0;
+            display:flex;
+            flex-direction: column;
+            justify-content: center;
+            list-style: none;
+        }
+
+        .links-list > li {
+            padding: 5px 0 5px 0;
+        }
+
+    </style>
+    <title>OpenAQ REST API</title>
+</head>
+<body>
+    <main class="container">
+        <img class="openaq-logo" src="openaq-logo.svg" alt="OpenAQ logo">
+        <h1>Welcome to the OpenAQ REST API</h1>
+            <h3>Links</h3>
+            <ul class="links-list">
+                <li><a href="https://docs.openaq.org">OpenAQ Documentation</a></li>
+                <li><a href="docs">Swagger docs</a></li>
+                <li><a href="https://openaqstatus.org">API Status</a></li>
+                <li><a href="https://openaq.org">OpenAQ website</a></li>
+                <li><a href="https://join.slack.com/t/openaq/shared_invite/zt-yzqlgsva-v6McumTjy2BZnegIK9XCVw">Join us on Slack</a></li>
+            </ul>
+    </main>
+</body>
+</html>

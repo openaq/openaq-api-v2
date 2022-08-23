@@ -1,21 +1,46 @@
+from typing import List
 from pydantic import BaseSettings
 from pathlib import Path
-
-parent = Path(__file__).resolve().parent.parent
-env_file = Path.joinpath(parent, ".env")
+from os import environ
 
 
 class Settings(BaseSettings):
-    DATABASE_URL: str
-    DATABASE_WRITE_URL: str
-    OPENAQ_ENV: str = "staging"
-    OPENAQ_FASTAPI_URL: str
-    TESTLOCAL: bool = True
-    OPENAQ_FETCH_BUCKET: str
-    OPENAQ_ETL_BUCKET: str
+    CDK_ACCOUNT: str
+    CDK_REGION: str
+    ENV: str = "staging"
+    PROJECT: str = "openaq"
+    FETCH_BUCKET: str
+    ETL_BUCKET: str
+    API_CACHE_TIMEOUT: int = 900
+    FETCH_ASCENDING: bool = False
+    ROLLUP_LAMBDA_TIMEOUT: int = 900
+    ROLLUP_LAMBDA_MEMORY_SIZE: int = 1536
+    INGEST_LAMBDA_TIMEOUT: int = 900
+    INGEST_LAMBDA_MEMORY_SIZE: int = 1536
+    PIPELINE_LIMIT: int = 10
+    METADATA_LIMIT: int = 10
+    REALTIME_LIMIT: int = 10
+    LOG_LEVEL: str = 'INFO'
+    LOCAL_SAVE_DIRECTORY: str = './openaq_files'
+    VPC_ID: str
+    HOSTED_ZONE_ID: str = None
+    HOSTED_ZONE_NAME: str = None
+    WEB_ACL_ID: str = None
+    DOMAIN_NAME: str = None
+    LOG_BUCKET: str = None
+    CERTIFICATE_ARN: str = None
+    TOPIC_ARN: str = None
+    API_LAMBDA_MEMORY_SIZE: int = 1536
+    API_LAMBDA_TIMEOUT: int = 30  # lambda timeout in seconds
+    CF_LOGS_LAMBDA_MEMORY_SIZE: int = 1792
+    CF_LOG_LAMBDA_TIMEOUT: int = 180  # lambda timeout in seconds
 
     class Config:
-        env_file = env_file
+        parent = Path(__file__).resolve().parent.parent
+        if 'DOTENV' in environ:
+            env_file = Path.joinpath(parent, environ['DOTENV'])
+        else:
+            env_file = Path.joinpath(parent, ".env")
 
 
 settings = Settings()

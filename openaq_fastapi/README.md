@@ -1,6 +1,6 @@
 # OPENAQ Version 2 API
 
-The OpenAQ Version 2 API, located in the [openaq_fastapi](openaq_fastapi/), is built using Python 3 and [FastAPI](https://fastapi.tiangolo.com/). It takes advantage of [Pydantic](https://pydantic-docs.helpmanual.io/) for data valdation.
+The OpenAQ Version 2 API, located in the [openaq_fastapi](openaq_fastapi/), is built using Python 3 and [FastAPI](https://fastapi.tiangolo.com/). It takes advantage of [Pydantic](https://pydantic-docs.helpmanual.io/) for data validation.
 
 ## Installation
 It is recommended to install in a python virtual environment.

@@ -1,16 +1,16 @@
 from enum import Enum
 import logging
 import os
-from typing import Optional
+from typing import Union
 import jq
 
 import orjson as json
 from dateutil.tz import UTC
 from datetime import timedelta, datetime
 from fastapi import APIRouter, Depends, Query
-from starlette.responses import Response, JSONResponse
+from starlette.responses import Response
 from ..db import DB
-from ..models.responses import Meta
+from ..models.responses import MeasurementsResponse, MeasurementsResponseV1, Meta
 from ..models.queries import (
     APIBase,
     City,
@@ -29,8 +29,7 @@ import io
 
 from openaq_fastapi.models.responses import OpenAQResult, converter
 
-logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger('measurements')
 
 router = APIRouter()
 
@@ -99,15 +98,39 @@ class Measurements(
     Location, City, Country, Geo, Measurands, HasGeo, APIBase, DateRange
 ):
     order_by: MeasOrder = Query("datetime")
-    sort: Sort = "desc"
-    isMobile: Optional[bool] = None
-    isAnalysis: Optional[bool] = None
-    project: Optional[int] = None
-    entity: Optional[EntityTypes] = None
-    sensorType: Optional[SensorTypes] = None
-    value_from: Optional[float] = None
-    value_to: Optional[float] = None
-    include_fields: Optional[str] = None
+    sort: Sort = Query("desc")
+    isMobile: Union[bool, None] = Query(
+        None,
+        description="Location is mobile e.g. ?isMobile=true",
+        example="true"
+    )
+    isAnalysis: Union[bool, None] =  Query(
+        None,
+        description="Data is the product of a previous analysis/aggregation and not raw measurements e.g. ?isAnalysis=false",
+        example="true"
+    )
+    project: Union[int, None] = Query(None)
+    entity: Union[EntityTypes, None] = Query(None)
+    sensorType: Union[SensorTypes, None] =  Query(
+        None,
+        description="Filter by sensor type (i,e. reference grade, low-cost sensor) e.g. ?sensorType=reference%20grade",
+        example="reference%20grade"
+    )
+    value_from: Union[float, None] =  Query(
+        None,
+        description="",
+        example=""
+    )
+    value_to: Union[float, None] =  Query(
+        None,
+        description="",
+        example=""
+    )
+    include_fields: Union[str, None] =  Query(
+        None,
+        description="Additional fields to include in response e.g. ?include_fields=sourceName",
+        example="sourceName"
+    )
 
     def where(self):
         wheres = []
@@ -155,11 +178,17 @@ class Measurements(
         return " TRUE "
 
 
-@router.get("/v2/measurements", tags=["v2"])
+@router.get(
+    "/v2/measurements",
+    summary="Get measurements",
+    description="",
+    response_model=MeasurementsResponse,
+    tags=["v2"]
+)
 async def measurements_get(
     db: DB = Depends(),
     m: Measurements = Depends(Measurements.depends()),
-    format: Optional[str] = None,
+    format: Union[str, None] = None,
 ):
     count = None
     date_from = m.date_from
@@ -240,7 +269,7 @@ async def measurements_get(
             {where}
         """
     rows = await db.fetch(q, params)
-    logger.debug(f"{rows}")
+
     if rows is None:
         return OpenAQResult()
     try:
@@ -407,13 +436,8 @@ async def measurements_get(
                 logger.debug(f"{len(rows)} rows found")
                 rc = rc + len(rows)
                 if len(rows) > 0 and rows[0][1] is not None:
-                    results.extend(
-                        [
-                            json.loads(r[1])
-                            for r in rows
-                            if isinstance(r[1], str)
-                        ]
-                    )
+                    results.extend([r[1] for r in rows])
+
             logger.debug(
                 f"ran query... {rc} {rangestart}"
                 f" {date_from_adj}{rangeend} {date_to_adj}"
@@ -432,7 +456,7 @@ async def measurements_get(
             params["rangeend"] = rangeend
             iteration += 1
     meta = Meta(
-        website=os.getenv("APP_HOST", "/"),
+        website=os.getenv("DOMAIN_NAME", os.getenv("BASE_URL", "/")),
         page=m.page,
         limit=m.limit,
         found=count,
@@ -454,11 +478,16 @@ async def measurements_get(
     return output
 
 
-@router.get("/v1/measurements", tags=["v1"])
+@router.get(
+    "/v1/measurements",
+    summary="Get a list of measurements",
+    response_model=MeasurementsResponseV1,
+    tags=["v1"]
+)
 async def measurements_get_v1(
     db: DB = Depends(),
     m: Measurements = Depends(Measurements.depends()),
-    format: Optional[str] = None,
+    format: Union[str, None] = None,
 ):
     m.entity = "government"
     data = await measurements_get(db, m, "json")
@@ -501,7 +530,6 @@ async def measurements_get_v1(
                 country:.country,
                 city: .city {fields}
             }}
-
         """
     )
 

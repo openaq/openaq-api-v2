@@ -1,15 +1,14 @@
 import logging
 from enum import Enum
-from typing import Optional
+from typing import Union
 
 from fastapi import APIRouter, Depends, Query
-from openaq_fastapi.models.responses import OpenAQCitiesResult, converter
+from openaq_fastapi.models.responses import CitiesResponse, converter
 import jq
 from ..db import DB
 from ..models.queries import APIBase, City, Country
 
-logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger("cities")
 
 router = APIRouter()
 
@@ -22,8 +21,12 @@ class CitiesOrder(str, Enum):
 
 
 class Cities(City, Country, APIBase):
-    order_by: CitiesOrder = Query("city", description="Order by a field")
-    entity: Optional[str] = None
+    order_by: CitiesOrder = Query(
+        "city", 
+        description="Order by a field e.g. ?order_by=city",
+        example="city"
+    )
+    entity: Union[str, None] = None
 
     def where(self):
         wheres = []
@@ -48,9 +51,10 @@ class Cities(City, Country, APIBase):
 
 @router.get(
     "/v2/cities",
-    response_model=OpenAQCitiesResult,
-    tags=["v2"],
-    summary="Provides a simple listing of cities within the platform",
+    response_model=CitiesResponse,
+    summary="Get cities",
+    description="Provides a list of cities supported by the platform",
+    tags=["v2"]
 )
 async def cities_get(
     db: DB = Depends(), cities: Cities = Depends(Cities.depends())
@@ -98,9 +102,10 @@ async def cities_get(
 
 @router.get(
     "/v1/cities",
-    response_model=OpenAQCitiesResult,
+    response_model=CitiesResponse,
     tags=["v1"],
-    summary="Provides a simple listing of cities within the platform",
+    summary="Get cities",
+    description="Provides a list of cities supported by the platform"
 )
 async def cities_getv1(
     db: DB = Depends(), cities: Cities = Depends(Cities.depends()),
@@ -123,7 +128,6 @@ async def cities_getv1(
                 count: .count,
                 locations: .locations
             }
-
         """
     )
 

@@ -2,10 +2,11 @@ import logging
 from typing import List
 
 import jq
-import orjson
 from fastapi import APIRouter, Depends, Query
-from pydantic.typing import Optional
+from pydantic.typing import Union
 from enum import Enum
+
+from ..models.responses import LatestResponse, LatestResponseV1, LocationsResponse, LocationsResponseV1, converter
 from ..db import DB
 from ..models.queries import (
     APIBase,
@@ -20,11 +21,7 @@ from ..models.queries import (
     SensorTypes,
 )
 
-from openaq_fastapi.models.responses import OpenAQResult, converter
-from starlette.responses import JSONResponse
-
 logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
 
 router = APIRouter()
 
@@ -38,37 +35,75 @@ class LocationsOrder(str, Enum):
     lastUpdated = "lastUpdated"
     count = "count"
     random = "random"
+    distance = "distance"
 
 
 class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
     order_by: LocationsOrder = Query(
-        "lastUpdated", description="Order by a field"
+        "lastUpdated",
+        description="Order by a field",
     )
-    sort: Optional[Sort] = Query("desc", description="Sort Direction")
-    isMobile: Optional[bool] = Query(None, description="Location is mobile")
-    isAnalysis: Optional[bool] = Query(
+    sort: Union[Sort, None] = Query(
+        "desc", 
+        description="Sort Direction e.g. sort=desc",
+        example="desc"
+    )
+    isMobile: Union[bool, None] = Query(
+        None, 
+        description="Location is mobile e.g. ?isMobile=true",
+        example="true"
+    )
+    isAnalysis: Union[bool, None] = Query(
         None,
         description=(
             "Data is the product of a previous "
-            "analysis/aggregation and not raw measurements"
+            "analysis/aggregation and not raw measurements "
+            "e.g. ?isAnalysis=true "
         ),
+        example="true"
     )
-    sourceName: Optional[List[str]] = Query(
-        None, description="Name of the data source"
+    sourceName: Union[List[str], None] = Query(
+        None, 
+        description="Name of the data source e.g. ?sourceName=Houston%20Mobile",
+        example="Houston%20Mobile"
     )
-    entity: Optional[EntityTypes] = Query(
-        None, description="Source entity type."
+    entity: Union[EntityTypes, None] = Query(
+        None, 
+        description="Source entity type. e.g. ?entity=government",
+        example="government"
     )
-    sensorType: Optional[SensorTypes] = Query(
-        None, description="Type of Sensor"
+    sensorType: Union[SensorTypes, None] = Query(
+        None, 
+        description="Type of Sensor e.g. ?sensorType=reference%20grade",
+        example="reference%20grade"
     )
-    modelName: Optional[List[str]] = Query(
-        None, description="Model Name of Sensor"
+    modelName: Union[List[str], None] = Query(
+        None, 
+        description="Model Name of Sensor e.g. ?modelName=AE33",
+        example="AE33"
     )
-    manufacturerName: Optional[List[str]] = Query(
-        None, description="Manufacturer of Sensor"
+    manufacturerName: Union[List[str], None] = Query(
+        None, 
+        description="Manufacturer of Sensor e.g. ?manufacturer=Ecotech",
+        example="Ecotech"
     )
-    dumpRaw: Optional[bool] = False
+    dumpRaw: Union[bool, None] = False
+
+    def order(self):
+        stm = self.order_by
+        if stm == "location":
+            stm = "name"
+        elif stm == "distance":
+            stm = "st_distance(st_makepoint(:lon,:lat)::geography, geog)"
+        elif stm == "count":
+            stm = "measurements"
+
+        if stm == "random":
+            stm = " random() "
+        elif self.order_by != "distance":
+            stm = f'"{stm}"'
+
+        return f"{stm} {self.sort} nulls last"
 
     def where(self):
         wheres = []
@@ -158,6 +193,8 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
                     )
         wheres.append(self.where_geo())
         wheres.append(" id not in (61485,61505,61506) ")
+        if self.order_by == 'random':
+            wheres.append("\"lastUpdated\" > now() - '2 weeks'::interval")
         wheres = [w for w in wheres if w is not None]
         if len(wheres) > 0:
             return (" AND ").join(wheres)
@@ -165,27 +202,22 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
 
 
 @router.get(
-    "/v2/locations/{location_id}", response_model=OpenAQResult, tags=["v2"]
+    "/v2/locations/{location_id}",
+    response_model=LocationsResponse,
+    summary="Get a location by ID",
+    description="Provides a location by location ID",
+    tags=["v2"]
 )
-@router.get("/v2/locations", response_model=OpenAQResult, tags=["v2"])
+@router.get(
+    "/v2/locations",
+    response_model=LocationsResponse,
+    summary="Get locations",
+    description="Provides a list of locations",
+    tags=["v2"]
+)
 async def locations_get(
     db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
 ):
-
-    order_by = locations.order_by
-    if order_by == "location":
-        order_by = "name"
-    elif order_by == "count":
-        order_by = "measurements"
-
-    if order_by == "random":
-        order_by = " random() "
-        lastupdateq = """
-            AND "lastUpdated" > now() - '2 weeks'::interval AND entity='government'
-            """
-    else:
-        order_by = f'"{order_by}"'
-        lastupdateq = ""
 
     qparams = locations.params()
 
@@ -218,8 +250,7 @@ async def locations_get(
             FROM locations_base_v2
             WHERE
             {locations.where()}
-            {lastupdateq}
-            ORDER BY {order_by} {locations.sort} nulls last
+            ORDER BY {locations.order()}
             LIMIT :limit
             OFFSET :offset
         ),
@@ -228,7 +259,6 @@ async def locations_get(
             FROM locations_base_v2
             WHERE
             {locations.where()}
-            {lastupdateq}
         ),
         t2 AS (
         SELECT
@@ -244,26 +274,31 @@ async def locations_get(
 
         ;
         """
-
-    logger.debug(f"**** {qparams}")
-
     output = await db.fetchOpenAQResult(q, qparams)
-
     return output
 
 
 @router.get(
-    "/v2/latest/{location_id}", response_model=OpenAQResult, tags=["v2"]
+    "/v2/latest/{location_id}",
+    response_model=LatestResponse,
+    summary="Get latest measurements by location ID",
+    description="Provides latest measurements for a locations by location ID",
+    tags=["v2"]
 )
-@router.get("/v2/latest", response_model=OpenAQResult, tags=["v2"])
+@router.get(
+    "/v2/latest",
+    response_model=LatestResponse,
+    summary="Get latest measurements",
+    description="Provides a list of locations with latest measurements",
+    tags=["v2"]
+)
 async def latest_get(
     db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
 ):
+
     data = await locations_get(db, locations)
     meta = data.meta
     res = data.results
-    if len(res) == 0:
-        return data
 
     latest_jq = jq.compile(
         """
@@ -287,34 +322,19 @@ async def latest_get(
     )
 
     ret = latest_jq.input(res).all()
-    return OpenAQResult(meta=meta, results=ret)
+    return LatestResponse(meta=meta, results=ret)
 
 
 async def v1_base(
     db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
 ):
     locations.entity = "government"
-
-    order_by = locations.order_by
-    if order_by == "location":
-        order_by = "name"
-    elif order_by == "count":
-        order_by = "measurements"
-
-    if order_by == "random":
-        order_by = " random() "
-        lastupdateq = """
-            AND "lastUpdated" > now() - '2 weeks'::interval
-            """
-    else:
-        order_by = f'"{order_by}"'
-        lastupdateq = ""
-
     qparams = locations.params()
 
     q = f"""
         WITH t1 AS (
             SELECT *,
+            parameters as measurements,
             json->'pvals'->'site_names' as locations,
             json->'pvals'->'cities' as cities,
             'government' as "sourceType",
@@ -326,18 +346,15 @@ async def v1_base(
             FROM locations_base_v2
             WHERE
             {locations.where()}
-            {lastupdateq}
-            ORDER BY {order_by} {locations.sort} nulls last
+            ORDER BY {locations.order()}
             LIMIT :limit
             OFFSET :offset
         ),
         nodes AS (
             SELECT count(distinct id) as nodes
             FROM locations_base_v2
-
             WHERE
             {locations.where()}
-            {lastupdateq}
         ),
         t2 AS (
         SELECT
@@ -354,61 +371,105 @@ async def v1_base(
         ;
         """
 
-    logger.debug(f"**** {qparams}")
-
     data = await db.fetchOpenAQResult(q, qparams)
     return data
 
 
 @router.get(
-    "/v1/latest/{location_id}", response_model=OpenAQResult, tags=["v1"]
+    "/v1/latest/{location_id}",
+    response_model=LatestResponseV1,
+    summary="Get latest measurements by location ID",
+    tags=["v1"]
 )
-@router.get("/v1/latest", response_model=OpenAQResult, tags=["v1"])
+@router.get(
+    "/v1/latest",
+    response_model=LatestResponseV1,
+    summary="Get latest measurements",
+    tags=["v1"]
+)
 async def latest_v1_get(
-    db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
+        db: DB = Depends(),
+        locations: Locations = Depends(Locations.depends()),
 ):
-    data = await v1_base(db, locations)
-    meta = data.meta
-    res = data.results
-    if len(res) == 0:
-        return data
 
-    latest_jq = jq.compile(
-        """
-        .[] | . as $loc |
-            {
-                location: .name,
-                city: .city,
-                country: .country,
-                coordinates: .coordinates,
-                measurements: [
-                    .parameters[] |
-                    . as $p | {
-                        parameter: .parameter,
-                        value: .lastValue,
-                        lastUpdated: .lastUpdated,
-                        unit: .unit,
-                        sourceName: $loc.sourceName,
-                        averagingPeriod: {
-                            value: $loc.systems[].sensors[]
-                                | select(.sensors_id==$p.id)
-                                | .data_averaging_period_seconds,
-                            unit: "seconds"
-                            }
-                    }
-                ]
-            }
+    found = 0
+    locations.entity = "government"
+    order_by = locations.order()
+    qparams = locations.params()
 
-        """
+    sql = f"""
+  -- start with getting locations with limit
+  WITH loc AS (
+    SELECT id
+    , name as location
+    , city
+    , country
+    , json->>'source_name' as source_name
+    , json_build_object(
+    'value', (json->'sensor_systems'->0->'sensors'->0->>'data_averaging_period_seconds')::int
+    , 'unit', 'seconds'
+    ) as "averagingPeriod"
+    , parameters
+    , case WHEN "isMobile" then null else coordinates end as coordinates
+    FROM locations_base_v2
+    WHERE
+    {locations.where()}
+    ORDER BY {locations.order()}
+    LIMIT :limit
+    OFFSET :offset
+  -- but also count locations without the limit
+  ), nodes AS (
+    SELECT count(distinct id) as n
+    FROM locations_base_v2
+    WHERE
+    {locations.where()}
+  -- and then reshape the parameters data
+  ), meas AS (
+    SELECT loc.id
+    , json_agg(jsonb_build_object(
+    'parameter', m.parameter
+    , 'unit', m.unit
+    , 'value', m."lastValue"
+    , 'lastUpdated', m."lastUpdated"
+    , 'sourceName', loc.source_name
+    , 'averagingPeriod', loc."averagingPeriod"
+    )) as measurements
+    FROM loc, jsonb_to_recordset(loc.parameters) as m(parameter text, "lastValue" float, "lastUpdated" timestamptz, unit text)
+    GROUP BY loc.id)
+  -- and finally we return it all
+SELECT loc.location
+, loc.country
+, loc.city
+, loc.coordinates
+, COALESCE(meas.measurements, '[]') as measurements
+, (SELECT n FROM nodes) as n
+FROM loc
+JOIN meas ON (meas.id = loc.id)
+    """
+    data = await db.fetch(sql, qparams)
+    if len(data):
+        found = data[0][5]
+
+    return LatestResponseV1(
+        meta={
+            'found': found,
+            'page': qparams['page'],
+            'limit': qparams['limit']
+        },
+        results=data
     )
 
-    return converter(meta, res, latest_jq)
-
-
 @router.get(
-    "/v1/locations/{location_id}", response_model=OpenAQResult, tags=["v1"]
+    "/v1/locations/{location_id}",
+    response_model=LocationsResponseV1,
+    summary="Get location by ID",
+    tags=["v1"]
 )
-@router.get("/v1/locations", response_model=OpenAQResult, tags=["v1"])
+@router.get(
+    "/v1/locations",
+    response_model=LocationsResponseV1,
+    summary="Get locations",
+    tags=["v1"])
 async def locationsv1_get(
     db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
 ):

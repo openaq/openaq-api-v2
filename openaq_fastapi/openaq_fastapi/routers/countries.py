@@ -5,12 +5,11 @@ from enum import Enum
 from ..db import DB
 from ..models.queries import APIBase, Country
 from openaq_fastapi.models.responses import (
-    OpenAQCountriesResult,
+    CountriesResponse,
     converter
 )
 import jq
-logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger("countries")
 
 router = APIRouter()
 
@@ -24,8 +23,16 @@ class CountriesOrder(str, Enum):
 
 
 class Countries(Country, APIBase):
-    order_by: CountriesOrder = Query("country")
-    limit: int = Query(200)
+    order_by: CountriesOrder = Query(
+        "country",
+        description="Order by a field e.g. ?order_by=country",
+        example="country"
+    )
+    limit: int = Query(
+        200,
+        description="Limit the number of results returned. e.g. limit=200 will return up to 200 results",
+        example="200"
+    )
 
     def where(self):
         wheres = []
@@ -40,15 +47,25 @@ class Countries(Country, APIBase):
 
 @router.get(
     "/v1/countries/{country_id}",
-    response_model=OpenAQCountriesResult,
+    response_model=CountriesResponse,
+    summary="Get country by ID",
+    description="Provides a single country by country ID",
     tags=["v1"],
 )
 @router.get(
     "/v2/countries/{country_id}",
-    response_model=OpenAQCountriesResult,
+    response_model=CountriesResponse,
+    summary="Get country by ID",
+    description="Provides a single country by country ID",
     tags=["v2"],
 )
-@router.get("/v2/countries", response_model=OpenAQCountriesResult, tags=["v2"])
+@router.get(
+    "/v2/countries", 
+    response_model=CountriesResponse, 
+    summary="Get countries",
+    description="Providecs a list of countries",
+    tags=["v2"]
+)
 async def countries_get(
     db: DB = Depends(),
     countries: Countries = Depends(Countries.depends()),
@@ -86,7 +103,12 @@ async def countries_get(
 
     return output
 
-@router.get("/v1/countries", response_model=OpenAQCountriesResult, tags=["v1"])
+@router.get(
+    "/v1/countries", 
+    response_model=CountriesResponse, 
+    summary="Get countries",
+    description="Providecs a list of countries",
+    tags=["v1"])
 async def countries_getv1(
     db: DB = Depends(),
     countries: Countries = Depends(Countries.depends()),

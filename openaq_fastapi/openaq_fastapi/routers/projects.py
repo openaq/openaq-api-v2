@@ -1,15 +1,14 @@
 import logging
 
 from fastapi import APIRouter, Depends, Query
-from openaq_fastapi.models.responses import OpenAQProjectsResult
-from pydantic.typing import Literal, Optional, List
+from openaq_fastapi.models.responses import ProjectsResponse
+from pydantic.typing import Union, List
 
 from ..db import DB
 from ..models.queries import APIBase, Country, Measurands, Project
 from enum import Enum
 
-logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger("projects")
 
 router = APIRouter()
 
@@ -23,11 +22,11 @@ class ProjectsOrder(str, Enum):
 
 class Projects(Project, Measurands, APIBase, Country):
     order_by: ProjectsOrder = Query("lastUpdated")
-    isMobile: Optional[bool] = None
-    isAnalysis: Optional[bool] = None
-    entity: Optional[str] = None
-    sensorType: Optional[str] = None
-    sourceName: Optional[List[str]] = None
+    isMobile: Union[bool, None] = None
+    isAnalysis: Union[bool, None] = None
+    entity: Union[str, None] = None
+    sensorType: Union[str, None] = None
+    sourceName: Union[List[str], None] = None
 
     def where(self):
         wheres = []
@@ -104,10 +103,17 @@ class Projects(Project, Measurands, APIBase, Country):
 
 @router.get(
     "/v2/projects/{project_id}",
-    response_model=OpenAQProjectsResult,
+    response_model=ProjectsResponse,
+    summary="Project by ID",
+    description="Provides a project by project ID",
     tags=["v2"],
 )
-@router.get("/v2/projects", response_model=OpenAQProjectsResult, tags=["v2"])
+@router.get(
+    "/v2/projects", 
+    response_model=ProjectsResponse, 
+    summary="Projects",
+    description="Provides a list of projects",
+    tags=["v2"])
 async def projects_get(
     db: DB = Depends(),
     projects: Projects = Depends(Projects.depends()),

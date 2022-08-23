@@ -1,0 +1,94 @@
+from pathlib import Path
+from typing import Dict
+
+from aws_cdk import (
+    aws_lambda,
+    aws_s3,
+    Stack,
+    Duration,
+    aws_events,
+    aws_events_targets,
+    aws_sns,
+    aws_sns_subscriptions,
+)
+
+from constructs import Construct
+from cdk.utils import (
+    stringify_settings,
+    create_dependencies_layer,
+)
+
+
+class LambdaIngestStack(Stack):
+    def __init__(
+        self,
+        scope: Construct,
+        id: str,
+        env_name: str,
+        lambda_env: Dict,
+        fetch_bucket: str,
+        ingest_lambda_timeout: int,
+        ingest_lambda_memory_size: int,
+        ingest_rate_minutes: int = 15,
+        topic_arn: str = None,
+        **kwargs,
+    ) -> None:
+        """Lambda plus cronjob to ingest metadata,
+        realtime and pipeline data"""
+        super().__init__(scope, id, *kwargs)
+
+        ingest_function = aws_lambda.Function(
+            self,
+            f"{id}-ingestlambda",
+            code=aws_lambda.Code.from_asset(
+                path='../openaq_fastapi',
+                exclude=[
+                    'venv',
+                    '__pycache__',
+                    'pytest_cache',
+                ],
+            ),
+            handler="openaq_fastapi.ingest.handler.handler",
+            runtime=aws_lambda.Runtime.PYTHON_3_8,
+            allow_public_subnet=True,
+            memory_size=ingest_lambda_memory_size,
+            environment=stringify_settings(lambda_env),
+            timeout=Duration.seconds(ingest_lambda_timeout),
+            layers=[
+                create_dependencies_layer(
+                    self,
+                    f"{env_name}",
+                    'ingest',
+                    Path('../openaq_fastapi/requirements.txt')
+                ),
+            ],
+        )
+
+        aws_events.Rule(
+            self,
+            f"{id}-ingest-event-rule",
+            schedule=aws_events.Schedule.cron(
+                minute=f"0/{ingest_rate_minutes}"
+            ),
+            targets=[
+                aws_events_targets.LambdaFunction(ingest_function),
+            ],
+        )
+
+        openaq_fetch_bucket = aws_s3.Bucket.from_bucket_name(
+            self, "{env_name}-FETCH-BUCKET", fetch_bucket
+        )
+
+        openaq_fetch_bucket.grant_read(ingest_function)
+
+        if topic_arn is not None:
+            topic = aws_sns.Topic.from_topic_arn(
+                self,
+                f"{id}-ingest-topic",
+                topic_arn=topic_arn
+            )
+            topic.add_subscription(
+                aws_sns_subscriptions.LambdaSubscription(
+                    ingest_function
+                )
+            )

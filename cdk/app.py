@@ -1,159 +1,83 @@
-import pathlib
-from pathlib import Path
-
-import docker
-from aws_cdk import aws_lambda, aws_s3, core
-from aws_cdk.aws_apigatewayv2 import HttpApi, HttpMethod
-from aws_cdk.aws_apigatewayv2_integrations import LambdaProxyIntegration
-from pydantic import BaseSettings
-
-code_dir = pathlib.Path(__file__).parent.absolute()
-parent = code_dir.parent.absolute()
-env_file = Path.joinpath(parent, ".env")
-
-
-class Settings(BaseSettings):
-    DATABASE_URL: str
-    DATABASE_WRITE_URL: str
-    OPENAQ_ENV: str = "staging"
-    OPENAQ_FASTAPI_URL: str
-    TESTLOCAL: bool = True
-    OPENAQ_FETCH_BUCKET: str
-    OPENAQ_ETL_BUCKET: str
-
-    class Config:
-        env_file = env_file
-
-
-settings = Settings()
-OPENAQ_FETCH_BUCKET = "openaq-fetches"
-
-
-code_dir = pathlib.Path(__file__).parent.absolute()
-docker_dir = code_dir.parent.absolute()
-
-
-def dictstr(item):
-    return item[0], str(item[1])
-
-
-env = dict(map(dictstr, settings.dict().items()))
-print(env)
-
-# create package using docker
-client = docker.from_env()
-client.images.build(
-    path=str(docker_dir),
-    dockerfile="Dockerfile",
-    tag="openaqfastapi",
-    nocache=False,
-)
-client.containers.run(
-    image="openaqfastapi",
-    command="/bin/sh -c 'cp /tmp/package.zip /local/package.zip'",
-    remove=True,
-    volumes={str(code_dir): {"bind": "/local/", "mode": "rw"}},
-    user=0,
+import aws_cdk
+from aws_cdk import (
+    Environment,
+    Tags,
 )
 
-stagingpackage = aws_lambda.Code.asset(
-    str(pathlib.Path.joinpath(code_dir, "package.zip"))
+from cdk.lambda_api_stack import LambdaApiStack
+from cdk.lambda_ingest_stack import LambdaIngestStack
+from cdk.lambda_rollup_stack import LambdaRollupStack
+
+from settings import settings
+
+# this is the only way that I can see to allow us to have
+# one settings file and import it from there. I would recommend
+# a better package structure in the future.
+import os
+import sys
+p = os.path.abspath('../openaq_fastapi')
+sys.path.insert(1, p)
+from openaq_fastapi.settings import settings as lambda_env
+
+p = os.path.abspath('../cloudfront_logs')
+sys.path.insert(1, p)
+from cloudfront_logs.settings import settings as cloudfront_logs_lambda_env
+
+app = aws_cdk.App()
+
+env = Environment(account=settings.CDK_ACCOUNT, region=settings.CDK_REGION)
+
+api = LambdaApiStack(
+    app,
+    f"openaq-api-{settings.ENV}",
+    env_name=settings.ENV,
+    lambda_env=lambda_env,
+    cloudfront_logs_lambda_env=cloudfront_logs_lambda_env,
+    vpc_id=settings.VPC_ID,
+    hosted_zone_name=settings.HOSTED_ZONE_NAME,
+    hosted_zone_id=settings.HOSTED_ZONE_ID,
+    api_lambda_timeout=settings.API_LAMBDA_TIMEOUT,
+    api_lambda_memory_size=settings.API_LAMBDA_MEMORY_SIZE,
+    cf_logs_lambda_timeout=settings.CF_LOG_LAMBDA_TIMEOUT,
+    cf_logs_lambda_memory_size=settings.CF_LOGS_LAMBDA_MEMORY_SIZE,
+    domain_name=settings.DOMAIN_NAME,
+    cert_arn=settings.CERTIFICATE_ARN,
+    web_acl_id=settings.WEB_ACL_ID,
+    env=env,
 )
-prodpackage = aws_lambda.Code.asset(
-    str(pathlib.Path.joinpath(code_dir, "package.zip"))
-)
-ingestpackage = aws_lambda.Code.asset(
-    str(pathlib.Path.joinpath(code_dir, "package.zip"))
-)
 
+Tags.of(api).add("project", settings.PROJECT)
+Tags.of(api).add("product", "api")
+Tags.of(api).add("env", settings.ENV)
 
-class LambdaApiStack(core.Stack):
-    def __init__(
-        self,
-        scope: core.Construct,
-        id: str,
-        package,
-        **kwargs,
-    ) -> None:
-        """Define stack."""
-        super().__init__(scope, id, *kwargs)
-
-        openaq_api = aws_lambda.Function(
-            self,
-            f"{id}-lambda",
-            code=package,
-            handler="openaq_fastapi.main.handler",
-            runtime=aws_lambda.Runtime.PYTHON_3_8,
-            allow_public_subnet=True,
-            memory_size=1512,
-            timeout=core.Duration.seconds(30),
-            environment=env,
-        )
-
-        api = HttpApi(
-            self,
-            f"{id}-endpoint",
-            default_integration=LambdaProxyIntegration(handler=openaq_api),
-            cors_preflight={
-                "allow_headers": [
-                    "Authorization",
-                    "*",
-                ],
-                "allow_methods": [
-                    HttpMethod.GET,
-                    HttpMethod.HEAD,
-                    HttpMethod.OPTIONS,
-                    HttpMethod.POST,
-                ],
-                "allow_origins": ["*"],
-                "max_age": core.Duration.days(10),
-            },
-        )
-
-        core.CfnOutput(self, "Endpoint", value=api.url)
-
-
-class LambdaIngestStack(core.Stack):
-    def __init__(
-        self,
-        scope: core.Construct,
-        id: str,
-        package,
-        **kwargs,
-    ) -> None:
-        """Define stack."""
-        super().__init__(scope, id, *kwargs)
-
-        ingest_function = aws_lambda.Function(
-            self,
-            f"{id}-ingestlambda",
-            code=package,
-            handler="openaq_fastapi.ingest.handler.handler",
-            runtime=aws_lambda.Runtime.PYTHON_3_8,
-            allow_public_subnet=True,
-            memory_size=1512,
-            timeout=core.Duration.seconds(900),
-            environment=env,
-        )
-
-        openaq_fetch_bucket = aws_s3.Bucket.from_bucket_name(
-            self, "{id}-OPENAQ-FETCH-BUCKET", OPENAQ_FETCH_BUCKET
-        )
-
-        openaq_fetch_bucket.grant_read(ingest_function)
-
-
-app = core.App()
-print(f"openaq-lcs-api{settings.OPENAQ_ENV}")
-staging = LambdaApiStack(app, "openaq-lcs-apistaging", package=stagingpackage)
-prod = LambdaApiStack(app, "openaq-lcs-api", package=prodpackage)
 ingest = LambdaIngestStack(
-    app, f"openaq-lcs-ingest{settings.OPENAQ_ENV}", package=ingestpackage
+    app,
+    f"openaq-ingest-{settings.ENV}",
+    env_name=settings.ENV,
+    lambda_env=lambda_env,
+    fetch_bucket=settings.FETCH_BUCKET,
+    ingest_lambda_timeout=settings.INGEST_LAMBDA_TIMEOUT,
+    ingest_lambda_memory_size=settings.INGEST_LAMBDA_MEMORY_SIZE,
+    ingest_rate_minutes=15,
+    topic_arn=settings.TOPIC_ARN,
 )
-core.Tags.of(staging).add("devseed", "true")
-core.Tags.of(staging).add("lcs", "true")
-core.Tags.of(ingest).add("devseed", "true")
-core.Tags.of(ingest).add("lcs", "true")
-core.Tags.of(prod).add("devseed", "true")
-core.Tags.of(prod).add("lcs", "true")
+
+Tags.of(ingest).add("project", settings.PROJECT)
+Tags.of(ingest).add("product", "ingest")
+Tags.of(ingest).add("env", settings.ENV)
+
+rollup = LambdaRollupStack(
+    app,
+    f"openaq-rollup-{settings.ENV}",
+    env_name=settings.ENV,
+    lambda_env=lambda_env,
+    lambda_timeout=settings.ROLLUP_LAMBDA_TIMEOUT,
+    lambda_memory_size=settings.ROLLUP_LAMBDA_MEMORY_SIZE,
+    rate_minutes=5,
+)
+
+Tags.of(rollup).add("project", settings.PROJECT)
+Tags.of(rollup).add("product", "api")
+Tags.of(rollup).add("env", settings.ENV)
+
 app.synth()

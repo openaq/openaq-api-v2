@@ -1,22 +1,29 @@
+from datetime import timedelta
 import logging
+import json
 import re
 import time
 from os import environ
-from typing import Optional
+from typing import Union
 
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.types import ASGIApp
 
-logger = logging.getLogger("locations")
-logger.setLevel(logging.DEBUG)
+from fastapi.responses import JSONResponse
+from fastapi import Response, status
+from redis import Redis
+
+from openaq_fastapi.models.logging import HTTPLog, LogType, TooManyRequestsLog, UnauthorizedLog
+
+logger = logging.getLogger("middleware")
 
 
 class CacheControlMiddleware(BaseHTTPMiddleware):
     """MiddleWare to add CacheControl in response headers."""
 
     def __init__(
-        self, app: ASGIApp, cachecontrol: Optional[str] = None
+        self, app: ASGIApp, cachecontrol: Union[str, None] = None
     ) -> None:
         """Init Middleware."""
         super().__init__(app)
@@ -70,17 +77,93 @@ class GetHostMiddleware(BaseHTTPMiddleware):
     """MiddleWare to set servers url on App with current url."""
 
     async def dispatch(self, request: Request, call_next):
+        environ['BASE_URL'] = str(request.base_url)
+        response = await call_next(request)
 
-        if (
-            not hasattr(request.app.state, "servers")
-            or request.app.state.servers is None
-        ):
-            logger.debug(f"***** Setting Servers to {request.base_url} ****")
-            request.app.state.servers = [{"url": str(request.base_url)}]
-            environ['APP_HOST'] = str(request.base_url)
-        else:
-            request.app.state.servers = None
+        return response
 
+
+class LoggingMiddleware(BaseHTTPMiddleware):
+    """MiddleWare to set servers url on App with current url."""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        if response.status_code == 200:
+            logging.info(HTTPLog(
+                request=request,
+                type=LogType.SUCCESS,
+                http_code=response.status_code
+            ).json())
+        return response
+
+
+class RateLimiterMiddleWare(BaseHTTPMiddleware):
+
+    def __init__(
+        self, app: ASGIApp,
+        redis_client: Redis,
+        rate_amount: int, # number of requests allow without api key
+        rate_amount_key: int, # number of requests allow with api key
+        rate_time: timedelta # timedelta of rate limit expiration
+    ) -> None:
+        """Init Middleware."""
+        super().__init__(app)
+        self.redis_client = redis_client
+        self.rate_amount = rate_amount
+        self.rate_amount_key = rate_amount_key
+        self.rate_time = rate_time
+
+
+    def request_is_limited(self, key: str, limit: int):
+        if self.redis_client.setnx(key, limit):
+            self.redis_client.expire(key, int(self.rate_time.total_seconds()))
+        count = self.redis_client.get(key)
+        if count and int(count) > 0:
+            self.redis_client.decrby(key, 1)
+            return False
+        return True
+
+
+    def check_valid_key(self, key: str):
+        if self.redis_client.sismember('keys', key):
+            return True
+        return False
+
+
+    @staticmethod
+    def limited_path(route: str) -> bool:
+        allow_list = ["/", "/openapi.json", "/docs"]
+        if route in allow_list:
+            return False
+        if "/v2/locations/tiles" in route:
+            return False
+        return True
+
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        route = request.url.path
+        auth = request.headers.get("X-API-Key", None)
+        limit = self.rate_amount
+        key = request.client.host
+        if auth:
+            if not self.check_valid_key(auth):
+                logging.info(UnauthorizedLog(
+                    request=request
+                ).json())
+                return JSONResponse(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    content={"message": "invalid credentials"}
+                )
+            key = auth
+            limit = self.rate_amount_key
+        if self.limited_path(route) and self.request_is_limited(key, limit):
+            logging.info(TooManyRequestsLog(
+                    request=request
+            ).json())
+            return JSONResponse(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                content={"message": "Too many requests"}
+            )
         response = await call_next(request)
 
         return response
