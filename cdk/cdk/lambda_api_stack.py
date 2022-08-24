@@ -88,12 +88,11 @@ class LambdaApiStack(Stack):
             ],
         )
         
-        if env_name == 'prod':
-            aws_lambda.Alias(self,
-                "openaq_api_alias",
-                alias_name="prod",
-                version=openaq_api.current_version
-            )
+        lambda_alias = aws_lambda.Alias(self,
+            "openaq_api_alias",
+            alias_name=env_name,
+            version=openaq_api.current_version
+        )
             
         api = HttpApi(
             self,
@@ -101,7 +100,7 @@ class LambdaApiStack(Stack):
             create_default_stage=False,
             default_integration=HttpLambdaIntegration(
                 f"openaq-api-integration-{env_name}",
-                openaq_api,
+                lambda_alias,
             ),
             cors_preflight={
                 "allow_headers": [
