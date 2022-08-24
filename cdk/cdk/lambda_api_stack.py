@@ -87,20 +87,14 @@ class LambdaApiStack(Stack):
                 create_dependencies_layer(self, f"{env_name}", 'api', Path('../openaq_fastapi/requirements.txt')),
             ],
         )
-        
-        lambda_alias = aws_lambda.Alias(self,
-            "openaq_api_alias",
-            alias_name=env_name,
-            version=openaq_api.current_version
-        )
-            
+                    
         api = HttpApi(
             self,
             f"{id}-endpoint",
             create_default_stage=False,
             default_integration=HttpLambdaIntegration(
                 f"openaq-api-integration-{env_name}",
-                lambda_alias,
+                openaq_api,
             ),
             cors_preflight={
                 "allow_headers": [
