@@ -170,16 +170,17 @@ async def startup_event():
     Application startup:
     register the database
     """
-    logger.info("Connecting to database")
-    app.state.pool = await db_pool(None)
-    logger.info(f"Connection established: {counter}")
+    if not hasattr(app.state, 'pool'):
+        logger.info("Connecting to database")
+        app.state.pool = await db_pool(None)
+        logger.info("Connection established")
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Application shutdown: de-register the database connection."""
     logger.debug("Closing connection to database")
-    await app.state.pool.close()
+    # await app.state.pool.close()
     logger.debug("Connection closed")
 
 
@@ -218,16 +219,12 @@ static_dir = Path.joinpath(Path(__file__).resolve().parent, 'static')
 
 app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
 
-counter = 0
-
 def handler(event, context):
-    counter += 1
     asgi_handler = Mangum(app)
     return asgi_handler(event, context)
 
 def run():
     attempts = 0
-    counter += 1
     while attempts < 10:
         try:
             import uvicorn
