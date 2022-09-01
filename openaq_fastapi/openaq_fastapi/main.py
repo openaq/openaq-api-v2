@@ -170,9 +170,9 @@ async def startup_event():
     Application startup:
     register the database
     """
-    logger.debug("Connecting to database")
+    logger.info("Connecting to database")
     app.state.pool = await db_pool(None)
-    logger.debug("Connection established")
+    logger.info(f"Connection established: {counter}")
 
 
 @app.on_event("shutdown")
@@ -218,15 +218,19 @@ static_dir = Path.joinpath(Path(__file__).resolve().parent, 'static')
 
 app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
 
-handler = Mangum(app)
+counter = 0
 
+def handler(event, context):
+    counter += 1
+    asgi_handler = Mangum(app)
+    return asgi_handler(event, context)
 
 def run():
     attempts = 0
+    counter += 1
     while attempts < 10:
         try:
             import uvicorn
-
             uvicorn.run(
                 "openaq_fastapi.main:app",
                 host="0.0.0.0",
