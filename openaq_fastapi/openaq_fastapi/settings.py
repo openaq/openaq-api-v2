@@ -14,16 +14,7 @@ class Settings(BaseSettings):
     DATABASE_PORT: int
     DATABASE_READ_URL: Union[str, None]
     DATABASE_WRITE_URL: Union[str, None]
-    FASTAPI_URL: str
-    DRYRUN: bool = False
-    FETCH_BUCKET: str
-    ETL_BUCKET: str
     API_CACHE_TIMEOUT: int = 900
-    FETCH_ASCENDING: bool = False
-    INGEST_TIMEOUT: int = 900
-    PIPELINE_LIMIT: int = 10
-    METADATA_LIMIT: int = 10
-    REALTIME_LIMIT: int = 10
     LOG_LEVEL: str = 'INFO'
     LOG_BUCKET: str = None
     DOMAIN_NAME: str = None

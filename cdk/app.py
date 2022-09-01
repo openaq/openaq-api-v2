@@ -5,7 +5,6 @@ from aws_cdk import (
 )
 
 from cdk.lambda_api_stack import LambdaApiStack
-from cdk.lambda_ingest_stack import LambdaIngestStack
 from cdk.lambda_rollup_stack import LambdaRollupStack
 
 from settings import settings
