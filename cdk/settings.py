@@ -7,22 +7,13 @@ from os import environ
 class Settings(BaseSettings):
     CDK_ACCOUNT: str
     CDK_REGION: str
+    VPC_ID: str
     ENV: str = "staging"
     PROJECT: str = "openaq"
-    FETCH_BUCKET: str
-    ETL_BUCKET: str
     API_CACHE_TIMEOUT: int = 900
-    FETCH_ASCENDING: bool = False
     ROLLUP_LAMBDA_TIMEOUT: int = 900
     ROLLUP_LAMBDA_MEMORY_SIZE: int = 1536
-    INGEST_LAMBDA_TIMEOUT: int = 900
-    INGEST_LAMBDA_MEMORY_SIZE: int = 1536
-    PIPELINE_LIMIT: int = 10
-    METADATA_LIMIT: int = 10
-    REALTIME_LIMIT: int = 10
     LOG_LEVEL: str = 'INFO'
-    LOCAL_SAVE_DIRECTORY: str = './openaq_files'
-    VPC_ID: str
     HOSTED_ZONE_ID: str = None
     HOSTED_ZONE_NAME: str = None
     WEB_ACL_ID: str = None
