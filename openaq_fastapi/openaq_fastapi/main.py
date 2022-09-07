@@ -163,7 +163,6 @@ async def openaq_exception_handler(request: Request, exc: ValidationError):
     ).json())
     return ORJSONResponse(status_code=500, content={"message":"internal server error"})
 
-
 @app.on_event("startup")
 async def startup_event():
     """
@@ -171,17 +170,21 @@ async def startup_event():
     register the database
     """
     if not hasattr(app.state, 'pool'):
-        logger.info("Connecting to database")
+        logger.info("initializing connection pool")
         app.state.pool = await db_pool(None)
-        logger.info("Connection established")
+        logger.debug("Connection pool established")
+    if hasattr(app.state, 'counter'):
+        app.state.counter += 1
+    else:
+        app.state.counter = 0
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Application shutdown: de-register the database connection."""
-    logger.debug("Closing connection to database")
+    # logger.debug("Closing connection to database")
     # await app.state.pool.close()
-    logger.debug("Connection closed")
+    # logger.debug("Connection closed")
 
 
 @app.get("/ping", include_in_schema=False)

@@ -50,11 +50,14 @@ class TotalTimeMiddleware(BaseHTTPMiddleware):
         start_time = time.time()
         response = await call_next(request)
         process_time = time.time() - start_time
-        timings = response.headers.get("Server-Timing")
-        app_time = "total;dur={}".format(round(process_time * 1000, 2))
-        response.headers["Server-Timing"] = (
-            f"{timings}, {app_time}" if timings else app_time
-        )
+        request.app.state.timing = round(process_time * 1000, 2)
+        print(type(request.app.state.timing))
+        # leaving in case we want to add this for authenticated users
+        # timings = response.headers.get("Server-Timing")
+        # app_time = "total;dur={}".format(round(process_time * 1000, 2))
+        # response.headers["Server-Timing"] = (
+        #     f"{timings}, {app_time}" if timings else app_time
+        # )
         return response
 
 
@@ -85,14 +88,26 @@ class GetHostMiddleware(BaseHTTPMiddleware):
 
 class LoggingMiddleware(BaseHTTPMiddleware):
     """MiddleWare to set servers url on App with current url."""
-
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
+
+        if hasattr(request.app.state, 'timing'):
+            timing = request.app.state.timing
+        else:
+            timing = None
+
+        if hasattr(request.app.state, 'rate_limiter'):
+            rate_limiter = request.app.state.rate_limiter
+        else:
+            rate_limiter = None
+
         if response.status_code == 200:
             logging.info(HTTPLog(
                 request=request,
                 type=LogType.SUCCESS,
-                http_code=response.status_code
+                http_code=response.status_code,
+                timing=timing,
+                rate_limiter=rate_limiter,
             ).json())
         return response
 

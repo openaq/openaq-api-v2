@@ -49,6 +49,8 @@ class HTTPLog(BaseLog):
     params_obj: Union[dict, None]
     ip: Union[str, None]
     api_key: Union[str, None]
+    timing: Union[float, None]
+    rate_limiter: Union[str, None]
 
     @validator('api_key', always=True)
     def set_api_key(cls, v, values) -> dict:
