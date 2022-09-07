@@ -51,7 +51,6 @@ class TotalTimeMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         process_time = time.time() - start_time
         request.app.state.timing = round(process_time * 1000, 2)
-        print(type(request.app.state.timing))
         # leaving in case we want to add this for authenticated users
         # timings = response.headers.get("Server-Timing")
         # app_time = "total;dur={}".format(round(process_time * 1000, 2))
