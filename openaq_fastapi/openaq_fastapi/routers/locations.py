@@ -44,12 +44,12 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
         description="Order by a field",
     )
     sort: Union[Sort, None] = Query(
-        "desc", 
+        "desc",
         description="Sort Direction e.g. sort=desc",
         example="desc"
     )
     isMobile: Union[bool, None] = Query(
-        None, 
+        None,
         description="Location is mobile e.g. ?isMobile=true",
         example="true"
     )
@@ -63,27 +63,27 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
         example="true"
     )
     sourceName: Union[List[str], None] = Query(
-        None, 
+        None,
         description="Name of the data source e.g. ?sourceName=Houston%20Mobile",
         example="Houston%20Mobile"
     )
     entity: Union[EntityTypes, None] = Query(
-        None, 
+        None,
         description="Source entity type. e.g. ?entity=government",
         example="government"
     )
     sensorType: Union[SensorTypes, None] = Query(
-        None, 
+        None,
         description="Type of Sensor e.g. ?sensorType=reference%20grade",
         example="reference%20grade"
     )
     modelName: Union[List[str], None] = Query(
-        None, 
+        None,
         description="Model Name of Sensor e.g. ?modelName=AE33",
         example="AE33"
     )
     manufacturerName: Union[List[str], None] = Query(
-        None, 
+        None,
         description="Manufacturer of Sensor e.g. ?manufacturer=Ecotech",
         example="Ecotech"
     )

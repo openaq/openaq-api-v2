@@ -188,8 +188,8 @@ class Project(OBaseModel):
 
 
 class Location(OBaseModel):
-    location_id: Union[int, None] = None
-    location: Union[List[Union[int, str]], None] = None
+    location_id: Union[int, None] = Query(None, gt=0, le=maxint)
+    location: Union[List[Union[int, str]], None] = Query(None, gt=0, le=maxint)
 
     @validator("location")
     def validate_location(cls, v, values):

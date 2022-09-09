@@ -5,7 +5,6 @@ from aws_cdk import (
 )
 
 from cdk.lambda_api_stack import LambdaApiStack
-from cdk.lambda_ingest_stack import LambdaIngestStack
 from cdk.lambda_rollup_stack import LambdaRollupStack
 
 from settings import settings
@@ -49,22 +48,6 @@ api = LambdaApiStack(
 Tags.of(api).add("project", settings.PROJECT)
 Tags.of(api).add("product", "api")
 Tags.of(api).add("env", settings.ENV)
-
-ingest = LambdaIngestStack(
-    app,
-    f"openaq-ingest-{settings.ENV}",
-    env_name=settings.ENV,
-    lambda_env=lambda_env,
-    fetch_bucket=settings.FETCH_BUCKET,
-    ingest_lambda_timeout=settings.INGEST_LAMBDA_TIMEOUT,
-    ingest_lambda_memory_size=settings.INGEST_LAMBDA_MEMORY_SIZE,
-    ingest_rate_minutes=15,
-    topic_arn=settings.TOPIC_ARN,
-)
-
-Tags.of(ingest).add("project", settings.PROJECT)
-Tags.of(ingest).add("product", "ingest")
-Tags.of(ingest).add("env", settings.ENV)
 
 rollup = LambdaRollupStack(
     app,
