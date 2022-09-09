@@ -87,9 +87,6 @@ class LambdaApiStack(Stack):
                 create_dependencies_layer(self, f"{env_name}", 'api', Path('../openaq_fastapi/requirements.txt')),
             ],
         )
-        
-        if env_name == 'prod':
-            openaq_api.add_alias('prod')
 
         api = HttpApi(
             self,
@@ -177,7 +174,7 @@ class LambdaApiStack(Stack):
             log_event_queue = aws_sqs.Queue(self, f"openaq-api-cf-log-event-queue-{env_name}")
 
             log_bucket.add_event_notification(
-                aws_s3.EventType.OBJECT_CREATED_PUT, 
+                aws_s3.EventType.OBJECT_CREATED_PUT,
                 aws_s3_notifications.SqsDestination(log_event_queue)
             )
 
