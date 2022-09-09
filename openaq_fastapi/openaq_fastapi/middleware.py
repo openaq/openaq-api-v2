@@ -180,7 +180,8 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
 
         if self.limited_path(route) and self.request_is_limited(key, limit):
             logging.info(TooManyRequestsLog(
-                    request=request
+                request=request,
+                rate_limiter=f'{key}/{limit}/{self.counter}',
             ).json())
             return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
