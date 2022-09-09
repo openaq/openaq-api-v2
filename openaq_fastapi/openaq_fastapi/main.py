@@ -118,7 +118,7 @@ app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
 app.add_middleware(TotalTimeMiddleware)
 app.add_middleware(LoggingMiddleware)
 
-if settings.RATE_LIMITING == True:
+if settings.RATE_LIMITING is True:
     if redis_client:
         app.add_middleware(
             RateLimiterMiddleWare,
@@ -131,6 +131,7 @@ if settings.RATE_LIMITING == True:
         logger.warning(WarnLog(
             detail="valid redis client not provided but RATE_LIMITING set to TRUE"
         ))
+
 
 class OpenAQValidationResponseDetail(BaseModel):
     loc: List[str] = None
@@ -172,7 +173,8 @@ async def startup_event():
     if not hasattr(app.state, 'pool'):
         logger.info("initializing connection pool")
         app.state.pool = await db_pool(None)
-        logger.debug("Connection pool established")
+        logger.info("Connection pool established")
+
     if hasattr(app.state, 'counter'):
         app.state.counter += 1
     else:
@@ -182,9 +184,11 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """Application shutdown: de-register the database connection."""
-    # logger.debug("Closing connection to database")
-    # await app.state.pool.close()
-    # logger.debug("Connection closed")
+    if hasattr(app.state, 'pool') and not settings.USE_SHARED_POOL:
+        logger.info("Closing connection")
+        await app.state.pool.close()
+        delattr(app.state, 'pool')
+        logger.info("Connection closed")
 
 
 @app.get("/ping", include_in_schema=False)

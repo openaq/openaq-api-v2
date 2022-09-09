@@ -51,6 +51,7 @@ class HTTPLog(BaseLog):
     api_key: Union[str, None]
     timing: Union[float, None]
     rate_limiter: Union[str, None]
+    counter: Union[str, None]
 
     @validator('api_key', always=True)
     def set_api_key(cls, v, values) -> dict:

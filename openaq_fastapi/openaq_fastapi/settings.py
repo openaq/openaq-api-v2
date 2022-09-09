@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     DATABASE_READ_URL: Union[str, None]
     DATABASE_WRITE_URL: Union[str, None]
     API_CACHE_TIMEOUT: int = 900
+    USE_SHARED_POOL: bool = False
     LOG_LEVEL: str = 'INFO'
     LOG_BUCKET: str = None
     DOMAIN_NAME: str = None

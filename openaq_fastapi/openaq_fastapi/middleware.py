@@ -100,6 +100,11 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         else:
             rate_limiter = None
 
+        if hasattr(request.app.state, 'counter'):
+            counter = request.app.state.counter
+        else:
+            counter = None
+
         if response.status_code == 200:
             logging.info(HTTPLog(
                 request=request,
@@ -107,6 +112,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 http_code=response.status_code,
                 timing=timing,
                 rate_limiter=rate_limiter,
+                counter=counter,
             ).json())
         return response
 
@@ -116,8 +122,8 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
     def __init__(
         self, app: ASGIApp,
         redis_client: Redis,
-        rate_amount: int, # number of requests allow without api key
-        rate_amount_key: int, # number of requests allow with api key
+        rate_amount: int, # number of requests allowed without api key
+        rate_amount_key: int, # number of requests allowed with api key
         rate_time: timedelta # timedelta of rate limit expiration
     ) -> None:
         """Init Middleware."""
@@ -126,14 +132,14 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         self.rate_amount = rate_amount
         self.rate_amount_key = rate_amount_key
         self.rate_time = rate_time
-
+        self.counter = 0
 
     def request_is_limited(self, key: str, limit: int):
         if self.redis_client.setnx(key, limit):
             self.redis_client.expire(key, int(self.rate_time.total_seconds()))
         count = self.redis_client.get(key)
         if count and int(count) > 0:
-            self.redis_client.decrby(key, 1)
+            self.counter = self.redis_client.decrby(key, 1)
             return False
         return True
 
@@ -159,6 +165,7 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         auth = request.headers.get("X-API-Key", None)
         limit = self.rate_amount
         key = request.client.host
+
         if auth:
             if not self.check_valid_key(auth):
                 logging.info(UnauthorizedLog(
@@ -170,6 +177,7 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
                 )
             key = auth
             limit = self.rate_amount_key
+
         if self.limited_path(route) and self.request_is_limited(key, limit):
             logging.info(TooManyRequestsLog(
                     request=request
@@ -178,6 +186,8 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 content={"message": "Too many requests"}
             )
+
+        request.app.state.rate_limiter = f'{key}/{limit}/{self.counter}'
         response = await call_next(request)
 
         return response
