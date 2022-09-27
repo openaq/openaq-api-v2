@@ -225,6 +225,10 @@ async def locations_get(
     if locations.dumpRaw:
         hidejson = ""
 
+    # row_number is required to make sure that the order is
+    # preserved after the to_jsonb aggregating, which resorts by id
+    # the order by inside row_number ensures that the right sort
+    # method is used to determine the row number
     q = f"""
         WITH t1 AS (
             SELECT
@@ -245,8 +249,8 @@ async def locations_get(
                 json as "rawData",
                 geog,
                 bounds,
-                parameters,
-                row_number() over () as row
+                parameters
+                , row_number() over (ORDER BY {locations.order()}) as row
             FROM locations_base_v2
             WHERE
             {locations.where()}
@@ -264,14 +268,16 @@ async def locations_get(
         SELECT
         row,
         jsonb_strip_nulls(
-            to_jsonb(t1) - '{{{hidejson}source_name,geog, row}}'::text[]
+            to_jsonb(t1) - '{{{hidejson}source_name,geog,row}}'::text[]
         ) as json
-        FROM t1 group by row, t1, json
+        FROM t1
+        GROUP BY row,
+        t1
+        , json
         )
         SELECT nodes as count, json
         FROM t2, nodes
         ORDER BY row
-
         ;
         """
     output = await db.fetchOpenAQResult(q, qparams)
@@ -300,6 +306,7 @@ async def latest_get(
     meta = data.meta
     res = data.results
 
+    #dprint(res)
     latest_jq = jq.compile(
         """
         .[] |
