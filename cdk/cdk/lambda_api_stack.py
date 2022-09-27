@@ -46,7 +46,7 @@ class LambdaApiStack(Stack):
         cloudfront_logs_lambda_env: Dict,
         api_lambda_memory_size: int,
         api_lambda_timeout: int,
-        vpc_id: str,
+        vpc_id: Union[str, None],
         cf_logs_lambda_memory_size: Union[int, None],
         cf_logs_lambda_timeout: Union[int, None],
         hosted_zone_name: Union[str, None],
@@ -59,11 +59,14 @@ class LambdaApiStack(Stack):
         """Lambda to handle api requests"""
         super().__init__(scope, id, env=env, **kwargs)
 
-        vpc = aws_ec2.Vpc.from_lookup(
-            self,
-            f"{id}-vpc",
-            vpc_id=vpc_id
-        )
+        if vpc_id is None:
+            vpc = None
+        else:
+            vpc = aws_ec2.Vpc.from_lookup(
+                self,
+                f"{id}-vpc",
+                vpc_id=vpc_id
+            )
 
         openaq_api = aws_lambda.Function(
             self,
