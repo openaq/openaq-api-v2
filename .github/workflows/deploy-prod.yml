@@ -65,7 +65,7 @@ jobs:
 
       - uses: actions/setup-python@v3
         with:
-          python-version: '3.8'
+          python-version: '3.9'
 
       - name: Deploy stack
         working-directory: ./cdk
@@ -87,7 +87,7 @@ jobs:
           
       - uses: actions/setup-python@v3
         with:
-          python-version: '3.8'
+          python-version: '3.9'
 
       - name: build schema
         working-directory: ./openaq_fastapi
