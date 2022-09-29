@@ -43,7 +43,7 @@ class LambdaRollupStack(Stack):
                 ],
             ),
             handler="openaq_fastapi.ingest.handler.rollup_handler",
-            runtime=aws_lambda.Runtime.PYTHON_3_8,
+            runtime=aws_lambda.Runtime.PYTHON_3_9,
             allow_public_subnet=True,
             memory_size=lambda_memory_size,
             timeout=Duration.seconds(lambda_timeout),
