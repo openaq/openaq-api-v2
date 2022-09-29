@@ -14,17 +14,14 @@ def stringify_settings(data):
 
 
 def create_dependencies_layer(
-        self,
-        env_name: str,
-        function_name: str,
-        requirements_path: Path
+    self, env_name: str, function_name: str, requirements_path: Path
 ) -> aws_lambda.LayerVersion:
     requirements_file = str(requirements_path.resolve())
-    output_dir = f'../.build/{function_name}'
-    layer_id = f'openaq-{function_name}-{env_name}-dependencies'
+    output_dir = f"../.build/{function_name}"
+    layer_id = f"openaq-{function_name}-{env_name}-dependencies"
 
-    if not environ.get('SKIP_PIP'):
-        print(f'Building {layer_id} from {requirements_file} into {output_dir}')
+    if not environ.get("SKIP_PIP"):
+        print(f"Building {layer_id} from {requirements_file} into {output_dir}")
         subprocess.run(
             f"""pip3 install -qq -r {requirements_file} \
             -t {output_dir}/python && \
@@ -39,7 +36,9 @@ def create_dependencies_layer(
             && find . -type d -a -name 'tests' -print0 | xargs -0 rm -rf \
             && find . -type d -a -name '*.dist-info' -print0 | xargs -0 rm -rf \
             && find . -type f -a -name '*.so' -print0 | xargs -0 strip --strip-unneeded
-            """, shell=True)
+            """,
+            shell=True,
+        )
 
     layer_code = aws_lambda.Code.from_asset(output_dir)
 
@@ -47,5 +46,5 @@ def create_dependencies_layer(
         self,
         layer_id,
         code=layer_code,
-        compatible_runtimes=[aws_lambda.Runtime.PYTHON_3_8]
+        compatible_runtimes=[aws_lambda.Runtime.PYTHON_3_9],
     )

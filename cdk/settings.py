@@ -7,7 +7,7 @@ from os import environ
 class Settings(BaseSettings):
     CDK_ACCOUNT: str
     CDK_REGION: str
-    VPC_ID: str
+    VPC_ID: str = None
     ENV: str = "staging"
     PROJECT: str = "openaq"
     API_CACHE_TIMEOUT: int = 900

@@ -10,13 +10,11 @@ This is the main API for the [OpenAQ](https://openaq.org) project. It is a web-a
 The API is accessible at [api.openaq.org](https://api.openaq.org) and documentation can be found at [docs.openaq.org](https://docs.openaq.org/).
 
 ### Platform Overview
-The OpenAQ Data format is explained in [openaq-data-format](https://github.com/openaq/openaq-data-format).
-
 
 [openaq-fetch](https://github.com/openaq/openaq-fetch) and [openaq-fetch-lcs](https://github.com/openaq/openaq-fetch-lcs) take care of fetching new data and writing to [S3](https://openaq-fetches.s3.amazonaws.com/index.html). Lambda functions defined in [ingest/](openaq_fastapi/openaq_fastapi/ingest/) then load data into the database, defined in [openaq-db](https://github.com/openaq/openaq-db).
 
 ## Getting started
-This repository holds the code for the OpenAQ API Version 2.
+This repository holds the code for the OpenAQ API.
 
 This API is based on Python 3 and includes an AWS CDK project to help in deployment.
 
@@ -38,7 +36,7 @@ There are a few ways to run the API locally
 Settings can be loaded using `.env` files and multiple files can be kept and used. The easiest way to manage multiple environment files is to add an extension describing your environment. For example, if I wanted to keep a production, staging and local environment I would save them as `.env.production`, `.env.staging` and `.env.local` each with their own settings.
 
 ### uvicorn
-The easiest way to run the API locally is to use uvicorn. Make sure that you have your settings (`.env`) file setup. Once that is done you can run the following from the `openaq_fastapi/openaq_fastapi` directory. Variables from the `.env` files can be overrode by setting them inline.
+The easiest way to run the API locally is to use uvicorn and a python virutal environment. Make sure that you have your settings (`.env`) file setup. Once that is done you can run the following from the `openaq_fastapi/openaq_fastapi` directory. Variables from the `.env` files can be overrode by setting them inline.
 ```
 # Run using the default .env file
 uvicorn main:app --reload

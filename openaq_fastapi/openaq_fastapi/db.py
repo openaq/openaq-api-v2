@@ -44,7 +44,7 @@ cache_config = {
 
 async def db_pool(pool):
     # each time we create a connect make sure it can
-    # property convert json/jsonb fields
+    # properly convert json/jsonb fields
     async def init(con):
         await con.set_type_codec(
             'jsonb',
