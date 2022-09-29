@@ -35,11 +35,11 @@ class LambdaRollupStack(Stack):
             self,
             f"{id}-rollup-lambda",
             code=aws_lambda.Code.from_asset(
-                path='../openaq_fastapi',
+                path="../openaq_fastapi",
                 exclude=[
-                    'venv',
-                    '__pycache__',
-                    'pytest_cache',
+                    "venv",
+                    "__pycache__",
+                    "pytest_cache",
                 ],
             ),
             handler="openaq_fastapi.ingest.handler.rollup_handler",
@@ -52,8 +52,8 @@ class LambdaRollupStack(Stack):
                 create_dependencies_layer(
                     self,
                     f"{env_name}",
-                    'api', # just use the same layer for now
-                    Path('../openaq_fastapi/requirements.txt')
+                    "api",  # just use the same layer for now
+                    Path("../openaq_fastapi/requirements.txt"),
                 ),
             ],
         )
@@ -61,9 +61,7 @@ class LambdaRollupStack(Stack):
         aws_events.Rule(
             self,
             f"{id}-rollup-hourly-event-rule",
-            schedule=aws_events.Schedule.cron(
-                minute=f"0/{rate_minutes}"
-            ),
+            schedule=aws_events.Schedule.cron(minute=f"0/{rate_minutes}"),
             targets=[
                 aws_events_targets.LambdaFunction(rollup_function),
             ],
