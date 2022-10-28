@@ -16,9 +16,7 @@ from ..db import DB
 from ..models.queries import OBaseModel, fix_datetime
 
 templates = Jinja2Templates(
-    directory=os.path.join(
-        str(pathlib.Path(__file__).parent.parent), "templates"
-    )
+    directory=os.path.join(str(pathlib.Path(__file__).parent.parent), "templates")
 )
 
 
@@ -50,14 +48,16 @@ router = APIRouter()
 
 
 class TileBase(OBaseModel):
-    z: int = Path(..., ge=0, le=30, description="Mercator tiles's zoom level"),
-    x: int = Path(..., description="Mercator tiles's column"),
-    y: int = Path(..., description="Mercator tiles's row"),
+    z: int = (Path(..., ge=0, le=30, description="Mercator tiles's zoom level"),)
+    x: int = (Path(..., description="Mercator tiles's column"),)
+    y: int = (Path(..., description="Mercator tiles's row"),)
 
 
 class MobileTile(TileBase):
     parameter: Union[int, None] = Query(None)
-    location: Union[List[int], None] = Query(None, description="limit data to location id")
+    location: Union[List[int], None] = Query(
+        None, description="limit data to location id"
+    )
     lastUpdatedFrom: Union[Union[datetime, date], None] = None
     lastUpdatedTo: Union[Union[datetime, date], None] = None
     isMobile: Union[bool, None] = None
@@ -69,7 +69,7 @@ class MobileTile(TileBase):
             int(value)
             self.parameter = int(value)
             return True
-        except ValueError: 
+        except ValueError:
             return False
 
     def where(self):
@@ -83,10 +83,10 @@ class MobileTile(TileBase):
                 elif f == "parameter":
                     wheres.append(" measurand = :parameter ")
                 elif f == "lastUpdatedFrom":
-                    self.lastUpdatedTo=fix_datetime(v)
+                    self.lastUpdatedTo = fix_datetime(v)
                     wheres.append(" last_datetime >= :last_updated_from ")
                 elif f == "lastUpdatedTo":
-                    self.lastUpdatedFrom=fix_datetime(v)
+                    self.lastUpdatedFrom = fix_datetime(v)
                     wheres.append(" last_datetime >= :last_updated_to ")
                 elif f == "isMobile":
                     wheres.append(" ismobile=:is_mobile ")
@@ -119,19 +119,20 @@ class MobileTile(TileBase):
         return paramgroup
 
 
-
 @router.get(
     "/v2/locations/tiles/{z}/{x}/{y}.pbf",
     responses={200: {"content": {"application/x-protobuf": {}}}},
     response_class=Response,
     tags=["v2"],
-    include_in_schema=False
+    include_in_schema=False,
 )
 async def get_tile(
     db: DB = Depends(),
     t: MobileTile = Depends(MobileTile.depends()),
 ):
-
+    print(t.paramcols())
+    print(t.where())
+    print(t.paramgroup())
 
     query = f"""
         WITH
@@ -166,13 +167,9 @@ async def get_tile(
 
     vt = await db.fetchval(query, t.params())
     if vt is None:
-        raise HTTPException(
-            status_code=204, detail="no data found for this tile"
-        )
+        raise HTTPException(status_code=204, detail="no data found for this tile")
 
-    return Response(
-        content=vt, status_code=200, media_type="application/x-protobuf"
-    )
+    return Response(content=vt, status_code=200, media_type="application/x-protobuf")
 
 
 @router.get(
@@ -180,7 +177,7 @@ async def get_tile(
     responses={200: {"content": {"application/x-protobuf": {}}}},
     response_class=Response,
     tags=["v2"],
-    include_in_schema=False
+    include_in_schema=False,
 )
 async def get_mobiletile(
     db: DB = Depends(),
@@ -219,7 +216,6 @@ async def get_mobiletile(
     if t.parameter is not None:
         paramcols = " measurand as parameter, units as unit, value, "
         value = " value, "
-
 
     query = f"""
         WITH
@@ -284,16 +280,9 @@ async def get_mobiletile(
 
     vt = await db.fetchval(query, params)
     if vt is None:
-        raise HTTPException(
-            status_code=204, detail="no data found for this tile"
-        )
+        raise HTTPException(status_code=204, detail="no data found for this tile")
 
-    return Response(
-        content=vt, status_code=200, media_type="application/x-protobuf"
-    )
-
-
-
+    return Response(content=vt, status_code=200, media_type="application/x-protobuf")
 
 
 @router.get(
@@ -301,13 +290,12 @@ async def get_mobiletile(
     responses={200: {"content": {"application/x-protobuf": {}}}},
     response_class=Response,
     tags=["v2"],
-    include_in_schema=False
+    include_in_schema=False,
 )
 async def get_mobilegentile(
     db: DB = Depends(),
     t: MobileTile = Depends(MobileTile.depends()),
 ):
-
 
     query = f"""
         WITH
@@ -372,13 +360,9 @@ async def get_mobilegentile(
 
     vt = await db.fetchval(query, t.params())
     if vt is None:
-        raise HTTPException(
-            status_code=204, detail="no data found for this tile"
-        )
+        raise HTTPException(status_code=204, detail="no data found for this tile")
 
-    return Response(
-        content=vt, status_code=200, media_type="application/x-protobuf"
-    )
+    return Response(content=vt, status_code=200, media_type="application/x-protobuf")
 
 
 async def tilejsonfunc(
@@ -411,7 +395,7 @@ async def tilejsonfunc(
     responses={200: {"description": "Return a tilejson"}},
     response_model_exclude_none=True,
     tags=["v2"],
-    include_in_schema=False
+    include_in_schema=False,
 )
 async def tilejson(
     request: Request,
@@ -425,10 +409,11 @@ async def tilejson(
     responses={200: {"description": "Return a tilejson"}},
     response_model_exclude_none=True,
     tags=["v2"],
-    include_in_schema=False
+    include_in_schema=False,
 )
 async def mobiletilejson(request: Request):
     return await tilejsonfunc(request, "get_mobiletile", minzoom=8, maxzoom=18)
+
 
 @router.get(
     "/v2/locations/tiles/mobile-generalized/tiles.json",
@@ -436,16 +421,17 @@ async def mobiletilejson(request: Request):
     responses={200: {"description": "Return a tilejson"}},
     response_model_exclude_none=True,
     tags=["v2"],
-    include_in_schema=False
+    include_in_schema=False,
 )
 async def mobilegentilejson(request: Request):
     return await tilejsonfunc(request, "get_mobilegentile", maxzoom=24)
 
+
 @router.get(
-    "/v2/locations/tiles/viewer", 
-    response_class=HTMLResponse, 
-    tags=["v2"],    
-    include_in_schema=False
+    "/v2/locations/tiles/viewer",
+    response_class=HTMLResponse,
+    tags=["v2"],
+    include_in_schema=False,
 )
 def demo(request: Request):
     params = urllib.parse.unquote(request.url.query)
