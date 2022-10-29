@@ -42,8 +42,14 @@ from openaq_fastapi.routers.parameters import router as parameters_router
 from openaq_fastapi.routers.projects import router as projects_router
 from openaq_fastapi.routers.sources import router as sources_router
 from openaq_fastapi.routers.summary import router as summary_router
+# V3 routers
+from openaq_fastapi.routers.v3.locations import router as locations_router_v3
+
+
 from openaq_fastapi.settings import settings
 from os import environ
+
+
 
 logging.basicConfig(
     format='[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s',
@@ -208,6 +214,8 @@ def favico():
         "https://openaq.org/assets/graphics/meta/favicon.png"
     )
 
+
+app.include_router(locations_router_v3)
 
 app.include_router(averages_router)
 app.include_router(cities_router)
