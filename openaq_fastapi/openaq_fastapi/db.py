@@ -130,6 +130,24 @@ class DB:
             return r[0]
         return None
 
+    async def fetchPage(self, query, kwargs):
+        if 'limit' in kwargs.keys():
+            page = kwargs.get("page", 1)
+            kwargs['offset'] = abs((page - 1) * kwargs.get('limit'))
+
+        data = await self.fetch(query, kwargs)
+        if len(data) > 0:
+            if 'found' in data[0].keys():
+                kwargs['found'] = data[0]["found"]
+        else:
+            kwargs['found'] = 0
+
+        output = OpenAQResult(
+            meta=Meta.parse_obj(kwargs),
+            results=data
+        )
+        return output
+
     async def fetchOpenAQResult(self, query, kwargs):
         rows = await self.fetch(query, kwargs)
         found = 0

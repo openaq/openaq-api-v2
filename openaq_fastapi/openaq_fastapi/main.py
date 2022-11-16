@@ -43,7 +43,7 @@ from openaq_fastapi.routers.projects import router as projects_router
 from openaq_fastapi.routers.sources import router as sources_router
 from openaq_fastapi.routers.summary import router as summary_router
 # V3 routers
-from openaq_fastapi.routers.v3.locations import router as locations_router_v3
+from openaq_fastapi.v3.routers.locations import router as locations_router_v3
 
 
 from openaq_fastapi.settings import settings
@@ -67,7 +67,8 @@ logging.getLogger('mangum').setLevel(logging.WARNING)
 logger = logging.getLogger('main')
 
 # this is instead of importing settings elsewhere
-environ['DOMAIN_NAME'] = settings.DOMAIN_NAME
+if settings.DOMAIN_NAME is not None:
+    environ['DOMAIN_NAME'] = settings.DOMAIN_NAME
 
 
 def default(obj):
