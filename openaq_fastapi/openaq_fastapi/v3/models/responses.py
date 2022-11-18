@@ -60,15 +60,15 @@ class Location(BaseModel):
     name: str
     country: Country
     owner: Contact
-    #provider: Contact
+    # provider: Contact
     isMobile: bool
     instruments: List[Instrument]
     parameters: List[Parameter]
     sensorType: str
     coordinates: Coordinates
-    #lastUpdated: str
-    #firstUpdated: str
-    #bounds: List[float]
+    # lastUpdated: str
+    # firstUpdated: str
+    # bounds: List[float]
 
 
 class Date(BaseModel):
