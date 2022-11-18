@@ -2,13 +2,25 @@ import logging
 from typing import Union
 from fastapi import APIRouter, Depends, Query, Path
 from openaq_fastapi.db import DB
-from openaq_fastapi.v3.models.responses import LocationsResponse
+from openaq_fastapi.openaq_fastapi.v3.routers.locations import SQL, Paging
+from openaq_fastapi.v3.models.responses import LocationsResponse, CountriesResponse
 from openaq_fastapi.models.queries import OBaseModel
 
 logger = logging.getLogger("locations")
 
 router = APIRouter()
-"""
+
+
+class countryy(Paging, SQL):
+    id: int = Query(description="Limit the results to a specific country by id", ge=1)
+
+    def clause(self):
+        return "WHERE id = :id"
+
+
+class countries(Paging, SQL):
+    ...
+
 
 @router.get(
     "/v3/countries/{id}",
@@ -18,24 +30,25 @@ router = APIRouter()
     tags=["v3"],
 )
 async def country_get(
-    location: Locationn = Depends(Locationn.depends()),
+    country: countryy = Depends(countryy.depends()),
     db: DB = Depends(),
 ):
-    response = await fetch_countries(location, db)
+    country.id = id
+    response = await fetch_countries(country, db)
     return response
 
 
 @router.get(
     "/v3/countries",
-    response_model=LocationsResponse,
+    response_model=CountriesResponse,
     summary="Get countries",
-    description="Provides a list of locations",
+    description="Provides a list of countries",
     tags=["v3"],
 )
 async def countries_get(
-    locations: Locations = Depends(Locations.depends()), db: DB = Depends()
+    countries: Countries = Depends(Countries.depends()), db: DB = Depends()
 ):
-    response = await fetch_countries(locations, db)
+    response = await fetch_countries(countries, db)
     return response
 
 
@@ -51,4 +64,3 @@ async def fetch_countries(where, db):
     """
     response = await db.fetchPage(sql, where.params())
     return response
-"""
