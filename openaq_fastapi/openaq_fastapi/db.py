@@ -81,7 +81,7 @@ class DB:
 
     async def pool(self):
         self.request.app.state.pool = await db_pool(
-            self.request.app.state.pool
+            getattr(self.request.app.state, 'pool', None)
         )
         return self.request.app.state.pool
 

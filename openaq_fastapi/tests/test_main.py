@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-
+import json
 from openaq_fastapi.main import app
 
 client = TestClient(app)
@@ -18,4 +18,7 @@ def test_locations_path_bad():
 
 def test_locations_path_good():
     response = client.get("/v3/locations/1")
+    res = json.loads(response.content)
     assert response.status_code == 200
+    assert len(res['results']) == 1
+    assert res['results'][0]['id'] == 1
