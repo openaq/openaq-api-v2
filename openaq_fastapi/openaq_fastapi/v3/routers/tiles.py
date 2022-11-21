@@ -43,6 +43,32 @@ class Tile(TileBase):
         return ("\nAND ").join(where)
 
 
+class MobileTile(TileBase):
+    parameters_id: int = Query(
+        description="Limit the results to a specific location by id", ge=1
+    )
+    providers: Union[List[int], None] = Query(
+        description="Limit the results to a specific provider by id"
+    )
+    is_monitor: Union[List[int], None] = Query(
+        description="Limit the results to one or more sensor types"
+    )
+    is_active: Union[bool, None] = Query(
+        description="Limit the results to locations active within the last 48 hours"
+    )
+
+    def clause(self):
+        where = ["WHERE ismobile = false"]
+        where.append("measurands_id = :parameters_id")
+        if hasattr(self, "providers") and self.providers is not None:
+            where.append("providers_id = ANY(:providers::int[])")
+        if hasattr(self, "is_monitor") and self.is_monitor is not None:
+            where.append("is_monitor = :is_monitor")
+        if hasattr(self, "is_active") and self.is_active is not None:
+            where.append("active = :is_active")
+        return ("\nAND ").join(where)
+
+
 @router.get(
     "/v3/locations/tiles/{z}/{x}/{y}.pbf",
     responses={200: {"content": {"application/x-protobuf": {}}}},
@@ -52,10 +78,9 @@ class Tile(TileBase):
 )
 async def get_tile(
     db: DB = Depends(),
-    where: Tile = Depends(Tile.depends()),
+    tile: Tile = Depends(Tile.depends()),
 ):
-    logging.info(where.clause())
-    vt = await fetch_tiles(where, db)
+    vt = await fetch_tiles(tile, db)
     if vt is None:
         raise HTTPException(status_code=204, detail="no data found for this tile")
 
@@ -114,6 +139,69 @@ async def fetch_tiles(where, db):
             {where.clause()}
         )
         SELECT ST_AsMVT(t, 'default') FROM t;
+    """
+    response = await db.fetchval(sql, where.params())
+    return response
+
+
+@router.get(
+    "/v3/locations/tiles/mobile-generalized/{z}/{x}/{y}.pbf",
+    responses={200: {"content": {"application/x-protobuf": {}}}},
+    response_class=Response,
+    tags=["v3"],
+    include_in_schema=False,
+)
+async def get_mobile_gen_tiles(
+    db: DB = Depends(),
+    tile: Tile = Depends(Tile.depends()),
+):
+    ...
+
+
+async def fetch_mobile_gen_tiles(where, db):
+    sql = f"""
+    """
+    response = await db.fetchval(sql, where.params())
+    return response
+
+
+@router.get(
+    "/v3/locations/tiles/mobile-paths/{z}/{x}/{y}.pbf",
+    responses={200: {"content": {"application/x-protobuf": {}}}},
+    response_class=Response,
+    tags=["v3"],
+    include_in_schema=False,
+)
+async def get_mobile_path_tiles(
+    db: DB = Depends(),
+    tile: Tile = Depends(Tile.depends()),
+):
+    ...
+
+
+async def fetch_mobile_path_tiles(where, db):
+    sql = f"""
+    """
+    response = await db.fetchval(sql, where.params())
+    return response
+
+
+@router.get(
+    "/v3/locations/tiles/mobile/{z}/{x}/{y}.pbf",
+    responses={200: {"content": {"application/x-protobuf": {}}}},
+    response_class=Response,
+    tags=["v3"],
+    include_in_schema=False,
+)
+async def get_mobiletiles(
+    db: DB = Depends(),
+    mt: MobileTile = Depends(MobileTile.depends()),
+):
+    ...
+
+
+async def fetch_mobile_tiles(where, db):
+    sql = f"""
     """
     response = await db.fetchval(sql, where.params())
     return response
