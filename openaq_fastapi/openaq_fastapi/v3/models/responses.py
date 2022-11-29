@@ -17,10 +17,37 @@ class OpenAQResult(BaseModel):
     results: List[Any] = []
 
 
-class Country(BaseModel):
+class CountryBase(BaseModel):
     id: Union[int, None]
     code: str
     name: str
+
+
+class ParameterBase(BaseModel):
+    id: int
+    name: str
+    units: str
+
+
+class Parameter(ParameterBase):
+    id: int
+    name: str
+    displayName: str
+    description: str
+    units: str
+
+
+class Country(CountryBase):
+    id: int
+    code: str
+    name: str
+    locationsCount: int
+    firstDatetime: str
+    lastDatetime: str
+    parameters: List[ParameterBase]
+    meaurementsCount: int
+    citiesCount: int
+    providersCount: int
 
 
 class Contact(BaseModel):
@@ -43,12 +70,6 @@ class Source(BaseModel):
     lifecycle_stage: str
 
 
-class Parameter(BaseModel):
-    id: int
-    name: str
-    units: str
-
-
 class Coordinates(BaseModel):
     latitude: Union[float, None]
     longitude: Union[float, None]
@@ -60,16 +81,16 @@ class Location(BaseModel):
     name: str
     country: Country
     owner: Contact
-    #provider: Contact
+    # provider: Contact
     isMobile: bool
     isMonitor: Union[bool, None]
     instruments: List[Instrument]
     parameters: List[Parameter]
     #sensorType: str
     coordinates: Coordinates
-    #lastUpdated: str
-    #firstUpdated: str
-    #bounds: List[float]
+    # lastUpdated: str
+    # firstUpdated: str
+    # bounds: List[float]
 
 
 class Date(BaseModel):
@@ -92,3 +113,7 @@ class MeasurementsResponse(BaseModel):
     date: Date
     unit: str
     coordinates: Union[Coordinates, None]
+
+
+class CountriesResponse(OpenAQResult):
+    results: List[Country]
