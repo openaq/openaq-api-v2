@@ -62,9 +62,10 @@ class Location(BaseModel):
     owner: Contact
     #provider: Contact
     isMobile: bool
+    isMonitor: Union[bool, None]
     instruments: List[Instrument]
     parameters: List[Parameter]
-    sensorType: str
+    #sensorType: str
     coordinates: Coordinates
     #lastUpdated: str
     #firstUpdated: str

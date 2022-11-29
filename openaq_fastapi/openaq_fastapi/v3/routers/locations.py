@@ -119,8 +119,8 @@ async def fetch_locations(where, db):
     sql = f"""
     SELECT id
     , name
-    , sensor_type as "sensorType"
     , ismobile as "isMobile"
+    , ismonitor as "isMonitor"
     , city
     , country
     , owner
