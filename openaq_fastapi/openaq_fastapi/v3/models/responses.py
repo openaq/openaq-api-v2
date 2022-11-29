@@ -79,13 +79,13 @@ class Location(BaseModel):
     id: int
     city: Union[str, None]
     name: str
-    country: Country
+    country: CountryBase
     owner: Contact
     # provider: Contact
     isMobile: bool
     isMonitor: Union[bool, None]
     instruments: List[Instrument]
-    parameters: List[Parameter]
+    parameters: List[ParameterBase]
     #sensorType: str
     coordinates: Coordinates
     # lastUpdated: str
