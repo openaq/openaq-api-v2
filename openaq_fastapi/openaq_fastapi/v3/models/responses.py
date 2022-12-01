@@ -56,15 +56,14 @@ class Country(CountryBase):
     providers_count: int
 
 
-class Contact(JsonBase):
+class ContactBase(JsonBase):
     id: int
     name: str
 
 
-class Instrument(JsonBase):
+class Contact(ContactBase):
     id: int
     name: str
-    manufacturer: Contact
 
 
 class Source(JsonBase):
@@ -81,31 +80,62 @@ class Coordinates(JsonBase):
     longitude: Union[float, None]
 
 
-class Location(JsonBase):
+class ProviderBase(JsonBase):
     id: int
-    city: Union[str, None]
     name: str
-    country: CountryBase
-    owner: Contact
-    provider: Contact
-    is_mobile: bool
-    is_monitor: Union[bool, None]
-    instruments: List[Instrument]
-    parameters: List[ParameterBase]
-    coordinates: Coordinates
-    last_updated: str
-    first_updated: str
-    bounds: List[float]
 
 
-class Date(JsonBase):
-    utc: str
-    local: str
+class Provider(ProviderBase):
+    contact: ContactBase
+
+
+class InstrumentBase(JsonBase):
+    id: int
+    name: str
+
+
+class Instrument(InstrumentBase):
+    manufacturer: Contact
 
 
 class Coordinates(JsonBase):
     latitude: float
     longitude: float
+
+
+class Datetime(JsonBase):
+    utc: str
+    local: str
+
+
+class SensorBase(JsonBase):
+    id: int
+    name: str
+    parameter: ParameterBase
+
+
+class Sensor(SensorBase):
+    datetime_first: Datetime
+    datetime_last: Datetime
+    value_last: float
+
+
+class Location(JsonBase):
+    id: int
+    name: str
+    locality: Union[str, None]
+    country: CountryBase
+    owner: ContactBase
+    provider: ProviderBase
+    is_mobile: bool
+    is_monitor: bool
+    instruments: List[InstrumentBase]
+    sensors: List[SensorBase]
+    coordinates: Coordinates
+    bounds: List[float, float, float, float]
+    distance: Union[float, None]
+    datetime_first: Datetime
+    datetime_last: Datetime
 
 
 class LocationsResponse(OpenAQResult):
@@ -115,7 +145,7 @@ class LocationsResponse(OpenAQResult):
 class MeasurementsResponse(JsonBase):
     parameter: str
     value: float
-    date: Date
+    date: Datetime
     unit: str
     coordinates: Union[Coordinates, None]
 
