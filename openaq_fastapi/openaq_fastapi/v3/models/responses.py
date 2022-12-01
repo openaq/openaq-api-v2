@@ -1,9 +1,15 @@
 from typing import List, Union
 from pydantic import BaseModel
 from pydantic.typing import Any
+from humps import camelize
 
 
-class Meta(BaseModel):
+class JsonBase(BaseModel):
+    class Config:
+        alias_generator = camelize
+
+
+class Meta(JsonBase):
     name: str = "openaq-api"
     license: str = "CC BY 4.0d"
     website: str = "/"
@@ -12,18 +18,18 @@ class Meta(BaseModel):
     found: int = 0
 
 
-class OpenAQResult(BaseModel):
+class OpenAQResult(JsonBase):
     meta: Meta = Meta()
     results: List[Any] = []
 
 
-class CountryBase(BaseModel):
+class CountryBase(JsonBase):
     id: Union[int, None]
     code: str
     name: str
 
 
-class ParameterBase(BaseModel):
+class ParameterBase(JsonBase):
     id: int
     name: str
     units: str
@@ -32,7 +38,7 @@ class ParameterBase(BaseModel):
 class Parameter(ParameterBase):
     id: int
     name: str
-    displayName: str
+    display_name: str
     description: str
     units: str
 
@@ -41,27 +47,27 @@ class Country(CountryBase):
     id: int
     code: str
     name: str
-    locationsCount: int
-    firstDatetime: str
-    lastDatetime: str
+    locations_count: int
+    first_datetime: str
+    last_datetime: str
     parameters: List[ParameterBase]
-    meaurementsCount: int
-    citiesCount: int
-    providersCount: int
+    meaurements_count: int
+    cities_count: int
+    providers_count: int
 
 
-class Contact(BaseModel):
+class Contact(JsonBase):
     id: int
     name: str
 
 
-class Instrument(BaseModel):
+class Instrument(JsonBase):
     id: int
     name: str
     manufacturer: Contact
 
 
-class Source(BaseModel):
+class Source(JsonBase):
     url: str
     name: str
     id: str
@@ -70,35 +76,34 @@ class Source(BaseModel):
     lifecycle_stage: str
 
 
-class Coordinates(BaseModel):
+class Coordinates(JsonBase):
     latitude: Union[float, None]
     longitude: Union[float, None]
 
 
-class Location(BaseModel):
+class Location(JsonBase):
     id: int
     city: Union[str, None]
     name: str
     country: CountryBase
     owner: Contact
     # provider: Contact
-    isMobile: bool
-    isMonitor: Union[bool, None]
+    is_mobile: bool
+    is_monitor: Union[bool, None]
     instruments: List[Instrument]
     parameters: List[ParameterBase]
-    #sensorType: str
     coordinates: Coordinates
     # lastUpdated: str
     # firstUpdated: str
-    # bounds: List[float]
+    bounds: List[float]
 
 
-class Date(BaseModel):
+class Date(JsonBase):
     utc: str
     local: str
 
 
-class Coordinates(BaseModel):
+class Coordinates(JsonBase):
     latitude: float
     longitude: float
 
@@ -107,7 +112,7 @@ class LocationsResponse(OpenAQResult):
     results: List[Location]
 
 
-class MeasurementsResponse(BaseModel):
+class MeasurementsResponse(JsonBase):
     parameter: str
     value: float
     date: Date
