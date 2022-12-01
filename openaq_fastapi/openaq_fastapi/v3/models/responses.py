@@ -87,14 +87,14 @@ class Location(JsonBase):
     name: str
     country: CountryBase
     owner: Contact
-    # provider: Contact
+    provider: Contact
     is_mobile: bool
     is_monitor: Union[bool, None]
     instruments: List[Instrument]
     parameters: List[ParameterBase]
     coordinates: Coordinates
-    # lastUpdated: str
-    # firstUpdated: str
+    last_updated: str
+    first_updated: str
     bounds: List[float]
 
 
