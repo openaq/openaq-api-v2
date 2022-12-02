@@ -207,8 +207,18 @@ class Geo(OBaseModel):
         description="Coordinate pair in form lat,lng. Up to 8 decimal points of precision e.g. 38.907,-77.037",
         example="38.907,-77.037"
     )
+    bbox: Union[str, None] = Query(
+        None,
+        regex=r"^-?\d{1,2}\.?\d{0,8},-?1?\d{1,2}\.?\d{0,8},-?\d{1,2}\.?\d{0,8},-?\d{1,2}\.?\d{0,8}$",
+        description="Min X, min Y, max X, max Y, up to 8 decimal points of precision e.g. -77.037,38.907,-77.035,38.910",
+        example="-77.037,38.907,-77.035,38.910"
+    )
     lat: Union[confloat(ge=-90, le=90), None] = None
     lon: Union[confloat(ge=-180, le=180), None] = None
+    miny: Union[confloat(ge=-90, le=90), None] = None
+    minx: Union[confloat(ge=-180, le=180), None] = None
+    maxy: Union[confloat(ge=-90, le=90), None] = None
+    maxx: Union[confloat(ge=-180, le=180), None] = None
     radius: conint(gt=0, le=100000) = Query(
         1000,
         description="Search radius from coordinates as center in meters. Maximum of 100,000 (100km) defaults to 1000 (1km) e.g. radius=10000",
@@ -225,12 +235,26 @@ class Geo(OBaseModel):
                 values["lon"] = float(lon)
         return values
 
-    def where_geo(self):
+    @root_validator(pre=True)
+    def addminmax(cls, values):
+        bbox = values.get("bbox", None)
+        if bbox is not None and "," in bbox:
+            minx, miny, maxx, maxy = bbox.split(",")
+            if minx and miny and maxx and maxy:
+                values["minx"] = float(minx)
+                values["miny"] = float(miny)
+                values["maxx"] = float(maxx)
+                values["maxy"] = float(maxy)
+        return values
+
+    def where_bbox(self):
+        if self.bbox is not None:
+            return "st_makeenvelope(:minx, :miny, :maxx, :maxy, 4326) && geom"
+        return None
+
+    def where_radius(self):
         if self.lat is not None and self.lon is not None:
-            return (
-                " st_dwithin(st_makepoint(:lon, :lat)::geography,"
-                " geog, :radius) "
-            )
+            return "st_dwithin(st_setsrid(st_makepoint(:lon, :lat), 4326), geom, :radius)"
         return None
 
 

@@ -3,7 +3,14 @@ from typing import Union
 from fastapi import APIRouter, Depends, Query, Path
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.models.responses import LocationsResponse
-from openaq_fastapi.models.queries import OBaseModel
+from openaq_fastapi.models.queries import OBaseModel, Geo
+
+from openaq_fastapi.v3.models.queries import (
+    SQL,
+    Paging,
+    Radius,
+    Bbox,
+)
 
 logger = logging.getLogger("locations")
 
@@ -33,47 +40,18 @@ router = APIRouter()
 
 # city/country
 
-# Does it help to create a SQL class to help a dev
-# write queries and not need to worry about how to
-# create the total and pagination?
-# and if so, how should that be done?
-class SQL():
-    def pagination(self):
-        return "OFFSET :offset\nLIMIT :limit"
 
-    def total(self):
-        return ", COUNT(1) OVER() as found"
-
-# Thinking about how the paging should be done
-# we should not let folks pass an offset if we also include
-# a page parameter. And until pydantic supports computed
-# values (v2) we have to calculate the offset ourselves
-# see the db.py method
-class Paging(OBaseModel):
-    limit: int = Query(
-        100,
-        gt=0,
-        description="Change the number of results returned. e.g. limit=1000 will return up to 1000 results",
-        example="100"
-    )
-    page: int = Query(
-        1,
-        gt=0,
-        description="Paginate through results. e.g. page=1 will return first page of results",
-        example="1"
-    )
-
-
-class Locationn(Paging, SQL):
+class LocationQueries(Paging, SQL):
     id: int = Query(
         description="Limit the results to a specific location by id",
         ge=1
     )
+
     def clause(self):
         return "WHERE id = :id"
 
 
-class Locations(Paging):
+class LocationsQueries(Paging, SQL, Radius, Bbox):
     mobile: Union[bool, None] = Query(
         description="Is the location considered a mobile location?"
     )
@@ -82,6 +60,11 @@ class Locations(Paging):
         where = ["WHERE TRUE"]
         if hasattr(self, "mobile") and self.mobile is not None:
             where.append("ismobile = :mobile")
+        if self.has('coordinates'):
+            where.append(self.where_radius())
+        if self.has('bbox'):
+            where.append(self.where_bbox())
+        print(where)
         return ("\nAND ").join(where)
 
 
@@ -93,7 +76,7 @@ class Locations(Paging):
     tags=["v3"],
 )
 async def location_get(
-        location: Locationn = Depends(Locationn.depends()),
+        location: LocationQueries = Depends(LocationQueries.depends()),
         db: DB = Depends(),
 ):
     response = await fetch_locations(location, db)
@@ -108,7 +91,7 @@ async def location_get(
     tags=["v3"],
 )
 async def locations_get(
-        locations: Locations = Depends(Locations.depends()),
+        locations: LocationsQueries = Depends(LocationsQueries.depends()),
         db: DB = Depends()
 ):
     response = await fetch_locations(locations, db)
