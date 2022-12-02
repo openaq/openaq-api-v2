@@ -56,9 +56,15 @@ class LocationsQueries(Paging, SQL, Radius, Bbox):
         description="Is the location considered a mobile location?"
     )
 
+    def fields(self):
+        fields = []
+        if self.has('coordinates'):
+            fields.append(self.fields_distance())
+        return ', '+(',').join(fields) if len(fields) > 0 else ''
+
     def clause(self):
         where = ["WHERE TRUE"]
-        if hasattr(self, "mobile") and self.mobile is not None:
+        if self.has('mobile'):
             where.append("ismobile = :mobile")
         if self.has('coordinates'):
             where.append(self.where_radius())
@@ -112,9 +118,10 @@ async def fetch_locations(where, db):
     , instruments
     , sensors
     , timezone
-    , bounds
+    , bbox(geom) as bounds
     , datetime_first
     , datetime_last
+    {where.fields()}
     {where.total()}
     FROM locations_view_m
     {where.clause()}

@@ -163,9 +163,12 @@ class Radius(BaseModel):
                 values["lon"] = float(lon)
         return values
 
-    def where_radius(self):
+    def fields_distance(self, geometry_field: str = 'geom'):
+        return f"st_distance({geometry_field}, st_setsrid(st_makepoint(:lon, :lat), 4326)) as distance"
+
+    def where_radius(self, geometry_field: str = 'geom'):
         if self.lat is not None and self.lon is not None:
-            return "st_dwithin(st_setsrid(st_makepoint(:lon, :lat), 4326), geom, :radius)"
+            return f"st_dwithin(st_setsrid(st_makepoint(:lon, :lat), 4326), {geometry_field}, :radius)"
         return None
 
 
