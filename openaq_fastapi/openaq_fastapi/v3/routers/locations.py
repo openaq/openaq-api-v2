@@ -119,14 +119,19 @@ async def fetch_locations(where, db):
     sql = f"""
     SELECT id
     , name
-    , ismobile as "isMobile"
-    , ismonitor as "isMonitor"
-    , city
+    , ismobile as is_mobile
+    , ismonitor as is_monitor
+    , city as locality
     , country
     , owner
+    , provider
     , coordinates
     , instruments
-    , parameters
+    , sensors
+    , timezone
+    , bounds
+    , datetime_first
+    , datetime_last
     {where.total()}
     FROM locations_view_m
     {where.clause()}

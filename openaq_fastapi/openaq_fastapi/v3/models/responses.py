@@ -1,11 +1,12 @@
 from typing import List, Union
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic.typing import Any
 from humps import camelize
 
 
 class JsonBase(BaseModel):
     class Config:
+        allow_population_by_field_name = True
         alias_generator = camelize
 
 
@@ -98,11 +99,6 @@ class Instrument(InstrumentBase):
     manufacturer: Contact
 
 
-class Coordinates(JsonBase):
-    latitude: float
-    longitude: float
-
-
 class Datetime(JsonBase):
     utc: str
     local: str
@@ -124,6 +120,7 @@ class Location(JsonBase):
     id: int
     name: str
     locality: Union[str, None]
+    timezone: str
     country: CountryBase
     owner: ContactBase
     provider: ProviderBase
@@ -132,7 +129,7 @@ class Location(JsonBase):
     instruments: List[InstrumentBase]
     sensors: List[SensorBase]
     coordinates: Coordinates
-    bounds: List[float, float, float, float]
+    bounds: List[float] = Field(..., min_items=4, max_items=4)
     distance: Union[float, None]
     datetime_first: Datetime
     datetime_last: Datetime

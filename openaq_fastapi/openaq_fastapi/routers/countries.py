@@ -60,8 +60,8 @@ class Countries(Country, APIBase):
     tags=["v2"],
 )
 @router.get(
-    "/v2/countries", 
-    response_model=CountriesResponse, 
+    "/v2/countries",
+    response_model=CountriesResponse,
     summary="Get countries",
     description="Providecs a list of countries",
     tags=["v2"]
@@ -104,8 +104,8 @@ async def countries_get(
     return output
 
 @router.get(
-    "/v1/countries", 
-    response_model=CountriesResponse, 
+    "/v1/countries",
+    response_model=CountriesResponse,
     summary="Get countries",
     description="Providecs a list of countries",
     tags=["v1"])
