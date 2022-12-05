@@ -138,7 +138,6 @@ class Location(JsonBase):
 class Period(JsonBase):
     label: str
     interval: str
-    minutes: str
     datetime_from: Datetime
     datetime_to: Datetime
 
