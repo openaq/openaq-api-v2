@@ -59,7 +59,9 @@ async def db_pool(pool):
             schema='pg_catalog'
         )
 
+    logger.debug(f"Checking for existing pool: {pool}")
     if pool is None:
+        logger.debug('Creating a new pool')
         pool = await asyncpg.create_pool(
             settings.DATABASE_READ_URL,
             command_timeout=14,
@@ -74,6 +76,7 @@ async def db_pool(pool):
 class DB:
     def __init__(self, request: Request):
         self.request = request
+        logger.debug(f"New db: {request.app.state}")
 
     async def acquire(self):
         pool = await self.pool()
@@ -106,7 +109,7 @@ class DB:
                     detail="Connection timed out",
                 )
             except Exception as e:
-                logger.error(f"Database Error: {e}")
+                logger.error(f"Unknown database error: {e}")
                 if str(e).startswith("ST_TileEnvelope"):
                     raise HTTPException(status_code=422, detail=f"{e}")
                 raise HTTPException(status_code=500, detail=f"{e}")
