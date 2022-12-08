@@ -8,14 +8,14 @@ from openaq_fastapi.models.queries import OBaseModel, Geo
 from openaq_fastapi.v3.models.queries import (
     SQL,
     Paging,
-    Radius,
-    Bbox,
+    RadiusQuery,
+    BboxQuery,
+    ProviderQuery,
 )
 
 logger = logging.getLogger("locations")
 
 router = APIRouter()
-
 
 # Needed query parameters
 
@@ -41,7 +41,7 @@ router = APIRouter()
 # city/country
 
 
-class LocationQueries(Paging, SQL):
+class LocationQueries(SQL):
     id: int = Query(
         description="Limit the results to a specific location by id",
         ge=1
@@ -51,7 +51,13 @@ class LocationQueries(Paging, SQL):
         return "WHERE id = :id"
 
 
-class LocationsQueries(Paging, SQL, Radius, Bbox):
+class LocationsQueries(
+        Paging,
+        SQL,
+        RadiusQuery,
+        BboxQuery,
+        ProviderQuery,
+):
     mobile: Union[bool, None] = Query(
         description="Is the location considered a mobile location?"
     )
@@ -59,7 +65,7 @@ class LocationsQueries(Paging, SQL, Radius, Bbox):
     def fields(self):
         fields = []
         if self.has('coordinates'):
-            fields.append(self.fields_distance())
+            fields.append(RadiusQuery.fields(self))
         return ', '+(',').join(fields) if len(fields) > 0 else ''
 
     def clause(self):
@@ -67,10 +73,11 @@ class LocationsQueries(Paging, SQL, Radius, Bbox):
         if self.has('mobile'):
             where.append("ismobile = :mobile")
         if self.has('coordinates'):
-            where.append(self.where_radius())
+            where.append(RadiusQuery.where(self))
         if self.has('bbox'):
-            where.append(self.where_bbox())
-        print(where)
+            where.append(BboxQuery.where(self))
+        if self.has('providers_id'):
+            where.append(ProviderQuery.where(self))
         return ("\nAND ").join(where)
 
 

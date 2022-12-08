@@ -103,9 +103,12 @@ class OBaseModel(BaseModel):
 # write queries and not need to worry about how to
 # create the total and pagination?
 # and if so, how should that be done?
-class SQL():
+class SQL(OBaseModel):
     def pagination(self):
-        return "OFFSET :offset\nLIMIT :limit"
+        return ''
+
+    def fields(self):
+        return ''
 
     def total(self):
         return ", COUNT(1) OVER() as found"
@@ -137,8 +140,22 @@ class Paging(OBaseModel):
         example="1"
     )
 
+    def pagination(self):
+        return "OFFSET :offset\nLIMIT :limit"
+
+
+class ProviderQuery(OBaseModel):
+    providers_id: Union[int, None] = Query(
+        description="Limit the results to a specific provider",
+        ge=1
+    )
+
+    def where(self):
+        return "providers_id = :providers_id"
+
+
 # Some spatial helper queries
-class Radius(BaseModel):
+class RadiusQuery(BaseModel):
     coordinates: Union[str, None] = Query(
         None,
         regex=r"^-?\d{1,2}\.?\d{0,8},-?1?\d{1,2}\.?\d{0,8}$",
@@ -163,16 +180,16 @@ class Radius(BaseModel):
                 values["lon"] = float(lon)
         return values
 
-    def fields_distance(self, geometry_field: str = 'geom'):
+    def fields(self, geometry_field: str = 'geom'):
         return f"st_distance({geometry_field}, st_setsrid(st_makepoint(:lon, :lat), 4326)) as distance"
 
-    def where_radius(self, geometry_field: str = 'geom'):
+    def where(self, geometry_field: str = 'geom'):
         if self.lat is not None and self.lon is not None:
             return f"st_dwithin(st_setsrid(st_makepoint(:lon, :lat), 4326), {geometry_field}, :radius)"
         return None
 
 
-class Bbox(BaseModel):
+class BboxQuery(BaseModel):
     bbox: Union[str, None] = Query(
         None,
         regex=r"^-?\d{1,2}\.?\d{0,8},-?1?\d{1,2}\.?\d{0,8},-?\d{1,2}\.?\d{0,8},-?\d{1,2}\.?\d{0,8}$",
@@ -196,7 +213,7 @@ class Bbox(BaseModel):
                 values["maxy"] = float(maxy)
         return values
 
-    def where_bbox(self):
+    def where(self):
         if self.bbox is not None:
             return "st_makeenvelope(:minx, :miny, :maxx, :maxy, 4326) && geom"
         return None
