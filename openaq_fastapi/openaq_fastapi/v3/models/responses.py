@@ -135,16 +135,49 @@ class Location(JsonBase):
     datetime_last: Datetime
 
 
+class Period(JsonBase):
+    label: str
+    interval: str
+    datetime_from: Datetime
+    datetime_to: Datetime
+
+
+class Summary(JsonBase):
+    min: float
+    q02: float
+    q25: float
+    median: float
+    q75: float
+    q98: float
+    max: float
+    sd: float
+
+
+class Coverage(JsonBase):
+    observed_count: int
+    expected_count: int
+    percent_complete: float
+    observed_interval: str
+    expected_interval: str
+
+
+class Measurement(JsonBase):
+    value: float
+    parameter: ParameterBase
+    coordinates: Union[Coordinates, None]
+    period: Period
+    summary: Summary
+    coverage: Coverage
+    start_datetime: Datetime
+    end_datetime: Datetime
+
+
 class LocationsResponse(OpenAQResult):
     results: List[Location]
 
 
-class MeasurementsResponse(JsonBase):
-    parameter: str
-    value: float
-    date: Datetime
-    unit: str
-    coordinates: Union[Coordinates, None]
+class MeasurementsResponse(OpenAQResult):
+    results: List[Measurement]
 
 
 class CountriesResponse(OpenAQResult):
