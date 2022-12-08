@@ -96,7 +96,6 @@ class OBaseModel(BaseModel):
 
     @classmethod
     def depends(cls):
-        logger.debug(f"Depends {cls}")
         return parameter_dependency_from_model("depends", cls)
 
     def params(self):
