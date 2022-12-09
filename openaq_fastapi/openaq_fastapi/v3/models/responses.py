@@ -24,6 +24,11 @@ class OpenAQResult(JsonBase):
     results: List[Any] = []
 
 
+class Datetime(JsonBase):
+    utc: str
+    local: str
+
+
 class CountryBase(JsonBase):
     id: Union[int, None]
     code: str
@@ -53,18 +58,16 @@ class Country(CountryBase):
     last_datetime: str
     parameters: List[ParameterBase]
     meaurements_count: int
-    cities_count: int
     providers_count: int
 
 
-class ContactBase(JsonBase):
+class EntityBase(JsonBase):
     id: int
     name: str
 
 
-class Contact(ContactBase):
-    id: int
-    name: str
+class Entity(EntityBase):
+    type: str
 
 
 class Source(JsonBase):
@@ -87,7 +90,13 @@ class ProviderBase(JsonBase):
 
 
 class Provider(ProviderBase):
-    contact: ContactBase
+    entity: EntityBase
+    locations_count: int
+    parameters: List[ParameterBase]
+    bbox: List[float] = Field(..., min_items=4, max_items=4)
+    datetime_added: Datetime
+    datetime_first: Datetime
+    datetime_last: Datetime
 
 
 class OwnerBase(JsonBase):
@@ -105,7 +114,7 @@ class InstrumentBase(JsonBase):
 
 
 class ManufacturerBase(JsonBase):
-    contact: Contact
+    entity: EntityBase
 
 
 class Instrument(InstrumentBase):
@@ -114,11 +123,6 @@ class Instrument(InstrumentBase):
 
 class Manufacturer(ManufacturerBase):
     ...
-
-
-class Datetime(JsonBase):
-    utc: str
-    local: str
 
 
 class SensorBase(JsonBase):
@@ -139,7 +143,7 @@ class Location(JsonBase):
     locality: Union[str, None]
     timezone: str
     country: CountryBase
-    owner: ContactBase
+    owner: EntityBase
     provider: ProviderBase
     is_mobile: bool
     is_monitor: bool
