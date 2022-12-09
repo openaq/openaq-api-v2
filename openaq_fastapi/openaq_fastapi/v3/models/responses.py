@@ -90,13 +90,30 @@ class Provider(ProviderBase):
     contact: ContactBase
 
 
+class OwnerBase(JsonBase):
+    id: int
+    name: str
+
+
+class Owner(OwnerBase):
+    ...
+
+
 class InstrumentBase(JsonBase):
     id: int
     name: str
 
 
+class ManufacturerBase(JsonBase):
+    contact: Contact
+
+
 class Instrument(InstrumentBase):
-    manufacturer: Contact
+    manufacturer: ManufacturerBase
+
+
+class Manufacturer(ManufacturerBase):
+    ...
 
 
 class Datetime(JsonBase):
@@ -182,3 +199,23 @@ class MeasurementsResponse(OpenAQResult):
 
 class CountriesResponse(OpenAQResult):
     results: List[Country]
+
+
+class ParametersResponse(OpenAQResult):
+    results: List[Parameter]
+
+
+class SensorsResponse(OpenAQResult):
+    results: List[Sensor]
+
+
+class ProvidersResponse(OpenAQResult):
+    results: List[Provider]
+
+
+class ManufacturersResponse(OpenAQResult):
+    results: List[Manufacturer]
+
+
+class OwnersResponse(OpenAQResult):
+    results: List[Owner]
