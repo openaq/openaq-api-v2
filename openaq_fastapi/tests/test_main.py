@@ -20,5 +20,25 @@ def test_locations_path_good():
     response = client.get("/v3/locations/1")
     res = json.loads(response.content)
     assert response.status_code == 200
-    assert len(res['results']) == 1
-    assert res['results'][0]['id'] == 1
+    assert len(res["results"]) == 1
+    assert res["results"][0]["id"] == 1
+
+
+def test_locations_query_bad():
+    response = client.get(
+        "/v3/locations/1?coordinates=42,42&radius=1000&bbox=42,42,42,42"
+    )
+    assert response.status_code == 422
+
+
+def test_providers_path_bad():
+    response = client.get("/v3/providers/0")
+    assert response.status_code == 422
+
+
+def test_providers_path_good():
+    response = client.get("/v3/providers/1")
+    res = json.loads(response.content)
+    assert response.status_code == 200
+    assert len(res["results"]) == 1
+    assert res["results"][0]["id"] == 1

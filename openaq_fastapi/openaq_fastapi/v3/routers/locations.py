@@ -1,6 +1,7 @@
 import logging
 from typing import Union
 from fastapi import APIRouter, Depends, Query, Path
+from pydantic import root_validator, validator
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.models.responses import LocationsResponse
 from openaq_fastapi.models.queries import OBaseModel, Geo
@@ -42,10 +43,7 @@ router = APIRouter()
 
 
 class LocationQueries(Paging, SQL):
-    id: int = Query(
-        description="Limit the results to a specific location by id",
-        ge=1
-    )
+    id: int = Query(description="Limit the results to a specific location by id", ge=1)
 
     def clause(self):
         return "WHERE id = :id"
@@ -56,19 +54,27 @@ class LocationsQueries(Paging, SQL, Radius, Bbox):
         description="Is the location considered a mobile location?"
     )
 
+    @root_validator(pre=True)
+    def check_bbox_radius_set(cls, values):
+        if "bbox" in values and ("coordinates" in values or "radius" in values):
+            raise ValueError(
+                "Cannot pass both bounding box and coordinate/radius query in the same URL"
+            )
+        return values
+
     def fields(self):
         fields = []
-        if self.has('coordinates'):
+        if self.has("coordinates"):
             fields.append(self.fields_distance())
-        return ', '+(',').join(fields) if len(fields) > 0 else ''
+        return ", " + (",").join(fields) if len(fields) > 0 else ""
 
     def clause(self):
         where = ["WHERE TRUE"]
-        if self.has('mobile'):
+        if self.has("mobile"):
             where.append("ismobile = :mobile")
-        if self.has('coordinates'):
+        if self.has("coordinates"):
             where.append(self.where_radius())
-        if self.has('bbox'):
+        if self.has("bbox"):
             where.append(self.where_bbox())
         print(where)
         return ("\nAND ").join(where)
@@ -82,8 +88,8 @@ class LocationsQueries(Paging, SQL, Radius, Bbox):
     tags=["v3"],
 )
 async def location_get(
-        location: LocationQueries = Depends(LocationQueries.depends()),
-        db: DB = Depends(),
+    location: LocationQueries = Depends(LocationQueries.depends()),
+    db: DB = Depends(),
 ):
     response = await fetch_locations(location, db)
     return response
@@ -97,8 +103,8 @@ async def location_get(
     tags=["v3"],
 )
 async def locations_get(
-        locations: LocationsQueries = Depends(LocationsQueries.depends()),
-        db: DB = Depends()
+    locations: LocationsQueries = Depends(LocationsQueries.depends()),
+    db: DB = Depends(),
 ):
     response = await fetch_locations(locations, db)
     return response

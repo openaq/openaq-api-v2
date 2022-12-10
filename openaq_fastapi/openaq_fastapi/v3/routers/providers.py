@@ -2,7 +2,7 @@ import logging
 from typing import Union
 from fastapi import APIRouter, Depends, Query, Path
 from openaq_fastapi.db import DB
-from openaq_fastapi.v3.models.responses import ProvidersResponse
+from openaq_fastapi.v3.models.responses import ProvidersResponse, LocationsResponse
 from openaq_fastapi.models.queries import OBaseModel, Geo
 
 from openaq_fastapi.v3.models.queries import (
@@ -53,7 +53,28 @@ async def providers_get(
     return response
 
 
+@router.get(
+    "/providers/{id}/locations",
+    response_model=LocationsResponse,
+    summary="Get lociations by provider ID",
+    description="Provides a list of locations by provider ID",
+)
+async def provider_get(
+    provider: ProvidersQueries = Depends(ProvidersQueries.depends()),
+    db: DB = Depends(),
+):
+    response = await fetch_provider_locations(provider, db)
+    return response
+
+
 async def fetch_providers(where, db):
+    sql = f"""
+    """
+    response = await db.fetchPage(sql, where.params())
+    return response
+
+
+async def fetch_provider_locations(where, db):
     sql = f"""
     """
     response = await db.fetchPage(sql, where.params())
