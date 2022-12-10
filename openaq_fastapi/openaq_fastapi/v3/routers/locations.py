@@ -56,7 +56,9 @@ class LocationsQueries(Paging, SQL, Radius, Bbox):
 
     @root_validator(pre=True)
     def check_bbox_radius_set(cls, values):
-        if values["bbox"] is not None and values["coordinates"] is not None:
+        bbox = values.get("bbox", None)
+        coordinates = values.get("coordinates", None)
+        if bbox is not None and coordinates is not None:
             raise ValueError(
                 "Cannot pass both bounding box and coordinate/radius query in the same URL"
             )

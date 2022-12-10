@@ -55,9 +55,7 @@ def parameter_dependency_from_model(name: str, model_cls):
                 names.append(field_model.name)
                 annotations[field_model.name] = field_model.outer_type_
                 defaults.append(
-                    Query(
-                        field_model.default, description=field_info.description
-                    )
+                    Query(field_model.default, description=field_info.description)
                 )
 
     code = inspect.cleandoc(
@@ -103,7 +101,7 @@ class OBaseModel(BaseModel):
 # write queries and not need to worry about how to
 # create the total and pagination?
 # and if so, how should that be done?
-class SQL():
+class SQL:
     def pagination(self):
         return "OFFSET :offset\nLIMIT :limit"
 
@@ -111,10 +109,7 @@ class SQL():
         return ", COUNT(1) OVER() as found"
 
     def has(self, field_name: str):
-        return (
-            hasattr(self, field_name)
-            and getattr(self, field_name) is not None
-        )
+        return hasattr(self, field_name) and getattr(self, field_name) is not None
 
 
 # Thinking about how the paging should be done
@@ -128,14 +123,15 @@ class Paging(OBaseModel):
         gt=0,
         description="""Change the number of results returned.
         e.g. limit=100 will return up to 100 results""",
-        example="100"
+        example="100",
     )
     page: int = Query(
         1,
         gt=0,
         description="Paginate through results. e.g. page=1 will return first page of results",
-        example="1"
+        example="1",
     )
+
 
 # Some spatial helper queries
 class Radius(BaseModel):
@@ -143,12 +139,12 @@ class Radius(BaseModel):
         None,
         regex=r"^-?\d{1,2}\.?\d{0,8},-?1?\d{1,2}\.?\d{0,8}$",
         description="Coordinate pair in form lat,lng. Up to 8 decimal points of precision e.g. 38.907,-77.037",
-        example="38.907,-77.037"
+        example="38.907,-77.037",
     )
     radius: conint(gt=0, le=100000) = Query(
         1000,
         description="Search radius from coordinates as center in meters. Maximum of 100,000 (100km) defaults to 1000 (1km) e.g. radius=10000",
-        example="10000"
+        example="10000",
     )
     lat: Union[confloat(ge=-90, le=90), None] = None
     lon: Union[confloat(ge=-180, le=180), None] = None
@@ -163,10 +159,10 @@ class Radius(BaseModel):
                 values["lon"] = float(lon)
         return values
 
-    def fields_distance(self, geometry_field: str = 'geom'):
+    def fields_distance(self, geometry_field: str = "geom"):
         return f"st_distance({geometry_field}, st_setsrid(st_makepoint(:lon, :lat), 4326)) as distance"
 
-    def where_radius(self, geometry_field: str = 'geom'):
+    def where_radius(self, geometry_field: str = "geom"):
         if self.lat is not None and self.lon is not None:
             return f"st_dwithin(st_setsrid(st_makepoint(:lon, :lat), 4326), {geometry_field}, :radius)"
         return None
@@ -177,7 +173,7 @@ class Bbox(BaseModel):
         None,
         regex=r"^-?\d{1,2}\.?\d{0,8},-?1?\d{1,2}\.?\d{0,8},-?\d{1,2}\.?\d{0,8},-?\d{1,2}\.?\d{0,8}$",
         description="Min X, min Y, max X, max Y, up to 8 decimal points of precision e.g. -77.037,38.907,-77.0,39.910",
-        example="-77.037,38.907,-77.035,38.910"
+        example="-77.037,38.907,-77.035,38.910",
     )
     miny: Union[confloat(ge=-90, le=90), None] = None
     minx: Union[confloat(ge=-180, le=180), None] = None
