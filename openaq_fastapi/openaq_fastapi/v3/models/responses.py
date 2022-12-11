@@ -12,7 +12,6 @@ class JsonBase(BaseModel):
 
 class Meta(JsonBase):
     name: str = "openaq-api"
-    license: str = "CC BY 4.0d"
     website: str = "/"
     page: int = 1
     limit: int = 100
@@ -24,14 +23,51 @@ class OpenAQResult(JsonBase):
     results: List[Any] = []
 
 
+#
+
+
 class Datetime(JsonBase):
     utc: str
     local: str
 
 
+class Coordinates(JsonBase):
+    latitude: Union[float, None]
+    longitude: Union[float, None]
+
+
+# Base classes
+
+
 class CountryBase(JsonBase):
     id: Union[int, None]
     code: str
+    name: str
+
+
+class EntityBase(JsonBase):
+    id: int
+    name: str
+
+
+class OwnerBase(JsonBase):
+    id: int
+    name: str
+
+
+class ProviderBase(JsonBase):
+    id: int
+    name: str
+
+
+class ManufacturerBase(JsonBase):
+    id: int
+    name: str
+    entity: EntityBase
+
+
+class InstrumentBase(JsonBase):
+    id: int
     name: str
 
 
@@ -41,57 +77,41 @@ class ParameterBase(JsonBase):
     units: str
 
 
-class Parameter(ParameterBase):
+class SensorBase(JsonBase):
     id: int
     name: str
+    parameter: ParameterBase
+
+
+# full classes
+
+
+class Parameter(ParameterBase):
     display_name: str
     description: str
-    units: str
+    locations_count: int = Field(..., gt=0)
+    measurements_count: int = Field(..., gt=0)
 
 
 class Country(CountryBase):
     id: int
     code: str
     name: str
-    locations_count: int
     first_datetime: str
     last_datetime: str
     parameters: List[ParameterBase]
-    meaurements_count: int
-    providers_count: int
-
-
-class EntityBase(JsonBase):
-    id: int
-    name: str
+    locations_count: int = Field(..., gt=0)
+    meaurements_count: int = Field(..., gt=0)
+    providers_count: int = Field(..., gt=0)
 
 
 class Entity(EntityBase):
     type: str
 
 
-class Source(JsonBase):
-    url: str
-    name: str
-    id: str
-    readme: str
-    organization: str
-    lifecycle_stage: str
-
-
-class Coordinates(JsonBase):
-    latitude: Union[float, None]
-    longitude: Union[float, None]
-
-
-class ProviderBase(JsonBase):
-    id: int
-    name: str
-
-
 class Provider(ProviderBase):
     entity: EntityBase
-    locations_count: int
+    locations_count: int = Field(..., gt=0)
     parameters: List[ParameterBase]
     bbox: List[float] = Field(..., min_items=4, max_items=4)
     datetime_added: Datetime
@@ -99,21 +119,7 @@ class Provider(ProviderBase):
     datetime_last: Datetime
 
 
-class OwnerBase(JsonBase):
-    id: int
-    name: str
-
-
 class Owner(OwnerBase):
-    ...
-
-
-class InstrumentBase(JsonBase):
-    id: int
-    name: str
-
-
-class ManufacturerBase(JsonBase):
     entity: EntityBase
 
 
@@ -123,12 +129,6 @@ class Instrument(InstrumentBase):
 
 class Manufacturer(ManufacturerBase):
     ...
-
-
-class SensorBase(JsonBase):
-    id: int
-    name: str
-    parameter: ParameterBase
 
 
 class Sensor(SensorBase):
@@ -191,6 +191,9 @@ class Measurement(JsonBase):
     coverage: Coverage
     start_datetime: Datetime
     end_datetime: Datetime
+
+
+# response classes
 
 
 class LocationsResponse(OpenAQResult):
