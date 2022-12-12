@@ -46,6 +46,7 @@ from openaq_fastapi.routers.summary import router as summary_router
 # V3 routers
 from openaq_fastapi.v3.routers.locations import router as locations_router_v3
 from openaq_fastapi.v3.routers.tiles import router as tiles_router_v3
+from openaq_fastapi.v3.routers.measurements import router as measurements_router_v3
 
 
 from openaq_fastapi.settings import settings

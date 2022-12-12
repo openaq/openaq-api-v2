@@ -1,9 +1,8 @@
 import logging
 from typing import Union
-from fastapi import APIRouter, Depends, Query, Path
+from fastapi import APIRouter, Depends, Query
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.models.responses import LocationsResponse
-from openaq_fastapi.models.queries import OBaseModel, Geo
 
 from openaq_fastapi.v3.models.queries import (
     SQL,
@@ -11,29 +10,21 @@ from openaq_fastapi.v3.models.queries import (
     RadiusQuery,
     BboxQuery,
     ProviderQuery,
+    OwnerQuery,
+    CountryQuery,
 )
 
 logger = logging.getLogger("locations")
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/v3",
+    tags=["v3"],
+)
 
 # Needed query parameters
 
-# bbox
-# bounding box minx, miny, maxx, maxy
-# use the coordinates in sensor nodes
-
-# distance from point (radius)
-# point (wgs84) and distance in meters
-
-# provider
 
 # source/owner
-
-# sensor type?
-
-# mobile yes/no
-# defaults to not showing mobile locations?
 
 # parameter
 # location must have a specific parameter(s)
@@ -57,9 +48,15 @@ class LocationsQueries(
         RadiusQuery,
         BboxQuery,
         ProviderQuery,
+        OwnerQuery,
+        CountryQuery,
 ):
     mobile: Union[bool, None] = Query(
         description="Is the location considered a mobile location?"
+    )
+
+    monitor: Union[bool, None] = Query(
+        description="Is the location considered a reference monitor?"
     )
 
     def fields(self):
@@ -72,6 +69,8 @@ class LocationsQueries(
         where = ["WHERE TRUE"]
         if self.has('mobile'):
             where.append("ismobile = :mobile")
+        if self.has('mobile'):
+            where.append("ismonitor = :monitor")
         if self.has('coordinates'):
             where.append(RadiusQuery.where(self))
         if self.has('bbox'):
@@ -82,11 +81,10 @@ class LocationsQueries(
 
 
 @router.get(
-    "/v3/locations/{id}",
+    "/locations/{id}",
     response_model=LocationsResponse,
     summary="Get a location by ID",
     description="Provides a location by location ID",
-    tags=["v3"],
 )
 async def location_get(
         location: LocationQueries = Depends(LocationQueries.depends()),
@@ -97,11 +95,10 @@ async def location_get(
 
 
 @router.get(
-    "/v3/locations",
+    "/locations",
     response_model=LocationsResponse,
     summary="Get locations",
     description="Provides a list of locations",
-    tags=["v3"],
 )
 async def locations_get(
         locations: LocationsQueries = Depends(LocationsQueries.depends()),

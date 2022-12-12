@@ -151,7 +151,33 @@ class ProviderQuery(OBaseModel):
     )
 
     def where(self):
-        return "providers_id = :providers_id"
+        return "(provider->'id')::int = :providers_id"
+
+
+class OwnerQuery(OBaseModel):
+    owner_contacts_id: Union[int, None] = Query(
+        description="Limit the results to a specific owner",
+        ge=1
+    )
+
+    def where(self):
+        return "(owner->'id')::int = :owner_contacts_id"
+
+
+class CountryQuery(OBaseModel):
+    countries_id: Union[int, None] = Query(
+        description="Limit the results to a specific country",
+        ge=1
+    )
+    iso: Union[str, None] = Query(
+        description="Limit the results to a specific country using ISO code",
+    )
+
+    def where(self):
+        if self.countries_id is not None:
+            return "(country->'id')::int = :countries_id"
+        elif self.iso is not None:
+            return "country->>'code' = :iso"
 
 
 # Some spatial helper queries
