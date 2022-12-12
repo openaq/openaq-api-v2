@@ -20,13 +20,15 @@ def test_locations_path_good():
     response = client.get("/v3/locations/1")
     res = json.loads(response.content)
     assert response.status_code == 200
-    assert len(res["results"]) == 1
+    assert (
+        len(res["results"]) == 1
+    ), f"should have 1 results, found {len(res['results'])}"
     assert res["results"][0]["id"] == 1
 
 
 def test_locations_query_bad():
     response = client.get(
-        "/v3/locations/1?coordinates=42,42&radius=1000&bbox=42,42,42,42"
+        "/v3/locations?coordinates=42,42&radius=1000&bbox=42,42,42,42"
     )
     assert response.status_code == 422
 

@@ -1,8 +1,9 @@
 import logging
 from typing import Union
-from fastapi import APIRouter, Depends, Query, Path
-from pydantic import root_validator, validator
+from fastapi import APIRouter, Depends, HTTPException, Query, Path
+from pydantic import ValidationError, root_validator, validator
 from openaq_fastapi.db import DB
+from openaq_fastapi.v3.models.queries import make_dependable
 from openaq_fastapi.v3.models.responses import LocationsResponse
 from openaq_fastapi.models.queries import OBaseModel, Geo
 
@@ -45,6 +46,9 @@ router = APIRouter()
 class LocationQueries(Paging, SQL):
     id: int = Query(description="Limit the results to a specific location by id", ge=1)
 
+    def fields(self):
+        return ""
+
     def clause(self):
         return "WHERE id = :id"
 
@@ -58,7 +62,9 @@ class LocationsQueries(Paging, SQL, Radius, Bbox):
     def check_bbox_radius_set(cls, values):
         bbox = values.get("bbox", None)
         coordinates = values.get("coordinates", None)
-        if bbox is not None and coordinates is not None:
+        radius = values.get("radius", None)
+        print(values)
+        if bbox is not None and (coordinates is not None or radius is not None):
             raise ValueError(
                 "Cannot pass both bounding box and coordinate/radius query in the same URL"
             )
@@ -90,7 +96,7 @@ class LocationsQueries(Paging, SQL, Radius, Bbox):
     tags=["v3"],
 )
 async def location_get(
-    location: LocationQueries = Depends(LocationQueries.depends()),
+    location: LocationQueries = Depends(make_dependable(LocationQueries)),
     db: DB = Depends(),
 ):
     response = await fetch_locations(location, db)
@@ -129,7 +135,7 @@ async def fetch_locations(where, db):
     , bbox(geom) as bounds
     , datetime_first
     , datetime_last
-    {where.fields()}
+    {where.fields() or ''}
     {where.total()}
     FROM locations_view_m
     {where.clause()}

@@ -14,6 +14,8 @@ from pydantic import (
     confloat,
     root_validator,
 )
+from inspect import signature
+from fastapi.exceptions import ValidationError, HTTPException
 
 logger = logging.getLogger("queries")
 
@@ -79,6 +81,24 @@ def parameter_dependency_from_model(name: str, model_cls):
     func.__defaults__ = (*defaults,)
 
     return func
+
+
+def make_dependable(cls):
+    """
+    https://github.com/tiangolo/fastapi/issues/1474#issuecomment-1160633178
+    """
+
+    def init_cls_and_handle_errors(*args, **kwargs):
+        try:
+            signature(init_cls_and_handle_errors).bind(*args, **kwargs)
+            return cls(*args, **kwargs)
+        except ValidationError as e:
+            for error in e.errors():
+                error["loc"] = ["query"] + list(error["loc"])
+            raise HTTPException(422, detail=e.errors())
+
+    init_cls_and_handle_errors.__signature__ = signature(cls)
+    return init_cls_and_handle_errors
 
 
 class OBaseModel(BaseModel):
@@ -171,8 +191,8 @@ class Radius(BaseModel):
 class Bbox(BaseModel):
     bbox: Union[str, None] = Query(
         None,
-        regex=r"^-?\d{1,2}\.?\d{0,8},-?1?\d{1,2}\.?\d{0,8},-?\d{1,2}\.?\d{0,8},-?\d{1,2}\.?\d{0,8}$",
-        description="Min X, min Y, max X, max Y, up to 8 decimal points of precision e.g. -77.037,38.907,-77.0,39.910",
+        regex=r"^-?\d{1,2}\.?\d{0,4},-?1?\d{1,2}\.?\d{0,4},-?\d{1,2}\.?\d{0,4},-?\d{1,2}\.?\d{0,4}$",
+        description="Min X, min Y, max X, max Y, up to 4 decimal points of precision e.g. -77.037,38.907,-77.0,39.910",
         example="-77.037,38.907,-77.035,38.910",
     )
     miny: Union[confloat(ge=-90, le=90), None] = None

@@ -89,8 +89,8 @@ class SensorBase(JsonBase):
 class Parameter(ParameterBase):
     display_name: str
     description: str
-    locations_count: int = Field(..., gt=0)
-    measurements_count: int = Field(..., gt=0)
+    locations_count: int
+    measurements_count: int
 
 
 class Country(CountryBase):
@@ -100,9 +100,9 @@ class Country(CountryBase):
     first_datetime: str
     last_datetime: str
     parameters: List[ParameterBase]
-    locations_count: int = Field(..., gt=0)
-    meaurements_count: int = Field(..., gt=0)
-    providers_count: int = Field(..., gt=0)
+    locations_count: int
+    meaurements_count: int
+    providers_count: int
 
 
 class Entity(EntityBase):
@@ -111,7 +111,7 @@ class Entity(EntityBase):
 
 class Provider(ProviderBase):
     entity: EntityBase
-    locations_count: int = Field(..., gt=0)
+    locations_count: int
     parameters: List[ParameterBase]
     bbox: List[float] = Field(..., min_items=4, max_items=4)
     datetime_added: Datetime
