@@ -2,6 +2,7 @@ from typing import List, Union
 from pydantic import BaseModel, Field
 from pydantic.typing import Any
 from humps import camelize
+from datetime import datetime
 
 
 class JsonBase(BaseModel):
@@ -97,11 +98,11 @@ class Country(CountryBase):
     id: int
     code: str
     name: str
-    first_datetime: str
-    last_datetime: str
+    first_datetime: datetime
+    last_datetime: datetime
     parameters: List[ParameterBase]
     locations_count: int
-    meaurements_count: int
+    measurements_count: int
     providers_count: int
 
 

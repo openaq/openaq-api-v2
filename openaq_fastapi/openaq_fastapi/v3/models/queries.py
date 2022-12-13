@@ -130,7 +130,7 @@ class QueryBaseModel(BaseModel):
         return self.dict(exclude_unset=True, by_alias=True)
 
     def pagination(self):
-        return ''
+        return 'LIMIT 1'
 
     def fields(self):
         return ''
@@ -140,6 +140,9 @@ class QueryBaseModel(BaseModel):
 
     def has(self, field_name: str):
         return hasattr(self, field_name) and getattr(self, field_name) is not None
+
+    def where(self):
+        return "WHERE id = :id"
 
 
 # Thinking about how the paging should be done

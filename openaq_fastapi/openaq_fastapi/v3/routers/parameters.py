@@ -6,20 +6,30 @@ from openaq_fastapi.v3.models.responses import ParametersResponse
 from openaq_fastapi.models.queries import OBaseModel, Geo
 
 from openaq_fastapi.v3.models.queries import (
+    QueryBaseModel,
     Paging,
 )
 
 logger = logging.getLogger("parameters")
 
-router = APIRouter(prefix="/v3", tags=["v3"])
+router = APIRouter(
+    prefix="/v3",
+    tags=["v3"],
+)
+
+
+class ParameterQueries(QueryBaseModel):
+    id: int = Path(
+        description="Limit the results to a specific id",
+        ge=1
+    )
+
+    def where(self):
+        return "WHERE measurands_id = :id"
 
 
 class ParametersQueries(Paging):
-    def fields(self):
-        fields = []
-        return ", " + (",").join(fields) if len(fields) > 0 else ""
-
-    def clause(self):
+    def where(self):
         where = ["WHERE TRUE"]
         return ("\nAND ").join(where)
 
@@ -31,7 +41,7 @@ class ParametersQueries(Paging):
     description="Provides a parameter by parameter ID",
 )
 async def parameter_get(
-    parameter: ParametersQueries = Depends(ParametersQueries.depends()),
+    parameter: ParameterQueries = Depends(ParameterQueries.depends()),
     db: DB = Depends(),
 ):
     response = await fetch_parameters(parameter, db)
@@ -52,8 +62,19 @@ async def parameters_get(
     return response
 
 
-async def fetch_parameters(where, db):
+async def fetch_parameters(query, db):
     sql = f"""
+    SELECT measurands_id as id
+    , measurand as name
+    , units
+    , description
+    , display as display_name
+    , 0 as locations_count
+    , 0 as measurements_count
+    {query.total()}
+    FROM measurands
+    {query.where()}
+    {query.pagination()}
     """
-    response = await db.fetchPage(sql, where.params())
+    response = await db.fetchPage(sql, query.params())
     return response

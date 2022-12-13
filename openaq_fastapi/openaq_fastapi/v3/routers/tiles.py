@@ -4,14 +4,21 @@ from typing import List, Union
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, Request, Response
 from pydantic import BaseModel, Field
 from openaq_fastapi.db import DB
-from openaq_fastapi.models.queries import OBaseModel
+
+from openaq_fastapi.v3.models.queries import (
+    QueryBaseModel,
+    Paging,
+)
 
 logger = logging.getLogger("tiles")
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/v3",
+    tags=["v3"],
+)
 
 
-class TileBase(OBaseModel):
+class TileBase(QueryBaseModel):
     z: int = (Path(..., ge=0, le=30, description="Mercator tiles's zoom level"),)
     x: int = (Path(..., description="Mercator tiles's column"),)
     y: int = (Path(..., description="Mercator tiles's row"),)
@@ -31,7 +38,7 @@ class Tile(TileBase):
         description="Limit the results to locations active within the last 48 hours"
     )
 
-    def clause(self):
+    def where(self):
         where = ["WHERE ismobile = false"]
         where.append("measurands_id = :parameters_id")
         if hasattr(self, "providers") and self.providers is not None:
@@ -57,7 +64,7 @@ class MobileTile(TileBase):
         description="Limit the results to locations active within the last 48 hours"
     )
 
-    def clause(self):
+    def where(self):
         where = ["WHERE ismobile = false"]
         where.append("measurands_id = :parameters_id")
         if hasattr(self, "providers") and self.providers is not None:
@@ -70,10 +77,9 @@ class MobileTile(TileBase):
 
 
 @router.get(
-    "/v3/locations/tiles/{z}/{x}/{y}.pbf",
+    "/locations/tiles/{z}/{x}/{y}.pbf",
     responses={200: {"content": {"application/x-protobuf": {}}}},
     response_class=Response,
-    tags=["v3"],
     include_in_schema=True,
 )
 async def get_tile(
@@ -102,27 +108,27 @@ async def fetch_tiles(where, db):
                 , sensors_latest.value
                 , sensors_latest.datetime > (NOW() - INTERVAL '48 hours' ) as active
                 , providers.providers_id
-            FROM 
+            FROM
                 sensor_nodes
-            JOIN 
-                tile 
-            ON 
+            JOIN
+                tile
+            ON
                 TRUE
-            JOIN 
-                sensor_systems 
-            ON 
+            JOIN
+                sensor_systems
+            ON
                 sensor_systems.sensor_nodes_id = sensor_nodes.sensor_nodes_id
-            JOIN 
-                sensors 
-            ON 
+            JOIN
+                sensors
+            ON
                 sensors.sensor_systems_id = sensor_systems.sensor_systems_id
-            JOIN 
-                sensors_latest 
-            ON 
+            JOIN
+                sensors_latest
+            ON
                 sensors_latest.sensors_id = sensors.sensors_id
-            JOIN 
-                providers 
-            ON 
+            JOIN
+                providers
+            ON
                 providers.providers_id = sensor_nodes.providers_id
         ),
         t AS (
@@ -134,7 +140,7 @@ async def fetch_tiles(where, db):
                 , active
                 , providers_id
                 , true AS is_monitor
-            FROM 
+            FROM
                 locations
             {where.clause()}
         )
@@ -145,10 +151,9 @@ async def fetch_tiles(where, db):
 
 
 @router.get(
-    "/v3/locations/tiles/mobile-generalized/{z}/{x}/{y}.pbf",
+    "/locations/tiles/mobile-generalized/{z}/{x}/{y}.pbf",
     responses={200: {"content": {"application/x-protobuf": {}}}},
     response_class=Response,
-    tags=["v3"],
     include_in_schema=False,
 )
 async def get_mobile_gen_tiles(
@@ -166,10 +171,9 @@ async def fetch_mobile_gen_tiles(where, db):
 
 
 @router.get(
-    "/v3/locations/tiles/mobile-paths/{z}/{x}/{y}.pbf",
+    "/locations/tiles/mobile-paths/{z}/{x}/{y}.pbf",
     responses={200: {"content": {"application/x-protobuf": {}}}},
     response_class=Response,
-    tags=["v3"],
     include_in_schema=False,
 )
 async def get_mobile_path_tiles(
@@ -187,10 +191,9 @@ async def fetch_mobile_path_tiles(where, db):
 
 
 @router.get(
-    "/v3/locations/tiles/mobile/{z}/{x}/{y}.pbf",
+    "/locations/tiles/mobile/{z}/{x}/{y}.pbf",
     responses={200: {"content": {"application/x-protobuf": {}}}},
     response_class=Response,
-    tags=["v3"],
     include_in_schema=False,
 )
 async def get_mobiletiles(
@@ -254,11 +257,10 @@ class TileJSON(BaseModel):
 
 
 @router.get(
-    "/v3/locations/tiles/tiles.json",
+    "/locations/tiles/tiles.json",
     response_model=TileJSON,
     responses={200: {"description": "Return a tilejson"}},
     response_model_exclude_none=True,
-    tags=["v3"],
     include_in_schema=False,
 )
 async def tilejson(

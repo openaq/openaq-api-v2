@@ -44,10 +44,13 @@ from openaq_fastapi.routers.sources import router as sources_router
 from openaq_fastapi.routers.summary import router as summary_router
 
 # V3 routers
-from openaq_fastapi.v3.routers.locations import router as locations_router_v3
-from openaq_fastapi.v3.routers.parameters import router as parameters_router_v3
-from openaq_fastapi.v3.routers.tiles import router as tiles_router_v3
-from openaq_fastapi.v3.routers.measurements import router as measurements_router_v3
+from openaq_fastapi.v3.routers import (
+    locations,
+    measurements,
+    parameters,
+    countries,
+    tiles,
+)
 
 
 from openaq_fastapi.settings import settings
@@ -215,9 +218,11 @@ def favico():
     return RedirectResponse("https://openaq.org/assets/graphics/meta/favicon.png")
 
 
-app.include_router(locations_router_v3)
-app.include_router(parameters_router_v3)
-app.include_router(tiles_router_v3)
+app.include_router(locations.router)
+app.include_router(parameters.router)
+app.include_router(tiles.router)
+app.include_router(countries.router)
+app.include_router(measurements.router)
 
 app.include_router(averages_router)
 app.include_router(cities_router)
