@@ -12,7 +12,6 @@ class JsonBase(BaseModel):
 
 class Meta(JsonBase):
     name: str = "openaq-api"
-    license: str = "CC BY 4.0d"
     website: str = "/"
     page: int = 1
     limit: int = 100
@@ -24,9 +23,51 @@ class OpenAQResult(JsonBase):
     results: List[Any] = []
 
 
+#
+
+
+class Datetime(JsonBase):
+    utc: str
+    local: str
+
+
+class Coordinates(JsonBase):
+    latitude: Union[float, None]
+    longitude: Union[float, None]
+
+
+# Base classes
+
+
 class CountryBase(JsonBase):
     id: Union[int, None]
     code: str
+    name: str
+
+
+class EntityBase(JsonBase):
+    id: int
+    name: str
+
+
+class OwnerBase(JsonBase):
+    id: int
+    name: str
+
+
+class ProviderBase(JsonBase):
+    id: int
+    name: str
+
+
+class ManufacturerBase(JsonBase):
+    id: int
+    name: str
+    entity: EntityBase
+
+
+class InstrumentBase(JsonBase):
+    id: int
     name: str
 
 
@@ -36,78 +77,58 @@ class ParameterBase(JsonBase):
     units: str
 
 
-class Parameter(ParameterBase):
+class SensorBase(JsonBase):
     id: int
     name: str
+    parameter: ParameterBase
+
+
+# full classes
+
+
+class Parameter(ParameterBase):
     display_name: str
     description: str
-    units: str
+    locations_count: int
+    measurements_count: int
 
 
 class Country(CountryBase):
     id: int
     code: str
     name: str
-    locations_count: int
     first_datetime: str
     last_datetime: str
     parameters: List[ParameterBase]
+    locations_count: int
     meaurements_count: int
-    cities_count: int
     providers_count: int
 
 
-class ContactBase(JsonBase):
-    id: int
-    name: str
-
-
-class Contact(ContactBase):
-    id: int
-    name: str
-
-
-class Source(JsonBase):
-    url: str
-    name: str
-    id: str
-    readme: str
-    organization: str
-    lifecycle_stage: str
-
-
-class Coordinates(JsonBase):
-    latitude: Union[float, None]
-    longitude: Union[float, None]
-
-
-class ProviderBase(JsonBase):
-    id: int
-    name: str
+class Entity(EntityBase):
+    type: str
 
 
 class Provider(ProviderBase):
-    contact: ContactBase
+    entity: EntityBase
+    locations_count: int
+    parameters: List[ParameterBase]
+    bbox: List[float] = Field(..., min_items=4, max_items=4)
+    datetime_added: Datetime
+    datetime_first: Datetime
+    datetime_last: Datetime
 
 
-class InstrumentBase(JsonBase):
-    id: int
-    name: str
+class Owner(OwnerBase):
+    entity: EntityBase
 
 
 class Instrument(InstrumentBase):
-    manufacturer: Contact
+    manufacturer: ManufacturerBase
 
 
-class Datetime(JsonBase):
-    utc: str
-    local: str
-
-
-class SensorBase(JsonBase):
-    id: int
-    name: str
-    parameter: ParameterBase
+class Manufacturer(ManufacturerBase):
+    ...
 
 
 class Sensor(SensorBase):
@@ -122,7 +143,7 @@ class Location(JsonBase):
     locality: Union[str, None]
     timezone: str
     country: CountryBase
-    owner: ContactBase
+    owner: EntityBase
     provider: ProviderBase
     is_mobile: bool
     is_monitor: bool
@@ -172,6 +193,9 @@ class Measurement(JsonBase):
     end_datetime: Datetime
 
 
+# response classes
+
+
 class LocationsResponse(OpenAQResult):
     results: List[Location]
 
@@ -182,3 +206,23 @@ class MeasurementsResponse(OpenAQResult):
 
 class CountriesResponse(OpenAQResult):
     results: List[Country]
+
+
+class ParametersResponse(OpenAQResult):
+    results: List[Parameter]
+
+
+class SensorsResponse(OpenAQResult):
+    results: List[Sensor]
+
+
+class ProvidersResponse(OpenAQResult):
+    results: List[Provider]
+
+
+class ManufacturersResponse(OpenAQResult):
+    results: List[Manufacturer]
+
+
+class OwnersResponse(OpenAQResult):
+    results: List[Owner]

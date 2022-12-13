@@ -11,14 +11,14 @@ logger = logging.getLogger("locations")
 router = APIRouter()
 
 
-class countryy(Paging, SQL):
+class CountryQueries(Paging, SQL):
     id: int = Query(description="Limit the results to a specific country by id", ge=1)
 
     def clause(self):
         return "WHERE id = :id"
 
 
-class countries(Paging, SQL):
+class CountriesQueries(Paging, SQL):
     ...
 
 
@@ -30,7 +30,7 @@ class countries(Paging, SQL):
     tags=["v3"],
 )
 async def country_get(
-    country: countryy = Depends(countryy.depends()),
+    country: CountryQueries = Depends(CountryQueries.depends()),
     db: DB = Depends(),
 ):
     country.id = id
@@ -46,7 +46,8 @@ async def country_get(
     tags=["v3"],
 )
 async def countries_get(
-    countries: Countries = Depends(Countries.depends()), db: DB = Depends()
+    countries: CountriesQueries = Depends(CountriesQueries.depends()),
+    db: DB = Depends(),
 ):
     response = await fetch_countries(countries, db)
     return response

@@ -14,7 +14,7 @@ from openaq_fastapi.settings import settings
 
 from .models.responses import Meta, OpenAQResult
 
-logger = logging.getLogger('db')
+logger = logging.getLogger("db")
 
 
 def default(obj):
@@ -47,16 +47,10 @@ async def db_pool(pool):
     # properly convert json/jsonb fields
     async def init(con):
         await con.set_type_codec(
-            'jsonb',
-            encoder=orjson.dumps,
-            decoder=orjson.loads,
-            schema='pg_catalog'
+            "jsonb", encoder=orjson.dumps, decoder=orjson.loads, schema="pg_catalog"
         )
         await con.set_type_codec(
-            'json',
-            encoder=orjson.dumps,
-            decoder=orjson.loads,
-            schema='pg_catalog'
+            "json", encoder=orjson.dumps, decoder=orjson.loads, schema="pg_catalog"
         )
 
     logger.debug(f"Checking for existing pool: {pool}")
@@ -68,7 +62,7 @@ async def db_pool(pool):
             max_inactive_connection_lifetime=15,
             min_size=1,
             max_size=10,
-            init=init
+            init=init,
         )
     return pool
 
@@ -84,7 +78,7 @@ class DB:
 
     async def pool(self):
         self.request.app.state.pool = await db_pool(
-            getattr(self.request.app.state, 'pool', None)
+            getattr(self.request.app.state, "pool", None)
         )
         return self.request.app.state.pool
 
@@ -134,21 +128,18 @@ class DB:
         return None
 
     async def fetchPage(self, query, kwargs):
-        if 'limit' in kwargs.keys():
+        if "limit" in kwargs.keys():
             page = kwargs.get("page", 1)
-            kwargs['offset'] = abs((page - 1) * kwargs.get('limit'))
+            kwargs["offset"] = abs((page - 1) * kwargs.get("limit"))
 
         data = await self.fetch(query, kwargs)
         if len(data) > 0:
-            if 'found' in data[0].keys():
-                kwargs['found'] = data[0]["found"]
+            if "found" in data[0].keys():
+                kwargs["found"] = data[0]["found"]
         else:
-            kwargs['found'] = 0
+            kwargs["found"] = 0
 
-        output = OpenAQResult(
-            meta=Meta.parse_obj(kwargs),
-            results=data
-        )
+        output = OpenAQResult(meta=Meta.parse_obj(kwargs), results=data)
         return output
 
     async def fetchOpenAQResult(self, query, kwargs):
@@ -157,20 +148,16 @@ class DB:
         results = []
 
         if len(rows) > 0:
-            if 'count' in rows[0].keys():
+            if "count" in rows[0].keys():
                 found = rows[0]["count"]
             # OpenAQResult expects a list for results
             if rows[0][1] is not None:
                 if isinstance(rows[0][1], list):
                     results = rows[0][1]
                 elif isinstance(rows[0][1], dict):
-                    results = [
-                        r[1] for r in rows
-                    ]
+                    results = [r[1] for r in rows]
                 elif isinstance(rows[0][1], str):
-                    results = [
-                        r[1] for r in rows
-                    ]
+                    results = [r[1] for r in rows]
 
         meta = Meta(
             website=os.getenv("DOMAIN_NAME", os.getenv("BASE_URL", "/")),

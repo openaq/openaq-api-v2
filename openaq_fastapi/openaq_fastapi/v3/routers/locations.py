@@ -1,11 +1,13 @@
 import logging
 from typing import Union
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Path
+from pydantic import ValidationError, root_validator, validator
 from openaq_fastapi.db import DB
+from openaq_fastapi.v3.models.queries import make_dependable
 from openaq_fastapi.v3.models.responses import LocationsResponse
 
 from openaq_fastapi.v3.models.queries import (
-    SQL,
+    QueryBaseModel,
     Paging,
     RadiusQuery,
     BboxQuery,
@@ -32,19 +34,18 @@ router = APIRouter(
 # city/country
 
 
-class LocationQueries(SQL):
+class LocationQueries(QueryBaseModel):
     id: int = Query(
         description="Limit the results to a specific location by id",
         ge=1
     )
 
-    def clause(self):
+    def where(self):
         return "WHERE id = :id"
 
 
 class LocationsQueries(
         Paging,
-        SQL,
         RadiusQuery,
         BboxQuery,
         ProviderQuery,
@@ -59,15 +60,27 @@ class LocationsQueries(
         description="Is the location considered a reference monitor?"
     )
 
+    @root_validator(pre=True)
+    def check_bbox_radius_set(cls, values):
+        bbox = values.get("bbox", None)
+        coordinates = values.get("coordinates", None)
+        radius = values.get("radius", None)
+        print(values)
+        if bbox is not None and (coordinates is not None or radius is not None):
+            raise ValueError(
+                "Cannot pass both bounding box and coordinate/radius query in the same URL"
+            )
+        return values
+
     def fields(self):
         fields = []
         if self.has('coordinates'):
             fields.append(RadiusQuery.fields(self))
         return ', '+(',').join(fields) if len(fields) > 0 else ''
 
-    def clause(self):
+    def where(self):
         where = ["WHERE TRUE"]
-        if self.has('mobile'):
+        if self.has("mobile"):
             where.append("ismobile = :mobile")
         if self.has('mobile'):
             where.append("ismonitor = :monitor")
@@ -87,8 +100,8 @@ class LocationsQueries(
     description="Provides a location by location ID",
 )
 async def location_get(
-        location: LocationQueries = Depends(LocationQueries.depends()),
-        db: DB = Depends(),
+    location: LocationQueries = Depends(make_dependable(LocationQueries)),
+    db: DB = Depends(),
 ):
     response = await fetch_locations(location, db)
     return response
@@ -101,14 +114,14 @@ async def location_get(
     description="Provides a list of locations",
 )
 async def locations_get(
-        locations: LocationsQueries = Depends(LocationsQueries.depends()),
-        db: DB = Depends()
+    locations: LocationsQueries = Depends(LocationsQueries.depends()),
+    db: DB = Depends(),
 ):
     response = await fetch_locations(locations, db)
     return response
 
 
-async def fetch_locations(where, db):
+async def fetch_locations(query, db):
     sql = f"""
     SELECT id
     , name
@@ -125,11 +138,11 @@ async def fetch_locations(where, db):
     , bbox(geom) as bounds
     , datetime_first
     , datetime_last
-    {where.fields()}
-    {where.total()}
+    {query.fields() or ''}
+    {query.total()}
     FROM locations_view_m
-    {where.clause()}
-    {where.pagination()}
+    {query.where()}
+    {query.pagination()}
     """
-    response = await db.fetchPage(sql, where.params())
+    response = await db.fetchPage(sql, query.params())
     return response
