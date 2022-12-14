@@ -27,7 +27,7 @@ class OpenAQResult(JsonBase):
 #
 
 
-class Datetime(JsonBase):
+class DatetimeObject(JsonBase):
     utc: str
     local: str
 
@@ -38,6 +38,9 @@ class Coordinates(JsonBase):
 
 
 # Base classes
+class GeoJSON(JsonBase):
+    type: str
+    coordinates: List[Any] = []
 
 
 class CountryBase(JsonBase):
@@ -111,13 +114,20 @@ class Entity(EntityBase):
 
 
 class Provider(ProviderBase):
-    entity: EntityBase
+    source_name: str
+    export_prefix: str
+    datetime_added: datetime
+    datetime_first: datetime
+    datetime_last: datetime
+    owner_entity: EntityBase
     locations_count: int
+    measurements_count: int
+    countries_count: int
     parameters: List[ParameterBase]
-    bbox: List[float] = Field(..., min_items=4, max_items=4)
-    datetime_added: Datetime
-    datetime_first: Datetime
-    datetime_last: Datetime
+    bbox: GeoJSON
+    datetime_added: datetime
+    datetime_first: datetime
+    datetime_last: datetime
 
 
 class Owner(OwnerBase):
@@ -133,8 +143,8 @@ class Manufacturer(ManufacturerBase):
 
 
 class Sensor(SensorBase):
-    datetime_first: Datetime
-    datetime_last: Datetime
+    datetime_first: DatetimeObject
+    datetime_last: DatetimeObject
     value_last: float
 
 
@@ -153,15 +163,15 @@ class Location(JsonBase):
     coordinates: Coordinates
     bounds: List[float] = Field(..., min_items=4, max_items=4)
     distance: Union[float, None]
-    datetime_first: Datetime
-    datetime_last: Datetime
+    datetime_first: DatetimeObject
+    datetime_last: DatetimeObject
 
 
 class Period(JsonBase):
     label: str
     interval: str
-    datetime_from: Datetime
-    datetime_to: Datetime
+    datetime_from: DatetimeObject
+    datetime_to: DatetimeObject
 
 
 class Summary(JsonBase):
@@ -190,8 +200,8 @@ class Measurement(JsonBase):
     period: Period
     summary: Summary
     coverage: Coverage
-    start_datetime: Datetime
-    end_datetime: Datetime
+    start_datetime: DatetimeObject
+    end_datetime: DatetimeObject
 
 
 # response classes

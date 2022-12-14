@@ -90,7 +90,7 @@ async def fetch_countries(query, db):
     , measurements_count
     , providers_count
     {query.total()}
-    FROM countries_view_m
+    FROM countries_view_cached
     {query.where()}
     {query.pagination()}
     """
