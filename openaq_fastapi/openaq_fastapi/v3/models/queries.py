@@ -106,6 +106,7 @@ class QueryBaseModel(BaseModel):
     # Using this to catch valididation errors that should be 422s
     https://github.com/tiangolo/fastapi/issues/318#issuecomment-1075020514
     """
+
     def __init__(self, **kwargs):
         try:
             super().__init__(**kwargs)
@@ -130,10 +131,10 @@ class QueryBaseModel(BaseModel):
         return self.dict(exclude_unset=True, by_alias=True)
 
     def pagination(self):
-        return 'LIMIT 1'
+        return "LIMIT 1"
 
     def fields(self):
-        return ''
+        return ""
 
     def total(self):
         return ", COUNT(1) OVER() as found"
@@ -142,7 +143,10 @@ class QueryBaseModel(BaseModel):
         return hasattr(self, field_name) and getattr(self, field_name) is not None
 
     def where(self):
-        return "WHERE id = :id"
+        if hasattr(self, "id"):
+            return "WHERE id = :id"
+        else:
+            return ""
 
 
 # Thinking about how the paging should be done
@@ -171,8 +175,7 @@ class Paging(QueryBaseModel):
 
 class ProviderQuery(QueryBaseModel):
     providers_id: Union[int, None] = Query(
-        description="Limit the results to a specific provider",
-        ge=1
+        description="Limit the results to a specific provider", ge=1
     )
 
     def where(self):
@@ -181,8 +184,7 @@ class ProviderQuery(QueryBaseModel):
 
 class OwnerQuery(QueryBaseModel):
     owner_contacts_id: Union[int, None] = Query(
-        description="Limit the results to a specific owner",
-        ge=1
+        description="Limit the results to a specific owner", ge=1
     )
 
     def where(self):
@@ -191,8 +193,7 @@ class OwnerQuery(QueryBaseModel):
 
 class CountryQuery(QueryBaseModel):
     countries_id: Union[int, None] = Query(
-        description="Limit the results to a specific country",
-        ge=1
+        description="Limit the results to a specific country", ge=1
     )
     iso: Union[str, None] = Query(
         description="Limit the results to a specific country using ISO code",
@@ -286,12 +287,12 @@ class MeasurementsQueries(Paging):
 
 
 class LocationsQueries(
-        Paging,
-        RadiusQuery,
-        BboxQuery,
-        ProviderQuery,
-        OwnerQuery,
-        CountryQuery,
+    Paging,
+    RadiusQuery,
+    BboxQuery,
+    ProviderQuery,
+    OwnerQuery,
+    CountryQuery,
 ):
     mobile: Union[bool, None] = Query(
         description="Is the location considered a mobile location?"
@@ -315,22 +316,22 @@ class LocationsQueries(
 
     def fields(self):
         fields = []
-        if self.has('coordinates'):
+        if self.has("coordinates"):
             fields.append(RadiusQuery.fields(self))
-        return ', '+(',').join(fields) if len(fields) > 0 else ''
+        return ", " + (",").join(fields) if len(fields) > 0 else ""
 
     def where(self):
         where = ["WHERE TRUE"]
         if self.has("mobile"):
             where.append("ismobile = :mobile")
-        if self.has('mobile'):
+        if self.has("mobile"):
             where.append("ismonitor = :monitor")
-        if self.has('coordinates'):
+        if self.has("coordinates"):
             where.append(RadiusQuery.where(self))
-        if self.has('bbox'):
+        if self.has("bbox"):
             where.append(BboxQuery.where(self))
-        if self.has('countries_id'):
+        if self.has("countries_id"):
             where.append(CountryQuery.where(self))
-        if self.has('providers_id'):
+        if self.has("providers_id"):
             where.append(ProviderQuery.where(self))
         return ("\nAND ").join(where)
