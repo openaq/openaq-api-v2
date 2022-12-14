@@ -41,9 +41,11 @@ class CountriesQueries(Paging):
     description="Provides a country by country ID",
 )
 async def country_get(
+    id: int,
     country: CountryQueries = Depends(CountryQueries.depends()),
     db: DB = Depends(),
 ):
+    country.id = id
     response = await fetch_countries(country, db)
     return response
 
