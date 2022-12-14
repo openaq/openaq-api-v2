@@ -270,6 +270,21 @@ class BboxQuery(QueryBaseModel):
         return None
 
 
+class MeasurementsQueries(Paging):
+    locations_id: int = Query(
+        description="Limit the results to a specific location",
+        ge=1,
+    )
+    limit: int = Query(2)
+
+    def where(self):
+        where = ["WHERE sensor_nodes_id = :locations_id"]
+        if self.has('providers_id'):
+            where.append(ProviderQuery.where(self))
+        return ("\nAND ").join(where)
+
+
+
 class LocationsQueries(
         Paging,
         RadiusQuery,

@@ -1,7 +1,5 @@
 import logging
-from typing import Union
-from fastapi import APIRouter, Depends, HTTPException, Query, Path
-from pydantic import ValidationError, root_validator, validator
+from fastapi import APIRouter, Depends, Query
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.models.queries import make_dependable
 from openaq_fastapi.v3.models.responses import LocationsResponse
@@ -82,7 +80,7 @@ async def fetch_locations(query, db):
     , bbox(geom) as bounds
     , datetime_first
     , datetime_last
-    {query.fields() or ''}
+    {query.fields()}
     {query.total()}
     FROM locations_view_m
     {query.where()}
