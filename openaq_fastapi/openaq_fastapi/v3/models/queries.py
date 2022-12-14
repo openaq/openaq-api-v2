@@ -268,3 +268,54 @@ class BboxQuery(QueryBaseModel):
         if self.bbox is not None:
             return "st_makeenvelope(:minx, :miny, :maxx, :maxy, 4326) && geom"
         return None
+
+
+class LocationsQueries(
+        Paging,
+        RadiusQuery,
+        BboxQuery,
+        ProviderQuery,
+        OwnerQuery,
+        CountryQuery,
+):
+    mobile: Union[bool, None] = Query(
+        description="Is the location considered a mobile location?"
+    )
+
+    monitor: Union[bool, None] = Query(
+        description="Is the location considered a reference monitor?"
+    )
+
+    @root_validator(pre=True)
+    def check_bbox_radius_set(cls, values):
+        bbox = values.get("bbox", None)
+        coordinates = values.get("coordinates", None)
+        radius = values.get("radius", None)
+        print(values)
+        if bbox is not None and (coordinates is not None or radius is not None):
+            raise ValueError(
+                "Cannot pass both bounding box and coordinate/radius query in the same URL"
+            )
+        return values
+
+    def fields(self):
+        fields = []
+        if self.has('coordinates'):
+            fields.append(RadiusQuery.fields(self))
+        return ', '+(',').join(fields) if len(fields) > 0 else ''
+
+    def where(self):
+        where = ["WHERE TRUE"]
+        if self.has("mobile"):
+            where.append("ismobile = :mobile")
+        if self.has('mobile'):
+            where.append("ismonitor = :monitor")
+        if self.has('coordinates'):
+            where.append(RadiusQuery.where(self))
+        if self.has('bbox'):
+            where.append(BboxQuery.where(self))
+        if self.has('countries_id'):
+            where.append(CountryQuery.where(self))
+        if self.has('providers_id'):
+            where.append(ProviderQuery.where(self))
+        return ("\nAND ").join(where)

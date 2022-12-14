@@ -98,8 +98,8 @@ class Country(CountryBase):
     id: int
     code: str
     name: str
-    first_datetime: datetime
-    last_datetime: datetime
+    datetime_first: datetime
+    datetime_last: datetime
     parameters: List[ParameterBase]
     locations_count: int
     measurements_count: int

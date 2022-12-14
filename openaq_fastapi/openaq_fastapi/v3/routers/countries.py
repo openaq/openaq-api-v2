@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, Depends, Query, Path
+from fastapi import APIRouter, Depends, Path
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.models.responses import (
     LocationsResponse,
@@ -9,6 +9,7 @@ from openaq_fastapi.v3.models.responses import (
 from openaq_fastapi.v3.models.queries import (
     QueryBaseModel,
     Paging,
+    LocationsQueries,
 )
 
 from openaq_fastapi.v3.routers.locations import fetch_locations
@@ -27,9 +28,6 @@ class CountryQueries(QueryBaseModel):
         description="Limit the results to a specific country by id",
         ge=1,
     )
-
-    def where(self):
-        return "WHERE countries_id = :id"
 
 
 class CountriesQueries(Paging):
@@ -51,16 +49,16 @@ async def country_get(
 
 
 @router.get(
-    "/countries/{id}/locations",
+    "/countries/{countries_id}/locations",
     response_model=LocationsResponse,
     summary="Get locations within a country",
     description="Provides a country by country ID",
 )
 async def country_locations_get(
-    country: CountryQueries = Depends(CountryQueries.depends()),
+    locations: LocationsQueries = Depends(LocationsQueries.depends()),
     db: DB = Depends(),
 ):
-    response = await fetch_locations(country, db)
+    response = await fetch_locations(locations, db)
     return response
 
 
@@ -80,17 +78,17 @@ async def countries_get(
 
 async def fetch_countries(query, db):
     sql = f"""
-    SELECT countries_id as id
-    , iso as code
+    SELECT id
+    , code
     , name
-    , now() as first_datetime
-    , now() as last_datetime
-    , '[]'::json as parameters
-    , 0 as locations_count
-    , 0 as measurements_count
-    , 0 as providers_count
+    , datetime_first
+    , datetime_last
+    , parameters
+    , locations_count
+    , measurements_count
+    , providers_count
     {query.total()}
-    FROM countries
+    FROM countries_view_m
     {query.where()}
     {query.pagination()}
     """

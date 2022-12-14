@@ -8,12 +8,7 @@ from openaq_fastapi.v3.models.responses import LocationsResponse
 
 from openaq_fastapi.v3.models.queries import (
     QueryBaseModel,
-    Paging,
-    RadiusQuery,
-    BboxQuery,
-    ProviderQuery,
-    OwnerQuery,
-    CountryQuery,
+    LocationsQueries,
 )
 
 logger = logging.getLogger("locations")
@@ -40,57 +35,6 @@ class LocationQueries(QueryBaseModel):
         ge=1
     )
 
-    def where(self):
-        return "WHERE id = :id"
-
-
-class LocationsQueries(
-        Paging,
-        RadiusQuery,
-        BboxQuery,
-        ProviderQuery,
-        OwnerQuery,
-        CountryQuery,
-):
-    mobile: Union[bool, None] = Query(
-        description="Is the location considered a mobile location?"
-    )
-
-    monitor: Union[bool, None] = Query(
-        description="Is the location considered a reference monitor?"
-    )
-
-    @root_validator(pre=True)
-    def check_bbox_radius_set(cls, values):
-        bbox = values.get("bbox", None)
-        coordinates = values.get("coordinates", None)
-        radius = values.get("radius", None)
-        print(values)
-        if bbox is not None and (coordinates is not None or radius is not None):
-            raise ValueError(
-                "Cannot pass both bounding box and coordinate/radius query in the same URL"
-            )
-        return values
-
-    def fields(self):
-        fields = []
-        if self.has('coordinates'):
-            fields.append(RadiusQuery.fields(self))
-        return ', '+(',').join(fields) if len(fields) > 0 else ''
-
-    def where(self):
-        where = ["WHERE TRUE"]
-        if self.has("mobile"):
-            where.append("ismobile = :mobile")
-        if self.has('mobile'):
-            where.append("ismonitor = :monitor")
-        if self.has('coordinates'):
-            where.append(RadiusQuery.where(self))
-        if self.has('bbox'):
-            where.append(BboxQuery.where(self))
-        if self.has('providers_id'):
-            where.append(ProviderQuery.where(self))
-        return ("\nAND ").join(where)
 
 
 @router.get(
