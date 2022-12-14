@@ -143,7 +143,10 @@ class QueryBaseModel(BaseModel):
         return hasattr(self, field_name) and getattr(self, field_name) is not None
 
     def where(self):
-        return "WHERE id = :id"
+        if hasattr(self, "id"):
+            return "WHERE id = :id"
+        else:
+            return ""
 
 
 # Thinking about how the paging should be done
