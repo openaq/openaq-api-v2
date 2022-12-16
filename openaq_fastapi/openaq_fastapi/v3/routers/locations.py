@@ -7,8 +7,16 @@ from openaq_fastapi.v3.models.queries import make_dependable
 from openaq_fastapi.v3.models.responses import LocationsResponse
 
 from openaq_fastapi.v3.models.queries import (
+    QueryBuilder,
     QueryBaseModel,
-    LocationsQueries,
+    RadiusQuery,
+    BboxQuery,
+    CountryQuery,
+    ProviderQuery,
+    Paging,
+    OwnerQuery,
+    MobileQuery,
+    MonitorQuery,
 )
 
 logger = logging.getLogger("locations")
@@ -29,22 +37,36 @@ router = APIRouter(
 # city/country
 
 
-class LocationQueries(QueryBaseModel):
-    id: int = Query(
-        description="Limit the results to a specific location by id",
-        ge=1
+class LocationQuery(QueryBaseModel):
+    locations_id: int = Query(
+        description="Limit the results to a specific location by id", ge=1
     )
 
+    def where(self):
+        return "id = :locations_id"
+
+
+class LocationsQueries(
+    Paging,
+    RadiusQuery,
+    BboxQuery,
+    ProviderQuery,
+    OwnerQuery,
+    CountryQuery,
+    MobileQuery,
+    MonitorQuery,
+):
+    ...
 
 
 @router.get(
-    "/locations/{id}",
+    "/locations/{locations_id}",
     response_model=LocationsResponse,
     summary="Get a location by ID",
     description="Provides a location by location ID",
 )
 async def location_get(
-    location: LocationQueries = Depends(make_dependable(LocationQueries)),
+    location: LocationQuery = Depends(LocationQuery.depends()),
     db: DB = Depends(),
 ):
     response = await fetch_locations(location, db)
@@ -66,6 +88,8 @@ async def locations_get(
 
 
 async def fetch_locations(query, db):
+    query_builder = QueryBuilder(query)
+
     sql = f"""
     SELECT id
     , name
@@ -82,11 +106,11 @@ async def fetch_locations(query, db):
     , bbox(geom) as bounds
     , datetime_first
     , datetime_last
-    {query.fields() or ''}
-    {query.total()}
+    {query_builder.fields() or ''} 
+    {query_builder.total()}
     FROM locations_view_m
-    {query.where()}
-    {query.pagination()}
+    {query_builder.where()}
+    {query_builder.pagination()}
     """
-    response = await db.fetchPage(sql, query.params())
+    response = await db.fetchPage(sql, query_builder.params())
     return response

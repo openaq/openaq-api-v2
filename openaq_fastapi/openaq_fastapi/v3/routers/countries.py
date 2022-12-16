@@ -1,5 +1,7 @@
 import logging
-from fastapi import APIRouter, Depends, Path
+from typing import List, Union
+from fastapi import APIRouter, Depends, Path, Query
+from pydantic import root_validator
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.models.responses import (
     LocationsResponse,
@@ -9,7 +11,12 @@ from openaq_fastapi.v3.models.responses import (
 from openaq_fastapi.v3.models.queries import (
     QueryBaseModel,
     Paging,
-    LocationsQueries,
+    RadiusQuery,
+    BboxQuery,
+    QueryBuilder,
+    ProviderQuery,
+    OwnerQuery,
+    MobileQuery,
 )
 
 from openaq_fastapi.v3.routers.locations import fetch_locations
@@ -23,29 +30,52 @@ router = APIRouter(
 )
 
 
-class CountryQueries(QueryBaseModel):
-    id: int = Path(
+class CountryPathQuery(QueryBaseModel):
+    countries_id: int = Path(
         description="Limit the results to a specific country by id",
         ge=1,
     )
 
+    def where(self) -> str:
+        return "id = :countries_id"
 
-class CountriesQueries(Paging):
+
+class CountriesQueries(QueryBaseModel, Paging):
+    ...
+
+
+class LocationCountryPathQuery(QueryBaseModel):
+
+    countries_id: int = Path(
+        description="Limit the results to a specific country",
+    )
+
+    def where(self):
+        return "(country->'id')::int = :countries_id"
+
+
+class CountryLocationsQueries(
+    Paging,
+    LocationCountryPathQuery,
+    RadiusQuery,
+    BboxQuery,
+    ProviderQuery,
+    OwnerQuery,
+    MobileQuery,
+):
     ...
 
 
 @router.get(
-    "/countries/{id}",
+    "/countries/{countries_id}",
     response_model=CountriesResponse,
     summary="Get a country by ID",
     description="Provides a country by country ID",
 )
 async def country_get(
-    id: int,
-    country: CountryQueries = Depends(CountryQueries.depends()),
+    country: CountryPathQuery = Depends(CountryPathQuery),
     db: DB = Depends(),
 ):
-    country.id = id
     response = await fetch_countries(country, db)
     return response
 
@@ -57,7 +87,7 @@ async def country_get(
     description="Provides a country by country ID",
 )
 async def country_locations_get(
-    locations: LocationsQueries = Depends(LocationsQueries.depends()),
+    locations: CountryLocationsQueries = Depends(CountryLocationsQueries.depends()),
     db: DB = Depends(),
 ):
     response = await fetch_locations(locations, db)
@@ -79,6 +109,7 @@ async def countries_get(
 
 
 async def fetch_countries(query, db):
+    query_builder = QueryBuilder(query)
     sql = f"""
     SELECT id
     , code
@@ -89,12 +120,11 @@ async def fetch_countries(query, db):
     , locations_count
     , measurements_count
     , providers_count
-    {query.total()}
+    {query_builder.total()}
     FROM countries_view_cached
-    {query.where()}
-    {query.pagination()}
+    {query_builder.where()}
+    {query_builder.pagination()}
     """
     print(sql)
-    print(query.params())
-    response = await db.fetchPage(sql, query.params())
+    response = await db.fetchPage(sql, query_builder.params())
     return response

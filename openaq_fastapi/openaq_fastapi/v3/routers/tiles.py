@@ -84,7 +84,7 @@ class MobileTile(TileBase):
 )
 async def get_tile(
     db: DB = Depends(),
-    tile: Tile = Depends(Tile.depends()),
+    tile: Tile = Depends(Tile),
 ):
     vt = await fetch_tiles(tile, db)
     if vt is None:
@@ -158,7 +158,7 @@ async def fetch_tiles(where, db):
 )
 async def get_mobile_gen_tiles(
     db: DB = Depends(),
-    tile: Tile = Depends(Tile.depends()),
+    tile: Tile = Depends(Tile),
 ):
     ...
 

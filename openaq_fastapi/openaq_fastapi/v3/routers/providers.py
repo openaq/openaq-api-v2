@@ -2,19 +2,23 @@ import logging
 from typing import Union
 from fastapi import APIRouter, Depends, Query, Path
 from openaq_fastapi.db import DB
+from openaq_fastapi.v3.models.queries import (
+    QueryBuilder,
+    QueryBaseModel,
+    Paging,
+    BboxQuery,
+    CountryQuery,
+    OwnerQuery,
+    RadiusQuery,
+)
 
 from openaq_fastapi.v3.models.responses import (
     ProvidersResponse,
     LocationsResponse,
 )
 
-from openaq_fastapi.v3.models.queries import (
-    QueryBaseModel,
-    Paging,
-    LocationsQueries,
-)
-
 from openaq_fastapi.v3.routers.locations import fetch_locations
+
 
 logger = logging.getLogger("providers")
 
@@ -34,9 +38,42 @@ class ProviderQueries(QueryBaseModel):
         return "WHERE id = :id"
 
 
-class ProvidersQueries(Paging):
-    def where(self):
-        return "WHERE id = :id"
+class ProvidersQueries(QueryBaseModel, Paging):
+    ...
+
+
+class ProviderLocationsQueries(
+    QueryBuilder,
+    Paging,
+    RadiusQuery,
+    BboxQuery,
+    OwnerQuery,
+    CountryQuery,
+):
+    mobile: Union[bool, None] = Query(
+        description="Is the location considered a mobile location?"
+    )
+
+    providers_id: int = Path(description="", ge=1)
+
+    monitor: Union[bool, None] = Query(
+        description="Is the location considered a reference monitor?"
+    )
+
+    def fields(self):
+        fields = []
+        if self.has("coordinates"):
+            fields.append(RadiusQuery.fields(self))
+        return ", " + (",").join(fields) if len(fields) > 0 else ""
+
+    def generate_where(self):
+        where = []
+        where.append("(provider->'id')::int = :providers_id")
+        if self.has("mobile"):
+            where.append("ismobile = :mobile")
+        if self.has("monitor"):
+            where.append("ismonitor = :monitor")
+        return where
 
 
 @router.get(
@@ -68,13 +105,13 @@ async def providers_get(
 
 
 @router.get(
-    "/providers/{id}/locations",
+    "/providers/{providers_id}/locations",
     response_model=LocationsResponse,
     summary="Get lociations by provider ID",
     description="Provides a list of locations by provider ID",
 )
 async def provider_locations_get(
-    locations: LocationsQueries = Depends(LocationsQueries.depends()),
+    locations: ProviderLocationsQueries = Depends(ProviderLocationsQueries.depends()),
     db: DB = Depends(),
 ):
     response = await fetch_locations(locations, db)
@@ -82,6 +119,7 @@ async def provider_locations_get(
 
 
 async def fetch_providers(query, db):
+    query_builder = QueryBuilder(query)
     sql = f"""
     SELECT id
     , name
@@ -96,10 +134,10 @@ async def fetch_providers(query, db):
     , owner_entity
     , parameters
     , st_asgeojson(extent)::json as bbox
-    {query.total()}
+    {query_builder.total()}
     FROM providers_view_cached
-    {query.where()}
-    {query.pagination()}
+    {query_builder.where()}
+    {query_builder.pagination()}
     """
-    response = await db.fetchPage(sql, query.params())
+    response = await db.fetchPage(sql, query_builder.params())
     return response

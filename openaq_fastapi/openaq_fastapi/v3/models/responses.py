@@ -124,7 +124,7 @@ class Provider(ProviderBase):
     measurements_count: int
     countries_count: int
     parameters: List[ParameterBase]
-    bbox: GeoJSON
+    bbox: Union[GeoJSON, None]
     datetime_added: datetime
     datetime_first: datetime
     datetime_last: datetime
@@ -150,7 +150,7 @@ class Sensor(SensorBase):
 
 class Location(JsonBase):
     id: int
-    name: str
+    name: Union[str, None]
     locality: Union[str, None]
     timezone: str
     country: CountryBase

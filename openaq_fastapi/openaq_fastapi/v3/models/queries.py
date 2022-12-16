@@ -1,19 +1,17 @@
 import inspect
 import logging
-from types import FunctionType
+from types import FunctionType, GenericAlias
 from typing import (
     Dict,
+    List,
     Union,
 )
+import weakref
+import itertools
 
 import humps
 from fastapi import Query
-from pydantic import (
-    BaseModel,
-    conint,
-    confloat,
-    root_validator,
-)
+from pydantic import BaseModel, conint, confloat, root_validator, parse_obj_as
 from inspect import signature
 from fastapi.exceptions import ValidationError, HTTPException
 
@@ -83,6 +81,62 @@ def parameter_dependency_from_model(name: str, model_cls):
     return func
 
 
+class TypeParametersMemoizer(type):
+    """
+    https://github.com/tiangolo/fastapi/issues/50#issuecomment-1267068112
+    """
+
+    _generics_cache = weakref.WeakValueDictionary()
+
+    def __getitem__(cls, typeparams):
+
+        # prevent duplication of generic types
+        if typeparams in cls._generics_cache:
+            return cls._generics_cache[typeparams]
+
+        # middleware class for holding type parameters
+        class TypeParamsWrapper(cls):
+            __type_parameters__ = (
+                typeparams if isinstance(typeparams, tuple) else (typeparams,)
+            )
+
+            @classmethod
+            def _get_type_parameters(cls):
+                return cls.__type_parameters__
+
+        return GenericAlias(TypeParamsWrapper, typeparams)
+
+
+class CommaSeparatedList(list, metaclass=TypeParametersMemoizer):
+    """
+    adapted from
+    https://github.com/tiangolo/fastapi/issues/50#issuecomment-1267068112
+    but reworked and simplified to only handled ints since we will only
+    support comma chaining for id query parameters
+    """
+
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, v: List[Union[str, int]]):
+        if v:
+            if isinstance(v[0], str):
+                v = [int(item) for x in v for item in x.split(",")]
+            elif isinstance(v[0], int):
+                pass
+            else:
+                v = list(itertools.chain.from_iterable((x.split(",") for x in v)))
+            return v
+        else:
+            return v
+
+    @classmethod
+    def _get_type_parameters(cls):
+        raise NotImplementedError("should be overridden in metaclass")
+
+
 def make_dependable(cls):
     """
     https://github.com/tiangolo/fastapi/issues/1474#issuecomment-1160633178
@@ -99,6 +153,53 @@ def make_dependable(cls):
 
     init_cls_and_handle_errors.__signature__ = signature(cls)
     return init_cls_and_handle_errors
+
+
+class QueryBuilder(object):
+    def __init__(self, query):
+        """
+        take a query object which can have multiple
+        QueryBaseModel ancestors
+        """
+        self.query = query
+
+    def fields(self):  # loops through non-None fields in children
+        return ""
+        # return [field for field in self.query.fields() if field]
+
+    def pagination(self):
+        return "LIMIT 1"
+
+    def params(self):
+        return self.query.dict(exclude_unset=True, by_alias=True)
+
+    @staticmethod
+    def total():
+        return ", COUNT(1) OVER() as found"
+
+    def where(self):
+        """
+        loops through all ancestor classes and calls
+        their respective where() methods to concatenate
+        into a full where statement
+        """
+        where = []
+        bases = list(inspect.getmro(self.query.__class__))[
+            1:-1
+        ]  # removes object primitive
+        for base in bases:
+            if callable(getattr(base, "where", None)):
+                if base.where(self.query):
+                    print("\n\nBASE\n\n")
+                    print(base)
+                    print(base.where(self.query))
+                    print("\n\nBASE\n\n")
+                    where.append(base.where(self.query))
+        if len(where):
+            print(where)
+            return "WHERE " + ("\nAND ").join(where)
+        else:
+            return ""
 
 
 class QueryBaseModel(BaseModel):
@@ -127,26 +228,17 @@ class QueryBaseModel(BaseModel):
     def depends(cls):
         return parameter_dependency_from_model("depends", cls)
 
-    def params(self):
-        return self.dict(exclude_unset=True, by_alias=True)
-
-    def pagination(self):
-        return "LIMIT 1"
-
-    def fields(self):
-        return ""
-
-    def total(self):
-        return ", COUNT(1) OVER() as found"
-
     def has(self, field_name: str):
         return hasattr(self, field_name) and getattr(self, field_name) is not None
 
     def where(self):
-        if hasattr(self, "id"):
-            return "WHERE id = :id"
-        else:
-            return ""
+        return None
+
+    def fields():  # for additional fields
+        return None
+
+    def pagination():
+        return
 
 
 # Thinking about how the paging should be done
@@ -154,7 +246,7 @@ class QueryBaseModel(BaseModel):
 # a page parameter. And until pydantic supports computed
 # values (v2) we have to calculate the offset ourselves
 # see the db.py method
-class Paging(QueryBaseModel):
+class Paging(BaseModel):
     limit: int = Query(
         100,
         gt=0,
@@ -173,35 +265,78 @@ class Paging(QueryBaseModel):
         return "OFFSET :offset\nLIMIT :limit"
 
 
-class ProviderQuery(QueryBaseModel):
-    providers_id: Union[int, None] = Query(
-        description="Limit the results to a specific provider", ge=1
+class MobileQuery(QueryBaseModel):
+
+    mobile: Union[bool, None] = Query(
+        description="Is the location considered a mobile location?"
     )
 
     def where(self):
-        return "(provider->'id')::int = :providers_id"
+        if self.has("mobile"):
+            return "ismobile = :mobile"
+        else:
+            return None
+
+
+class MonitorQuery(QueryBaseModel):
+
+    monitor: Union[bool, None] = Query(
+        description="Is the location considered a reference monitor?"
+    )
+
+    def where(self):
+        if self.has("monitor"):
+            return "ismonitor = :monitor"
+        else:
+            return None
+
+
+class ProviderQuery(QueryBaseModel):
+
+    providers_id: Union[CommaSeparatedList[int], None] = Query(
+        description="Limit the results to a specific provider"
+    )
+
+    def where(self):
+        if self.providers_id is not None:
+            return "(provider->'id')::int = ANY (:providers_id)"
 
 
 class OwnerQuery(QueryBaseModel):
-    owner_contacts_id: Union[int, None] = Query(
+    owner_contacts_id: Union[CommaSeparatedList[int], None] = Query(
         description="Limit the results to a specific owner", ge=1
     )
 
     def where(self):
-        return "(owner->'id')::int = :owner_contacts_id"
+        if self.owner_contacts_id is not None:
+            return "(owner->'id')::int = ANY (:owner_contacts_id)"
 
 
 class CountryQuery(QueryBaseModel):
-    countries_id: Union[int, None] = Query(
-        description="Limit the results to a specific country", ge=1
+    """
+    countries_id supports comma chaining but iso does not because it
+    is a string parameter. countries_id is the preferred and more
+    powerful query method
+    """
+
+    countries_id: Union[CommaSeparatedList[int], None] = Query(
+        description="Limit the results to a specific country or countries",
     )
     iso: Union[str, None] = Query(
         description="Limit the results to a specific country using ISO code",
     )
 
+    @root_validator(pre=True)
+    def check_only_one(cls, values):
+        countries_id = values.get("countries_id", None)
+        iso = values.get("iso", None)
+        if countries_id is not None and iso is not None:
+            raise ValueError("Cannot pass both countries_id and iso code")
+        return values
+
     def where(self):
         if self.countries_id is not None:
-            return "(country->'id')::int = :countries_id"
+            return "(country->'id')::int = ANY (:countries_id)"
         elif self.iso is not None:
             return "country->>'code' = :iso"
 
@@ -230,6 +365,17 @@ class RadiusQuery(QueryBaseModel):
             if lat and lon:
                 values["lat"] = float(lat)
                 values["lon"] = float(lon)
+        return values
+
+    @root_validator(pre=True)
+    def check_spatial_inputs(cls, values):
+        bbox = values.get("bbox", None)
+        coordinates = values.get("coordinates", None)
+        radius = values.get("radius", None)
+        if bbox is not None and (coordinates is not None or radius is not None):
+            raise ValueError(
+                "Cannot pass both bounding box and coordinate/radius query in the same URL"
+            )
         return values
 
     def fields(self, geometry_field: str = "geom"):
@@ -269,54 +415,3 @@ class BboxQuery(QueryBaseModel):
         if self.bbox is not None:
             return "st_makeenvelope(:minx, :miny, :maxx, :maxy, 4326) && geom"
         return None
-
-
-class LocationsQueries(
-    Paging,
-    RadiusQuery,
-    BboxQuery,
-    ProviderQuery,
-    OwnerQuery,
-    CountryQuery,
-):
-    mobile: Union[bool, None] = Query(
-        description="Is the location considered a mobile location?"
-    )
-
-    monitor: Union[bool, None] = Query(
-        description="Is the location considered a reference monitor?"
-    )
-
-    @root_validator(pre=True)
-    def check_bbox_radius_set(cls, values):
-        bbox = values.get("bbox", None)
-        coordinates = values.get("coordinates", None)
-        radius = values.get("radius", None)
-        print(values)
-        if bbox is not None and (coordinates is not None or radius is not None):
-            raise ValueError(
-                "Cannot pass both bounding box and coordinate/radius query in the same URL"
-            )
-        return values
-
-    def fields(self):
-        fields = []
-        if self.has("coordinates"):
-            fields.append(RadiusQuery.fields(self))
-        return ", " + (",").join(fields) if len(fields) > 0 else ""
-
-    def where(self):
-        where = ["WHERE TRUE"]
-        if self.has("mobile"):
-            where.append("ismobile = :mobile")
-        if self.has("mobile"):
-            where.append("ismonitor = :monitor")
-        if self.has("coordinates"):
-            where.append(RadiusQuery.where(self))
-        if self.has("bbox"):
-            where.append(BboxQuery.where(self))
-        if self.has("countries_id"):
-            where.append(CountryQuery.where(self))
-        if self.has("providers_id"):
-            where.append(ProviderQuery.where(self))
-        return ("\nAND ").join(where)

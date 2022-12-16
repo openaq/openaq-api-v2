@@ -6,7 +6,9 @@ from openaq_fastapi.v3.models.responses import ParametersResponse
 from openaq_fastapi.models.queries import OBaseModel, Geo
 
 from openaq_fastapi.v3.models.queries import (
+    QueryBuilder,
     QueryBaseModel,
+    CountryQuery,
     Paging,
 )
 
@@ -19,19 +21,14 @@ router = APIRouter(
 
 
 class ParameterQueries(QueryBaseModel):
-    id: int = Path(
-        description="Limit the results to a specific id",
-        ge=1
-    )
+    id: int = Path(description="Limit the results to a specific id", ge=1)
 
     def where(self):
         return "WHERE measurands_id = :id"
 
 
-class ParametersQueries(Paging):
-    def where(self):
-        where = ["WHERE TRUE"]
-        return ("\nAND ").join(where)
+class ParametersQueries(Paging, CountryQuery):
+    ...
 
 
 @router.get(
@@ -41,7 +38,7 @@ class ParametersQueries(Paging):
     description="Provides a parameter by parameter ID",
 )
 async def parameter_get(
-    parameter: ParameterQueries = Depends(ParameterQueries.depends()),
+    parameter: ParameterQueries = Depends(ParameterQueries),
     db: DB = Depends(),
 ):
     response = await fetch_parameters(parameter, db)
@@ -55,7 +52,7 @@ async def parameter_get(
     description="Provides a list of parameters",
 )
 async def parameters_get(
-    parameter: ParametersQueries = Depends(ParametersQueries.depends()),
+    parameter: ParametersQueries = Depends(ParametersQueries),
     db: DB = Depends(),
 ):
     response = await fetch_parameters(parameter, db)
@@ -63,6 +60,7 @@ async def parameters_get(
 
 
 async def fetch_parameters(query, db):
+    query_builder = QueryBuilder(query)
     sql = f"""
     SELECT measurands_id as id
     , measurand as name
@@ -71,10 +69,10 @@ async def fetch_parameters(query, db):
     , display as display_name
     , 0 as locations_count
     , 0 as measurements_count
-    {query.total()}
+    {query_builder.total()}
     FROM measurands
-    {query.where()}
-    {query.pagination()}
+    {query_builder.where()}
+    {query_builder.pagination()}
     """
-    response = await db.fetchPage(sql, query.params())
+    response = await db.fetchPage(sql, query_builder.params())
     return response

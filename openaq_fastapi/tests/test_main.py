@@ -5,6 +5,7 @@ import pytest
 from openaq_fastapi.main import app
 from openaq_fastapi.db import db_pool
 
+
 @pytest.fixture
 def client():
     with TestClient(app) as c:
@@ -54,12 +55,33 @@ def test_locations_query_bad(client):
 
 def test_providers_path_bad(client):
     response = client.get("/v3/providers/0")
-    assert response.status_code == 404
+    assert response.status_code == 422
 
 
 def test_providers_path_good(client):
     response = client.get("/v3/providers/1")
     res = json.loads(response.content)
     assert response.status_code == 200
-    #assert len(res["results"]) == 1
-    #assert res["results"][0]["id"] == 1
+    # assert len(res["results"]) == 1
+    # assert res["results"][0]["id"] == 1
+
+
+def test_locations_providers_id_param(client):
+    response = client.get("/v3/locations?providers_id=1")
+    res = json.loads(response.content)
+    assert all(result["provider"]["id"] == 1 for result in res["results"])
+
+
+def test_locations_is_monitor_param(client):
+    response = client.get("/v3/locations?monitor=true")
+    res = json.loads(response.content)
+    assert all(result["isMonitor"] for result in res["results"])
+    response = client.get("/v3/locations?monitor=false")
+    res = json.loads(response.content)
+    assert all(not result["isMonitor"] for result in res["results"])
+
+
+def test_locations_countries_id_param(client):
+    response = client.get("/v3/locations?countries_id=1")
+    res = json.loads(response.content)
+    assert all(result["country"]["id"] == 1 for result in res["results"])
