@@ -133,6 +133,7 @@ async def fetch_providers(query, db):
     , countries_count
     , owner_entity
     , parameters
+    , license
     , st_asgeojson(extent)::json as bbox
     {query_builder.total()}
     FROM providers_view_cached

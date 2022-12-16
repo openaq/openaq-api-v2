@@ -116,6 +116,7 @@ class Entity(EntityBase):
 class Provider(ProviderBase):
     source_name: str
     export_prefix: str
+    license: Union[str, None]
     datetime_added: datetime
     datetime_first: datetime
     datetime_last: datetime
@@ -125,9 +126,6 @@ class Provider(ProviderBase):
     countries_count: int
     parameters: List[ParameterBase]
     bbox: Union[GeoJSON, None]
-    datetime_added: datetime
-    datetime_first: datetime
-    datetime_last: datetime
 
 
 class Owner(OwnerBase):
@@ -170,38 +168,38 @@ class Location(JsonBase):
 class Period(JsonBase):
     label: str
     interval: str
-    datetime_from: DatetimeObject
-    datetime_to: DatetimeObject
+    datetime_from: Union[DatetimeObject, None]
+    datetime_to: Union[DatetimeObject, None]
 
 
 class Summary(JsonBase):
     min: float
-    q02: float
-    q25: float
+    q05: float
+    # q25: float
     median: float
-    q75: float
-    q98: float
+    # q75: float
+    q95: float
     max: float
-    sd: float
+    sd: Union[float, None]
 
 
 class Coverage(JsonBase):
+    # observed_interval: str
+    # expected_interval: str
     observed_count: int
-    expected_count: int
-    percent_complete: float
-    observed_interval: str
-    expected_interval: str
+    # expected_count: int
+    # percent_complete: float
+    datetime_first: DatetimeObject
+    datetime_last: DatetimeObject
 
 
 class Measurement(JsonBase):
+    period: Period
     value: float
     parameter: ParameterBase
     coordinates: Union[Coordinates, None]
-    period: Period
     summary: Summary
     coverage: Coverage
-    start_datetime: DatetimeObject
-    end_datetime: DatetimeObject
 
 
 # response classes
