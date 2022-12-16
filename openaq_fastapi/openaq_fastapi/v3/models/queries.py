@@ -415,8 +415,6 @@ class BboxQuery(QueryBaseModel):
         if self.bbox is not None:
             return "st_makeenvelope(:minx, :miny, :maxx, :maxy, 4326) && geom"
         return None
-<<<<<<< HEAD
-=======
 
 
 class MeasurementsQueries(Paging):
@@ -428,10 +426,9 @@ class MeasurementsQueries(Paging):
 
     def where(self):
         where = ["WHERE sensor_nodes_id = :locations_id"]
-        if self.has('providers_id'):
+        if self.has("providers_id"):
             where.append(ProviderQuery.where(self))
         return ("\nAND ").join(where)
-
 
 
 class LocationsQueries(
@@ -483,4 +480,3 @@ class LocationsQueries(
         if self.has("providers_id"):
             where.append(ProviderQuery.where(self))
         return ("\nAND ").join(where)
->>>>>>> a8c93153bd7005dd0dba620ae7e70fd753e4e3e8
