@@ -163,21 +163,21 @@ class QueryBuilder(object):
         """
         self.query = query
 
-    def fields(self):  # loops through non-None fields in children
+    def fields(self) -> str:  # loops through non-None fields in children
         return ""
         # return [field for field in self.query.fields() if field]
 
-    def pagination(self):
+    def pagination(self) -> str:
         return "LIMIT 1"
 
-    def params(self):
+    def params(self) -> dict:
         return self.query.dict(exclude_unset=True, by_alias=True)
 
     @staticmethod
-    def total():
+    def total() -> str:
         return ", COUNT(1) OVER() as found"
 
-    def where(self):
+    def where(self) -> str:
         """
         loops through all ancestor classes and calls
         their respective where() methods to concatenate
@@ -228,7 +228,7 @@ class QueryBaseModel(BaseModel):
     def depends(cls):
         return parameter_dependency_from_model("depends", cls)
 
-    def has(self, field_name: str):
+    def has(self, field_name: str) -> bool:
         return hasattr(self, field_name) and getattr(self, field_name) is not None
 
     def where(self):
@@ -261,7 +261,7 @@ class Paging(BaseModel):
         example="1",
     )
 
-    def pagination(self):
+    def pagination(self) -> str:
         return "OFFSET :offset\nLIMIT :limit"
 
 
@@ -271,11 +271,9 @@ class MobileQuery(QueryBaseModel):
         description="Is the location considered a mobile location?"
     )
 
-    def where(self):
+    def where(self) -> Union[str, None]:
         if self.has("mobile"):
             return "ismobile = :mobile"
-        else:
-            return None
 
 
 class MonitorQuery(QueryBaseModel):
@@ -284,11 +282,9 @@ class MonitorQuery(QueryBaseModel):
         description="Is the location considered a reference monitor?"
     )
 
-    def where(self):
+    def where(self) -> Union[str, None]:
         if self.has("monitor"):
             return "ismonitor = :monitor"
-        else:
-            return None
 
 
 class ProviderQuery(QueryBaseModel):
@@ -297,8 +293,8 @@ class ProviderQuery(QueryBaseModel):
         description="Limit the results to a specific provider"
     )
 
-    def where(self):
-        if self.providers_id is not None:
+    def where(self) -> Union[str, None]:
+        if self.has("providers_id"):
             return "(provider->'id')::int = ANY (:providers_id)"
 
 
@@ -307,7 +303,7 @@ class OwnerQuery(QueryBaseModel):
         description="Limit the results to a specific owner", ge=1
     )
 
-    def where(self):
+    def where(self) -> Union[str, None]:
         if self.owner_contacts_id is not None:
             return "(owner->'id')::int = ANY (:owner_contacts_id)"
 
@@ -334,7 +330,7 @@ class CountryQuery(QueryBaseModel):
             raise ValueError("Cannot pass both countries_id and iso code")
         return values
 
-    def where(self):
+    def where(self) -> Union[str, None]:
         if self.countries_id is not None:
             return "(country->'id')::int = ANY (:countries_id)"
         elif self.iso is not None:
@@ -411,10 +407,9 @@ class BboxQuery(QueryBaseModel):
                 values["maxy"] = float(maxy)
         return values
 
-    def where(self):
-        if self.bbox is not None:
+    def where(self) -> Union[str, None]:
+        if self.has("bbox"):
             return "st_makeenvelope(:minx, :miny, :maxx, :maxy, 4326) && geom"
-        return None
 
 
 class MeasurementsQueries(Paging):
@@ -459,7 +454,7 @@ class LocationsQueries(
             )
         return values
 
-    def fields(self):
+    def fields(self) -> str:
         fields = []
         if self.has("coordinates"):
             fields.append(RadiusQuery.fields(self))
