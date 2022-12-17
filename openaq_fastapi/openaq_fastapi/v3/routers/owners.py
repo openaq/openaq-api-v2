@@ -2,6 +2,7 @@ import logging
 from typing import Union
 from fastapi import APIRouter, Depends, Path
 from openaq_fastapi.db import DB
+from openaq_fastapi.v3.routers.locations import fetch_locations
 from openaq_fastapi.v3.models.responses import OwnersResponse, LocationsResponse
 
 from openaq_fastapi.v3.models.queries import Paging, QueryBaseModel, QueryBuilder
@@ -21,7 +22,7 @@ class OwnerPathQuery(QueryBaseModel):
         return "id = :owners_id"
 
 
-class OwnersQueries(Paging):
+class OwnersQueries(QueryBaseModel, Paging):
     ...
 
 
@@ -80,19 +81,11 @@ async def owner_locations_get(
     owner_locations: OwnerLocationsQueries = Depends(OwnerLocationsQueries.depends()),
     db: DB = Depends(),
 ):
-    response = await fetch_owner_locations(owner_locations, db)
+    response = await fetch_locations(owner_locations, db)
     return response
 
 
 async def fetch_owners(query, db):
-    query_builder = QueryBuilder(query)
-    sql = f"""
-    """
-    response = await db.fetchPage(sql, query_builder.params())
-    return response
-
-
-async def fetch_owner_locations(query, db):
     query_builder = QueryBuilder(query)
     sql = f"""
     """

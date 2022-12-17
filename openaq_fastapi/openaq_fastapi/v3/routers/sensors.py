@@ -2,7 +2,8 @@ import logging
 from typing import Union
 from fastapi import APIRouter, Depends, Query, Path
 from openaq_fastapi.db import DB
-from openaq_fastapi.v3.models.responses import SensorsResponse, MeasurementsReponse
+from openaq_fastapi.v3.routers.measurements import fetch_measurements
+from openaq_fastapi.v3.models.responses import SensorsResponse, MeasurementsResponse
 
 from openaq_fastapi.v3.models.queries import Paging, QueryBaseModel, CountryQuery
 
@@ -40,7 +41,7 @@ async def sensor_get(
 
 @router.get(
     "/sensors/{id}/measurements",
-    response_model=MeasurementsReponse,
+    response_model=MeasurementsResponse,
     summary="Get measurements by sensor ID",
     description="Provides a list of measurements by sensor ID",
 )
@@ -48,18 +49,11 @@ async def sensor_measurements_get(
     sensor: SensorsQueries = Depends(SensorsQueries.depends()),
     db: DB = Depends(),
 ):
-    response = await fetch_sensor_measurements(id, sensor, db)
+    response = await fetch_measurements(sensor, db)
     return response
 
 
 async def fetch_sensors(where, db):
-    sql = f"""
-    """
-    response = await db.fetchPage(sql, where.params())
-    return response
-
-
-async def fetch_sensor_measurements(id, where, db):
     sql = f"""
     """
     response = await db.fetchPage(sql, where.params())

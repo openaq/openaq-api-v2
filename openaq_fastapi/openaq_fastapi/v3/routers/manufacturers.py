@@ -19,7 +19,7 @@ class ManufacturerPathQuery(QueryBaseModel):
         return "id = :manufacturers_id"
 
 
-class ManufacturersQueries(Paging):
+class ManufacturersQueries(QueryBaseModel, Paging):
     ...
 
 
