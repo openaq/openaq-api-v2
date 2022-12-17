@@ -1,7 +1,6 @@
 import logging
 from fastapi import APIRouter, Depends, Path
 from openaq_fastapi.db import DB
-from openaq_fastapi.v3.models.queries import make_dependable
 from openaq_fastapi.v3.models.responses import LocationsResponse
 
 from openaq_fastapi.v3.models.queries import (
@@ -95,7 +94,7 @@ async def fetch_locations(query, db):
     , datetime_last
     {query_builder.fields() or ''} 
     {query_builder.total()}
-    FROM locations_view_m
+    FROM locations_view_cached
     {query_builder.where()}
     {query_builder.pagination()}
     """

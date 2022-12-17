@@ -10,13 +10,13 @@ logger = logging.getLogger("manufacturers")
 router = APIRouter(prefix="/v3", tags=["v3"])
 
 
-class ManufacturerQuery(QueryBaseModel):
+class ManufacturerPathQuery(QueryBaseModel):
     manufacturers_id: int = Path(
         description="Limit the results to a specific manufacturers id", ge=1
     )
 
     def where(self) -> str:
-        return "WHERE id = :manufacturers_id"
+        return "id = :manufacturers_id"
 
 
 class ManufacturersQueries(Paging):
@@ -30,7 +30,7 @@ class ManufacturersQueries(Paging):
     description="Provides a manufacturer by manufacturer ID",
 )
 async def manufacturer_get(
-    manufacturer: ManufacturerQuery = Depends(ManufacturerQuery.depends()),
+    manufacturer: ManufacturerPathQuery = Depends(ManufacturerPathQuery.depends()),
     db: DB = Depends(),
 ):
     response = await fetch_manufacturers(manufacturer, db)

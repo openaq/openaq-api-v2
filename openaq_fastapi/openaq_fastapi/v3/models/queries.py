@@ -161,6 +161,8 @@ class QueryBuilder(object):
         take a query object which can have multiple
         QueryBaseModel ancestors
         """
+        print("\n\n\nQUERY")
+        print(query)
         self.query = query
 
     def fields(self) -> str:  # loops through non-None fields in children
@@ -188,6 +190,9 @@ class QueryBuilder(object):
             :-3
         ]  # removes object primitive
         for base in bases:
+            print("\n\n\nBASE")
+            print(base)
+
             if callable(getattr(base, "where", None)):
                 if base.where(self.query):
                     where.append(base.where(self.query))

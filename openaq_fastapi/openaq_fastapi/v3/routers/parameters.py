@@ -21,7 +21,7 @@ router = APIRouter(
 )
 
 
-class ParameterQuery(QueryBaseModel):
+class ParameterPathQuery(QueryBaseModel):
     parameters_id: int = Path(
         description="Limit the results to a specific parameters id", ge=1
     )
@@ -41,7 +41,7 @@ class ParametersQueries(Paging, CountryQuery, BboxQuery, RadiusQuery):
     description="Provides a parameter by parameter ID",
 )
 async def parameter_get(
-    parameter: ParameterQuery = Depends(ParameterQuery.depends()),
+    parameter: ParameterPathQuery = Depends(ParameterPathQuery.depends()),
     db: DB = Depends(),
 ):
     response = await fetch_parameters(parameter, db)

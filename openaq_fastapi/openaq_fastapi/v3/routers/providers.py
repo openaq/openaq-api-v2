@@ -29,23 +29,32 @@ router = APIRouter(
 )
 
 
-class ProviderQuery(QueryBaseModel):
+class ProviderPathQuery(QueryBaseModel):
     providers_id: int = Path(
         description="Limit the results to a specific provider by id",
         ge=1,
     )
 
     def where(self):
-        return "WHERE id = :providers_id"
+        return "id = :providers_id"
 
 
 class ProvidersQueries(QueryBaseModel, Paging):
     ...
 
 
+class ProviderLocationPathQuery(QueryBaseModel):
+
+    providers_id: int = Path(
+        description="Limit the results to a specific country",
+    )
+
+    def where(self) -> str:
+        return "(provider->'id')::int = :providers_id"
+
+
 class ProviderLocationsQueries(
-    QueryBuilder,
-    ProviderQuery,
+    ProviderLocationPathQuery,
     Paging,
     RadiusQuery,
     BboxQuery,
@@ -64,7 +73,7 @@ class ProviderLocationsQueries(
     description="Provides a provider by provider ID",
 )
 async def provider_get(
-    provider: ProviderQuery = Depends(ProviderQuery.depends()),
+    provider: ProviderPathQuery = Depends(ProviderPathQuery.depends()),
     db: DB = Depends(),
 ):
     response = await fetch_providers(provider, db)

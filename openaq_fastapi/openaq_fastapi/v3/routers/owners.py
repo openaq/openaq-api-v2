@@ -11,23 +11,33 @@ logger = logging.getLogger("owners")
 router = APIRouter(prefix="/v3", tags=["v3"])
 
 
-class OwnerQuery(QueryBaseModel):
+class OwnerPathQuery(QueryBaseModel):
     owners_id: int = Path(
-        description="Limit the results to a specific provider by id",
+        description="Limit the results to a specific owner by id",
         ge=1,
     )
 
     def where(self) -> str:
-        return "WHERE id = :owners_id"
+        return "id = :owners_id"
 
 
 class OwnersQueries(Paging):
     ...
 
 
+class OwnerLocationPathQuery(QueryBaseModel):
+
+    owners_id: int = Path(
+        description="Limit the results to a specific country",
+    )
+
+    def where(self) -> str:
+        return "(owner->'id')::int = :owners_id"
+
+
 class OwnerLocationsQueries(
     Paging,
-    OwnerQuery,
+    OwnerLocationPathQuery,
 ):
     ...
 
@@ -39,7 +49,7 @@ class OwnerLocationsQueries(
     description="Provides a owner by owner ID",
 )
 async def owner_get(
-    owner: OwnerQuery = Depends(OwnerQuery.depends()),
+    owner: OwnerPathQuery = Depends(OwnerPathQuery.depends()),
     db: DB = Depends(),
 ):
     response = await fetch_owners(owner, db)
