@@ -1,11 +1,10 @@
 import logging
 from typing import Union
-from fastapi import APIRouter, Depends, Query, Path
+from fastapi import APIRouter, Depends, Path
 from openaq_fastapi.db import DB
-from openaq_fastapi.v3.models.responses import OwnersResponse, LocationsReponse
-from openaq_fastapi.models.queries import OBaseModel, Geo
+from openaq_fastapi.v3.models.responses import OwnersResponse, LocationsResponse
 
-from openaq_fastapi.v3.models.queries import Paging, QueryBaseModel
+from openaq_fastapi.v3.models.queries import Paging, QueryBaseModel, QueryBuilder
 
 logger = logging.getLogger("owners")
 
@@ -13,23 +12,24 @@ router = APIRouter(prefix="/v3", tags=["v3"])
 
 
 class OwnerQuery(QueryBaseModel):
-    id: int = Path(
+    owners_id: int = Path(
         description="Limit the results to a specific provider by id",
         ge=1,
     )
 
-    def where(self):
-        return "WHERE id = :id"
+    def where(self) -> str:
+        return "WHERE id = :owners_id"
 
 
-class OwnersQueries(Paging, SQL):
-    def fields(self):
-        fields = []
-        return ", " + (",").join(fields) if len(fields) > 0 else ""
+class OwnersQueries(Paging):
+    ...
 
-    def clause(self):
-        where = ["WHERE TRUE"]
-        return ("\nAND ").join(where)
+
+class OwnerLocationsQueries(
+    Paging,
+    OwnerQuery,
+):
+    ...
 
 
 @router.get(
@@ -39,7 +39,7 @@ class OwnersQueries(Paging, SQL):
     description="Provides a owner by owner ID",
 )
 async def owner_get(
-    owner: OwnersQueries = Depends(OwnersQueries.depends()),
+    owner: OwnerQuery = Depends(OwnerQuery.depends()),
     db: DB = Depends(),
 ):
     response = await fetch_owners(owner, db)
@@ -62,27 +62,29 @@ async def owners_get(
 
 @router.get(
     "/owners/{owners_id}/locations",
-    response_model=LocationsReponse,
+    response_model=LocationsResponse,
     summary="Get locations by owner ID",
     description="Provides a list of locations by owner ID",
 )
 async def owner_locations_get(
-    owner: OwnersQueries = Depends(OwnersQueries.depends()),
+    owner_locations: OwnerLocationsQueries = Depends(OwnerLocationsQueries.depends()),
     db: DB = Depends(),
 ):
-    response = await fetch_owner_locations(owner, db)
+    response = await fetch_owner_locations(owner_locations, db)
     return response
 
 
-async def fetch_owners(where, db):
+async def fetch_owners(query, db):
+    query_builder = QueryBuilder(query)
     sql = f"""
     """
-    response = await db.fetchPage(sql, where.params())
+    response = await db.fetchPage(sql, query_builder.params())
     return response
 
 
-async def fetch_owner_locations(id, where, db):
+async def fetch_owner_locations(query, db):
+    query_builder = QueryBuilder(query)
     sql = f"""
     """
-    response = await db.fetchPage(sql, where.params())
+    response = await db.fetchPage(sql, query_builder.params())
     return response

@@ -3,7 +3,6 @@ from typing import Union
 from fastapi import APIRouter, Depends, Query, Path
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.models.responses import ParametersResponse
-from openaq_fastapi.models.queries import OBaseModel, Geo
 
 from openaq_fastapi.v3.models.queries import (
     QueryBuilder,
@@ -23,10 +22,12 @@ router = APIRouter(
 
 
 class ParameterQuery(QueryBaseModel):
-    parameters_id: int = Path(description="Limit the results to a specific id", ge=1)
+    parameters_id: int = Path(
+        description="Limit the results to a specific parameters id", ge=1
+    )
 
-    def where(self):
-        return "WHERE measurands_id = :parameters_id"
+    def where(self) -> str:
+        return "WHERE id = :parameters_id"
 
 
 class ParametersQueries(Paging, CountryQuery, BboxQuery, RadiusQuery):
@@ -64,15 +65,15 @@ async def parameters_get(
 async def fetch_parameters(query, db):
     query_builder = QueryBuilder(query)
     sql = f"""
-    SELECT measurands_id as id
-    , measurand as name
+    SELECT id
+    , name
+    , display_name
     , units
     , description
-    , display as display_name
-    , 0 as locations_count
-    , 0 as measurements_count
+    , locations_count
+    , measurements_count
     {query_builder.total()}
-    FROM measurands
+    FROM parameters_view_cached
     {query_builder.where()}
     {query_builder.pagination()}
     """

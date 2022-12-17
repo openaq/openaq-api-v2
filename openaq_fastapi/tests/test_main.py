@@ -78,7 +78,7 @@ def test_locations_is_monitor_param(client):
     assert all(result["isMonitor"] for result in res["results"])
     response = client.get("/v3/locations?monitor=false")
     res = json.loads(response.content)
-    assert all(not result["isMonitor"] for result in res["results"])
+    assert all(result["isMonitor"] == False for result in res["results"])
 
 
 def test_locations_countries_id_param(client):

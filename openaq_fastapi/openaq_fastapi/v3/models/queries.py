@@ -185,15 +185,11 @@ class QueryBuilder(object):
         """
         where = []
         bases = list(inspect.getmro(self.query.__class__))[
-            1:-1
+            :-3
         ]  # removes object primitive
         for base in bases:
             if callable(getattr(base, "where", None)):
                 if base.where(self.query):
-                    print("\n\nBASE\n\n")
-                    print(base)
-                    print(base.where(self.query))
-                    print("\n\nBASE\n\n")
                     where.append(base.where(self.query))
         if len(where):
             print(where)
@@ -263,6 +259,15 @@ class Paging(BaseModel):
 
     def pagination(self) -> str:
         return "OFFSET :offset\nLIMIT :limit"
+
+
+class ParametersQuery(QueryBaseModel):
+
+    parameters_id: Union[CommaSeparatedList[int], None] = Query(description="")
+
+    def where(self) -> Union[str, None]:
+        if self.has("parameters_id"):
+            return "parameters_id = ANY :parameters_id"
 
 
 class MobileQuery(QueryBaseModel):
@@ -412,66 +417,5 @@ class BboxQuery(QueryBaseModel):
             return "st_makeenvelope(:minx, :miny, :maxx, :maxy, 4326) && geom"
 
 
-class MeasurementsQueries(Paging):
-    locations_id: int = Query(
-        description="Limit the results to a specific location",
-        ge=1,
-    )
-    limit: int = Query(2)
-
-    def where(self):
-        where = ["WHERE sensor_nodes_id = :locations_id"]
-        if self.has("providers_id"):
-            where.append(ProviderQuery.where(self))
-        return ("\nAND ").join(where)
-
-
-class LocationsQueries(
-    Paging,
-    RadiusQuery,
-    BboxQuery,
-    ProviderQuery,
-    OwnerQuery,
-    CountryQuery,
-):
-    mobile: Union[bool, None] = Query(
-        description="Is the location considered a mobile location?"
-    )
-
-    monitor: Union[bool, None] = Query(
-        description="Is the location considered a reference monitor?"
-    )
-
-    @root_validator(pre=True)
-    def check_bbox_radius_set(cls, values):
-        bbox = values.get("bbox", None)
-        coordinates = values.get("coordinates", None)
-        radius = values.get("radius", None)
-        print(values)
-        if bbox is not None and (coordinates is not None or radius is not None):
-            raise ValueError(
-                "Cannot pass both bounding box and coordinate/radius query in the same URL"
-            )
-        return values
-
-    def fields(self) -> str:
-        fields = []
-        if self.has("coordinates"):
-            fields.append(RadiusQuery.fields(self))
-        return ", " + (",").join(fields) if len(fields) > 0 else ""
-
-    def where(self):
-        where = ["WHERE TRUE"]
-        if self.has("mobile"):
-            where.append("ismobile = :mobile")
-        if self.has("mobile"):
-            where.append("ismonitor = :monitor")
-        if self.has("coordinates"):
-            where.append(RadiusQuery.where(self))
-        if self.has("bbox"):
-            where.append(BboxQuery.where(self))
-        if self.has("countries_id"):
-            where.append(CountryQuery.where(self))
-        if self.has("providers_id"):
-            where.append(ProviderQuery.where(self))
-        return ("\nAND ").join(where)
+class MeasurementsQueries(Paging, ParametersQuery):
+    ...

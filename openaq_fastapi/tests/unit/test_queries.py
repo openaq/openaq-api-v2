@@ -137,13 +137,19 @@ class TestQueryBuilder:
     ...
 
 
-class TestLocationQueries:
-    def test_location_queries(self):
+class TestLocationQuery:
+    def test_location_query(self):
         location_queries = LocationQuery(locations_id=42)
         where = render(location_queries.where(), **location_queries.dict())
         assert where[0] == f"id = $1"
         assert where[1] == [42]
 
+    def test_id(self):
+        with pytest.raises(fastapi.exceptions.HTTPException):
+            LocationQuery(locations_id=0)
+
+
+class TestLocationsQueries:
     def test_locations_query_radius_bbox(self):
         latitude = 38.9072
         longitude = -77.0369

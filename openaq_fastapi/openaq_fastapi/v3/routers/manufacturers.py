@@ -1,41 +1,39 @@
 import logging
-from typing import Union
-from fastapi import APIRouter, Depends, Query, Path
+from fastapi import APIRouter, Depends, Path
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.models.responses import ManufacturersResponse
-from openaq_fastapi.models.queries import OBaseModel, Geo
 
-from openaq_fastapi.v3.models.queries import (
-    SQL,
-    Paging,
-)
+from openaq_fastapi.v3.models.queries import Paging, QueryBaseModel, QueryBuilder
 
 logger = logging.getLogger("manufacturers")
 
 router = APIRouter(prefix="/v3", tags=["v3"])
 
 
-class ManufacturersQueries(Paging, SQL):
-    def fields(self):
-        fields = []
-        return ", " + (",").join(fields) if len(fields) > 0 else ""
+class ManufacturerQuery(QueryBaseModel):
+    manufacturers_id: int = Path(
+        description="Limit the results to a specific manufacturers id", ge=1
+    )
 
-    def clause(self):
-        where = ["WHERE TRUE"]
-        return ("\nAND ").join(where)
+    def where(self) -> str:
+        return "WHERE id = :manufacturers_id"
+
+
+class ManufacturersQueries(Paging):
+    ...
 
 
 @router.get(
-    "/manufacturers/{id}",
+    "/manufacturers/{manufacturers_id}",
     response_model=ManufacturersResponse,
     summary="Get a manufacturer by ID",
     description="Provides a manufacturer by manufacturer ID",
 )
 async def manufacturer_get(
-    parameter: ManufacturersQueries = Depends(ManufacturersQueries.depends()),
+    manufacturer: ManufacturerQuery = Depends(ManufacturerQuery.depends()),
     db: DB = Depends(),
 ):
-    response = await fetch_manufacturers(parameter, db)
+    response = await fetch_manufacturers(manufacturer, db)
     return response
 
 
@@ -46,15 +44,16 @@ async def manufacturer_get(
     description="Provides a list of manufacturers",
 )
 async def manufacturers_get(
-    parameter: ManufacturersQueries = Depends(ManufacturersQueries.depends()),
+    manufacturer: ManufacturersQueries = Depends(ManufacturersQueries.depends()),
     db: DB = Depends(),
 ):
-    response = await fetch_manufacturers(parameter, db)
+    response = await fetch_manufacturers(manufacturer, db)
     return response
 
 
-async def fetch_manufacturers(where, db):
+async def fetch_manufacturers(query, db):
+    query_builder = QueryBuilder(query)
     sql = f"""
     """
-    response = await db.fetchPage(sql, where.params())
+    response = await db.fetchPage(sql, query_builder.params())
     return response

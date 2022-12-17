@@ -1,7 +1,5 @@
 import logging
-from typing import Union
-from fastapi import APIRouter, Depends, HTTPException, Query, Path
-from pydantic import ValidationError, root_validator, validator
+from fastapi import APIRouter, Depends, Path
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.models.queries import make_dependable
 from openaq_fastapi.v3.models.responses import LocationsResponse
@@ -26,23 +24,13 @@ router = APIRouter(
     tags=["v3"],
 )
 
-# Needed query parameters
-
-
-# source/owner
-
-# parameter
-# location must have a specific parameter(s)
-
-# city/country
-
 
 class LocationQuery(QueryBaseModel):
-    locations_id: int = Query(
+    locations_id: int = Path(
         description="Limit the results to a specific location by id", ge=1
     )
 
-    def where(self):
+    def where(self) -> str:
         return "id = :locations_id"
 
 
@@ -89,7 +77,6 @@ async def locations_get(
 
 async def fetch_locations(query, db):
     query_builder = QueryBuilder(query)
-
     sql = f"""
     SELECT id
     , name

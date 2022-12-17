@@ -30,7 +30,7 @@ router = APIRouter(
 )
 
 
-class CountryPathQuery(QueryBaseModel):
+class CountryQuery(QueryBaseModel):
     countries_id: int = Path(
         description="Limit the results to a specific country by id",
         ge=1,
@@ -44,19 +44,19 @@ class CountriesQueries(QueryBaseModel, Paging):
     ...
 
 
-class LocationCountryPathQuery(QueryBaseModel):
+class LocationCountryQuery(QueryBaseModel):
 
     countries_id: int = Path(
         description="Limit the results to a specific country",
     )
 
-    def where(self):
+    def where(self) -> str:
         return "(country->'id')::int = :countries_id"
 
 
 class CountryLocationsQueries(
     Paging,
-    LocationCountryPathQuery,
+    LocationCountryQuery,
     RadiusQuery,
     BboxQuery,
     ProviderQuery,
@@ -73,7 +73,7 @@ class CountryLocationsQueries(
     description="Provides a country by country ID",
 )
 async def country_get(
-    country: CountryPathQuery = Depends(CountryPathQuery),
+    country: CountryQuery = Depends(CountryQuery),
     db: DB = Depends(),
 ):
     response = await fetch_countries(country, db)
