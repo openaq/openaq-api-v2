@@ -360,7 +360,7 @@ class RadiusQuery(QueryBaseModel):
         description="Search radius from coordinates as center in meters. Maximum of 100,000 (100km) defaults to 1000 (1km) e.g. radius=1000",
         example="1000",
     )
-    lat: Union[confloat(ge=-90, le=90), None] = None
+    lat: Union[confloat(ge=-90, le=90), None] = Query(None, include_in_schema=False)
     lon: Union[confloat(ge=-180, le=180), None] = None
 
     @root_validator(pre=True)
