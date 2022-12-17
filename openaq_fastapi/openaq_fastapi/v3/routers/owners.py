@@ -5,14 +5,21 @@ from openaq_fastapi.db import DB
 from openaq_fastapi.v3.models.responses import OwnersResponse, LocationsReponse
 from openaq_fastapi.models.queries import OBaseModel, Geo
 
-from openaq_fastapi.v3.models.queries import (
-    SQL,
-    Paging,
-)
+from openaq_fastapi.v3.models.queries import Paging, QueryBaseModel
 
 logger = logging.getLogger("owners")
 
 router = APIRouter(prefix="/v3", tags=["v3"])
+
+
+class OwnerQuery(QueryBaseModel):
+    id: int = Path(
+        description="Limit the results to a specific provider by id",
+        ge=1,
+    )
+
+    def where(self):
+        return "WHERE id = :id"
 
 
 class OwnersQueries(Paging, SQL):
@@ -26,7 +33,7 @@ class OwnersQueries(Paging, SQL):
 
 
 @router.get(
-    "/owners/{id}",
+    "/owners/{owners_id}",
     response_model=OwnersResponse,
     summary="Get a owner by ID",
     description="Provides a owner by owner ID",
@@ -54,7 +61,7 @@ async def owners_get(
 
 
 @router.get(
-    "/owners/{id}/locations",
+    "/owners/{owners_id}/locations",
     response_model=LocationsReponse,
     summary="Get locations by owner ID",
     description="Provides a list of locations by owner ID",

@@ -4,6 +4,7 @@ from openaq_fastapi.v3.models.queries import (
     OwnerQuery,
     ProviderQuery,
     CountryQuery,
+    QueryBuilder,
 )
 from openaq_fastapi.v3.routers.locations import (
     LocationQuery,

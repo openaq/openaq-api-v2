@@ -1,5 +1,4 @@
 import logging
-from typing import Union
 from fastapi import APIRouter, Depends, Query, Path
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.models.queries import (
@@ -10,6 +9,8 @@ from openaq_fastapi.v3.models.queries import (
     CountryQuery,
     OwnerQuery,
     RadiusQuery,
+    MobileQuery,
+    MonitorQuery,
 )
 
 from openaq_fastapi.v3.models.responses import (
@@ -28,14 +29,14 @@ router = APIRouter(
 )
 
 
-class ProviderQueries(QueryBaseModel):
-    id: int = Path(
+class ProviderQuery(QueryBaseModel):
+    providers_id: int = Path(
         description="Limit the results to a specific provider by id",
         ge=1,
     )
 
     def where(self):
-        return "WHERE id = :id"
+        return "WHERE id = :providers_id"
 
 
 class ProvidersQueries(QueryBaseModel, Paging):
@@ -44,46 +45,26 @@ class ProvidersQueries(QueryBaseModel, Paging):
 
 class ProviderLocationsQueries(
     QueryBuilder,
+    ProviderQuery,
     Paging,
     RadiusQuery,
     BboxQuery,
     OwnerQuery,
     CountryQuery,
+    MobileQuery,
+    MonitorQuery,
 ):
-    mobile: Union[bool, None] = Query(
-        description="Is the location considered a mobile location?"
-    )
-
-    providers_id: int = Path(description="", ge=1)
-
-    monitor: Union[bool, None] = Query(
-        description="Is the location considered a reference monitor?"
-    )
-
-    def fields(self):
-        fields = []
-        if self.has("coordinates"):
-            fields.append(RadiusQuery.fields(self))
-        return ", " + (",").join(fields) if len(fields) > 0 else ""
-
-    def generate_where(self):
-        where = []
-        where.append("(provider->'id')::int = :providers_id")
-        if self.has("mobile"):
-            where.append("ismobile = :mobile")
-        if self.has("monitor"):
-            where.append("ismonitor = :monitor")
-        return where
+    ...
 
 
 @router.get(
-    "/providers/{id}",
+    "/providers/{providers_id}",
     response_model=ProvidersResponse,
     summary="Get a provider by ID",
     description="Provides a provider by provider ID",
 )
 async def provider_get(
-    provider: ProviderQueries = Depends(ProviderQueries.depends()),
+    provider: ProviderQuery = Depends(ProviderQuery.depends()),
     db: DB = Depends(),
 ):
     response = await fetch_providers(provider, db)

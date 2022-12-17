@@ -3,36 +3,35 @@ from typing import Union
 from fastapi import APIRouter, Depends, Query, Path
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.models.responses import SensorsResponse, MeasurementsReponse
-from openaq_fastapi.models.queries import OBaseModel, Geo
 
-from openaq_fastapi.v3.models.queries import (
-    SQL,
-    Paging,
-)
+from openaq_fastapi.v3.models.queries import Paging, QueryBaseModel, CountryQuery
 
 logger = logging.getLogger("sensors")
 
 router = APIRouter(prefix="/v3", tags=["v3"])
 
 
-class SensorsQueries(Paging, SQL):
-    def fields(self):
-        fields = []
-        return ", " + (",").join(fields) if len(fields) > 0 else ""
+class SensorQuery(QueryBaseModel):
+    sensors_id: int = Path(
+        description="Limit the results to a specific sensors id", ge=1
+    )
 
-    def clause(self):
-        where = ["WHERE TRUE"]
-        return ("\nAND ").join(where)
+    def where(self):
+        return "WHERE sensors_id = :sensors_id"
+
+
+class SensorsQueries(Paging, CountryQuery):
+    ...
 
 
 @router.get(
-    "/sensors/{id}",
+    "/sensors/{sensors_id}",
     response_model=SensorsResponse,
     summary="Get a sensor by ID",
     description="Provides a sensor by sensor ID",
 )
 async def sensor_get(
-    sensor: SensorsQueries = Depends(SensorsQueries.depends()),
+    sensor: SensorQuery = Depends(SensorQuery.depends()),
     db: DB = Depends(),
 ):
     response = await fetch_sensors(sensor, db)

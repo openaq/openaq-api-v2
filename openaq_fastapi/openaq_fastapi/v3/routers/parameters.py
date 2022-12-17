@@ -9,6 +9,8 @@ from openaq_fastapi.v3.models.queries import (
     QueryBuilder,
     QueryBaseModel,
     CountryQuery,
+    BboxQuery,
+    RadiusQuery,
     Paging,
 )
 
@@ -20,25 +22,25 @@ router = APIRouter(
 )
 
 
-class ParameterQueries(QueryBaseModel):
-    id: int = Path(description="Limit the results to a specific id", ge=1)
+class ParameterQuery(QueryBaseModel):
+    parameters_id: int = Path(description="Limit the results to a specific id", ge=1)
 
     def where(self):
-        return "WHERE measurands_id = :id"
+        return "WHERE measurands_id = :parameters_id"
 
 
-class ParametersQueries(Paging, CountryQuery):
+class ParametersQueries(Paging, CountryQuery, BboxQuery, RadiusQuery):
     ...
 
 
 @router.get(
-    "/parameters/{id}",
+    "/parameters/{parameters_id}",
     response_model=ParametersResponse,
     summary="Get a parameter by ID",
     description="Provides a parameter by parameter ID",
 )
 async def parameter_get(
-    parameter: ParameterQueries = Depends(ParameterQueries),
+    parameter: ParameterQuery = Depends(ParameterQuery.depends()),
     db: DB = Depends(),
 ):
     response = await fetch_parameters(parameter, db)
