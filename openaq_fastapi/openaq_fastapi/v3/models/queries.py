@@ -161,16 +161,44 @@ class QueryBuilder(object):
         take a query object which can have multiple
         QueryBaseModel ancestors
         """
-        print("\n\n\nQUERY")
-        print(query)
         self.query = query
 
-    def fields(self) -> str:  # loops through non-None fields in children
-        return ""
-        # return [field for field in self.query.fields() if field]
+    def _bases(self) -> List[type]:
+        bases = list(inspect.getmro(self.query.__class__))[
+            :-4
+        ]  # removes object primitives
+        return bases
+
+    def fields(self) -> str:
+        """
+        loops through all ancestor classes and calls
+        their respective fields() methods to concatenate
+        into additional fields for select
+        """
+        fields = []
+        bases = self._bases()
+        for base in bases:
+            if callable(getattr(base, "fields", None)):
+                if base.fields(self.query):
+                    fields.append(base.fields(self.query))
+        if len(fields):
+            fields = list(set(fields))
+            return "\n," + ("\n,").join(fields)
+        else:
+            return ""
 
     def pagination(self) -> str:
-        return "LIMIT 1"
+        pagination = []
+        bases = self._bases()
+        for base in bases:
+            if callable(getattr(base, "pagination", None)):
+                if base.pagination(self.query):
+                    pagination.append(base.pagination(self.query))
+        if len(pagination):
+            pagination = list(set(pagination))
+            return "\n" + ("\n,").join(pagination)
+        else:
+            return ""
 
     def params(self) -> dict:
         return self.query.dict(exclude_unset=True, by_alias=True)
@@ -186,18 +214,13 @@ class QueryBuilder(object):
         into a full where statement
         """
         where = []
-        bases = list(inspect.getmro(self.query.__class__))[
-            :-3
-        ]  # removes object primitive
+        bases = self._bases()
         for base in bases:
-            print("\n\n\nBASE")
-            print(base)
-
             if callable(getattr(base, "where", None)):
                 if base.where(self.query):
                     where.append(base.where(self.query))
         if len(where):
-            print(where)
+            where = list(set(where))
             return "WHERE " + ("\nAND ").join(where)
         else:
             return ""
@@ -235,10 +258,10 @@ class QueryBaseModel(BaseModel):
     def where(self):
         return None
 
-    def fields():  # for additional fields
+    def fields(self):  # for additional fields
         return None
 
-    def pagination():
+    def pagination(self):
         return
 
 
@@ -251,6 +274,7 @@ class Paging(BaseModel):
     limit: int = Query(
         100,
         gt=0,
+        le=1000,
         description="""Change the number of results returned.
         e.g. limit=100 will return up to 100 results""",
         example="100",
@@ -263,7 +287,7 @@ class Paging(BaseModel):
     )
 
     def pagination(self) -> str:
-        return "OFFSET :offset\nLIMIT :limit"
+        return "LIMIT :limit"
 
 
 class ParametersQuery(QueryBaseModel):
@@ -272,7 +296,7 @@ class ParametersQuery(QueryBaseModel):
 
     def where(self) -> Union[str, None]:
         if self.has("parameters_id"):
-            return "parameters_id = ANY :parameters_id"
+            return "parameters_id = ANY (:parameters_id)"
 
 
 class MobileQuery(QueryBaseModel):
@@ -360,7 +384,7 @@ class RadiusQuery(QueryBaseModel):
         description="Search radius from coordinates as center in meters. Maximum of 100,000 (100km) defaults to 1000 (1km) e.g. radius=1000",
         example="1000",
     )
-    lat: Union[confloat(ge=-90, le=90), None] = Query(None, include_in_schema=False)
+    lat: Union[confloat(ge=-90, le=90), None] = None
     lon: Union[confloat(ge=-180, le=180), None] = None
 
     @root_validator(pre=True)
@@ -385,10 +409,11 @@ class RadiusQuery(QueryBaseModel):
         return values
 
     def fields(self, geometry_field: str = "geom"):
-        return f"st_distance({geometry_field}, st_setsrid(st_makepoint(:lon, :lat), 4326)) as distance"
+        if self.lat is not None and self.lon is not None and self.radius is not None:
+            return f"st_distance({geometry_field}, st_setsrid(st_makepoint(:lon, :lat), 4326)) as distance"
 
     def where(self, geometry_field: str = "geom"):
-        if self.lat is not None and self.lon is not None:
+        if self.lat is not None and self.lon is not None and self.radius is not None:
             return f"st_dwithin(st_setsrid(st_makepoint(:lon, :lat), 4326), {geometry_field}, :radius)"
         return None
 

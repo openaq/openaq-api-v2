@@ -59,7 +59,7 @@ class TestSubResourceHealth:
 
     def test_endpoint_resource_path_bad(self, client, endpoint, resource):
         response = client.get(f"/v3/{endpoint}/0/{resource}")
-        assert response.status_code == 200
+        assert response.status_code == 422
 
 
 class TestLocations:

@@ -5,6 +5,7 @@ from openaq_fastapi.v3.models.queries import (
     ProviderQuery,
     CountryQuery,
     QueryBuilder,
+    RadiusQuery,
 )
 from openaq_fastapi.v3.routers.locations import (
     LocationQuery,
@@ -133,8 +134,40 @@ class TestBboxQuery:
     ...
 
 
-class TestQueryBuilder:
+class QueryContainer(CountryQuery, MonitorQuery):
     ...
+
+
+class TestQueryBuilder:
+    def test_params_method(self):
+        query = QueryContainer(iso="us", monitor=True)
+        query_builder = QueryBuilder(query)
+        assert query_builder.params() == {"monitor": True, "iso": "us"}
+
+    def test_where_method_single(self):
+        expected = "WHERE country->>'code' = :iso"
+        query = QueryContainer(iso="us")
+        query_builder = QueryBuilder(query)
+        assert query_builder.where() == expected
+
+    def test_where_method_multiple(self):
+        expected = "WHERE ismonitor = :monitor\nAND country->>'code' = :iso"
+        query = QueryContainer(iso="us", monitor=True)
+        query_builder = QueryBuilder(query)
+        assert query_builder.where() == expected
+
+    def test_fields_method_none(self):
+        country_query = CountryQuery(iso="us")
+        query_builder = QueryBuilder(country_query)
+        assert query_builder.fields() == ""
+
+    def test_fields_method(self):
+        radius_query = RadiusQuery(coordinates="38.9072,-77.0369", radius=1000)
+        query_builder = QueryBuilder(radius_query)
+        assert (
+            query_builder.fields()
+            == "\n,st_distance(geom, st_setsrid(st_makepoint(:lon, :lat), 4326)) as distance"
+        )
 
 
 class TestLocationQuery:

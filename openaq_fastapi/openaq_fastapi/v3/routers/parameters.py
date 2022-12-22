@@ -55,7 +55,7 @@ async def parameter_get(
     description="Provides a list of parameters",
 )
 async def parameters_get(
-    parameter: ParametersQueries = Depends(ParametersQueries),
+    parameter: ParametersQueries = Depends(ParametersQueries.depends()),
     db: DB = Depends(),
 ):
     response = await fetch_parameters(parameter, db)

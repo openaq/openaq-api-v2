@@ -91,8 +91,8 @@ class SensorBase(JsonBase):
 
 
 class Parameter(ParameterBase):
-    display_name: str
-    description: str
+    display_name: Union[str, None]
+    description: Union[str, None]
     locations_count: int
     measurements_count: int
 
