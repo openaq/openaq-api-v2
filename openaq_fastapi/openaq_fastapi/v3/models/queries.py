@@ -287,7 +287,7 @@ class Paging(BaseModel):
     )
 
     def pagination(self) -> str:
-        return "LIMIT :limit"
+        return "LIMIT :limit OFFSET :offset"
 
 
 class ParametersQuery(QueryBaseModel):

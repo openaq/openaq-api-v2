@@ -27,7 +27,7 @@ class ParameterPathQuery(QueryBaseModel):
     )
 
     def where(self) -> str:
-        return "WHERE id = :parameters_id"
+        return "id = :parameters_id"
 
 
 class ParametersQueries(Paging, CountryQuery, BboxQuery, RadiusQuery):
