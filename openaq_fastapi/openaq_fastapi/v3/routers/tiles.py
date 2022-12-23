@@ -24,12 +24,32 @@ router = APIRouter(
 
 class TileProvidersQuery(QueryBaseModel):
     providers_id: Union[CommaSeparatedList[int], None] = Query(
-        description="Limit the results to a specific provider"
+        description="Limit the results to a specific provider or providers"
     )
 
     def where(self) -> Union[str, None]:
         if self.has("providers_id"):
             return "providers_id = ANY (:providers_id)"
+
+
+class TileOwnersQuery(QueryBaseModel):
+    owners_id: Union[CommaSeparatedList[int], None] = Query(
+        description="Limit the results to a specific owner or owners"
+    )
+
+    def where(self) -> Union[str, None]:
+        if self.has("owners_id"):
+            return "owners_id = ANY (:owners_id)"
+
+
+class ActiveQuery(QueryBaseModel):
+    active: Union[bool, None] = Query(
+        description="Limits to locations with recent measurements (<48 hours)"
+    )
+
+    def where(self) -> Union[str, None]:
+        if self.has("active"):
+            return "active = :active"
 
 
 class TileBase(QueryBaseModel):
@@ -38,7 +58,15 @@ class TileBase(QueryBaseModel):
     y: int = (Path(..., description="Mercator tiles's row"),)
 
 
-class Tile(TileBase, ParametersQuery, TileProvidersQuery, MonitorQuery, MobileQuery):
+class Tile(
+    TileBase,
+    ParametersQuery,
+    TileProvidersQuery,
+    MonitorQuery,
+    MobileQuery,
+    TileOwnersQuery,
+    ActiveQuery,
+):
     ...
 
 
