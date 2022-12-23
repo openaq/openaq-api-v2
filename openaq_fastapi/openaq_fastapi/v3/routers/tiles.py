@@ -7,7 +7,11 @@ from openaq_fastapi.db import DB
 
 from openaq_fastapi.v3.models.queries import (
     QueryBaseModel,
-    Paging,
+    CommaSeparatedList,
+    ParametersQuery,
+    MonitorQuery,
+    MobileQuery,
+    QueryBuilder,
 )
 
 logger = logging.getLogger("tiles")
@@ -18,36 +22,24 @@ router = APIRouter(
 )
 
 
+class TileProvidersQuery(QueryBaseModel):
+    providers_id: Union[CommaSeparatedList[int], None] = Query(
+        description="Limit the results to a specific provider"
+    )
+
+    def where(self) -> Union[str, None]:
+        if self.has("providers_id"):
+            return "providers_id = ANY (:providers_id)"
+
+
 class TileBase(QueryBaseModel):
     z: int = (Path(..., ge=0, le=30, description="Mercator tiles's zoom level"),)
     x: int = (Path(..., description="Mercator tiles's column"),)
     y: int = (Path(..., description="Mercator tiles's row"),)
 
 
-class Tile(TileBase):
-    parameters_id: int = Query(
-        description="Limit the results to a specific location by id", ge=1
-    )
-    providers: Union[List[int], None] = Query(
-        description="Limit the results to a specific provider by id"
-    )
-    is_monitor: Union[List[int], None] = Query(
-        description="Limit the results to one or more sensor types"
-    )
-    is_active: Union[bool, None] = Query(
-        description="Limit the results to locations active within the last 48 hours"
-    )
-
-    def where(self):
-        where = ["WHERE ismobile = false"]
-        where.append("measurands_id = :parameters_id")
-        if hasattr(self, "providers") and self.providers is not None:
-            where.append("providers_id = ANY(:providers::int[])")
-        if hasattr(self, "is_monitor") and self.is_monitor is not None:
-            where.append("is_monitor = :is_monitor")
-        if hasattr(self, "is_active") and self.is_active is not None:
-            where.append("active = :is_active")
-        return ("\nAND ").join(where)
+class Tile(TileBase, ParametersQuery, TileProvidersQuery, MonitorQuery, MobileQuery):
+    ...
 
 
 class MobileTile(TileBase):
@@ -84,7 +76,7 @@ class MobileTile(TileBase):
 )
 async def get_tile(
     db: DB = Depends(),
-    tile: Tile = Depends(Tile),
+    tile: Tile = Depends(Tile.depends()),
 ):
     vt = await fetch_tiles(tile, db)
     if vt is None:
@@ -93,7 +85,8 @@ async def get_tile(
     return Response(content=vt, status_code=200, media_type="application/x-protobuf")
 
 
-async def fetch_tiles(where, db):
+async def fetch_tiles(query, db):
+    query_builder = QueryBuilder(query)
     sql = f"""
     WITH
         tile AS (
@@ -101,15 +94,16 @@ async def fetch_tiles(where, db):
         ),
         locations AS (
             SELECT
-                sensor_nodes.sensor_nodes_id
-                , sensor_nodes.ismobile
-                , sensors.measurands_id
-                , ST_AsMVTGeom(ST_Transform(sensor_nodes.geom, 3857), tile) AS mvt
-                , sensors_latest.value
-                , sensors_latest.datetime > (NOW() - INTERVAL '48 hours' ) as active
-                , providers.providers_id
+                locations_view_cached.id AS sensor_nodes_id
+                , locations_view_cached.ismobile 
+                , locations_view_cached.ismonitor 
+                , sensors.measurands_id AS parameters_id
+                , ST_AsMVTGeom(ST_Transform(locations_view_cached.geom, 3857), tile) AS mvt
+                , sensors_rollup.value_latest AS value
+                , sensors_rollup.datetime_last > (NOW() - INTERVAL '48 hours' ) AS active
+                , locations_view_cached.provider->'id' AS providers_id 
             FROM
-                sensor_nodes
+                locations_view_cached
             JOIN
                 tile
             ON
@@ -117,36 +111,33 @@ async def fetch_tiles(where, db):
             JOIN
                 sensor_systems
             ON
-                sensor_systems.sensor_nodes_id = sensor_nodes.sensor_nodes_id
+                sensor_systems.sensor_nodes_id = locations_view_cached.id
             JOIN
                 sensors
             ON
                 sensors.sensor_systems_id = sensor_systems.sensor_systems_id
             JOIN
-                sensors_latest
+                sensors_rollup
             ON
-                sensors_latest.sensors_id = sensors.sensors_id
-            JOIN
-                providers
-            ON
-                providers.providers_id = sensor_nodes.providers_id
+                sensors_rollup.sensors_id = sensors.sensors_id
         ),
         t AS (
             SELECT
                 sensor_nodes_id
-                , measurands_id
                 , mvt
                 , value
                 , active
                 , providers_id
-                , true AS is_monitor
+                , parameters_id
+                , ismonitor
+                , ismobile
             FROM
                 locations
-            {where.clause()}
+            {query_builder.where()}
         )
         SELECT ST_AsMVT(t, 'default') FROM t;
     """
-    response = await db.fetchval(sql, where.params())
+    response = await db.fetchval(sql, query_builder.params())
     return response
 
 
