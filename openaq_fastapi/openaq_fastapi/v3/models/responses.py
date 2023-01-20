@@ -172,29 +172,46 @@ class Period(JsonBase):
     datetime_to: Union[DatetimeObject, None]
 
 
+class Factor(JsonBase):
+    label: str
+    interval: str
+    order: int
+
+
 class Summary(JsonBase):
-    min: float
-    q05: float
+    min: Union[float, None]
+    q05: Union[float, None]
     # q25: float
-    median: float
+    median: Union[float, None]
     # q75: float
-    q95: float
-    max: float
+    q95: Union[float, None]
+    max: Union[float, None]
     sd: Union[float, None]
 
 
 class Coverage(JsonBase):
-    # observed_interval: str
-    # expected_interval: str
+    expected_count: int
+    expected_interval: str
     observed_count: int
-    # expected_count: int
-    # percent_complete: float
-    datetime_first: DatetimeObject
-    datetime_last: DatetimeObject
+    observed_interval: str
+    percent_complete: float  # percent of expected values
+    percent_coverage: float  # percent of time
+    #  datetime_first: DatetimeObject
+    #  datetime_last: DatetimeObject
 
 
 class Measurement(JsonBase):
     period: Period
+    value: float
+    parameter: ParameterBase
+    coordinates: Union[Coordinates, None]
+    summary: Summary
+    coverage: Coverage
+
+
+# Similar to measurement but without timestamps
+class Trend(JsonBase):
+    factor: Factor
     value: float
     parameter: ParameterBase
     coordinates: Union[Coordinates, None]
@@ -211,6 +228,10 @@ class LocationsResponse(OpenAQResult):
 
 class MeasurementsResponse(OpenAQResult):
     results: List[Measurement]
+
+
+class TrendsResponse(OpenAQResult):
+    results: List[Trend]
 
 
 class CountriesResponse(OpenAQResult):

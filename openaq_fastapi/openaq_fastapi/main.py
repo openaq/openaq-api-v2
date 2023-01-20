@@ -47,6 +47,7 @@ from openaq_fastapi.routers.summary import router as summary_router
 from openaq_fastapi.v3.routers import (
     locations,
     measurements,
+    trends,
     parameters,
     countries,
     tiles,
@@ -224,6 +225,7 @@ app.include_router(parameters.router)
 app.include_router(tiles.router)
 app.include_router(countries.router)
 app.include_router(measurements.router)
+app.include_router(trends.router)
 app.include_router(providers.router)
 
 app.include_router(averages_router)
