@@ -174,17 +174,17 @@ class Period(JsonBase):
 
 class Factor(JsonBase):
     label: str
-    interval: str
-    order: int
+    interval: Union[str, None]
+    order: Union[int, None]
 
 
 class Summary(JsonBase):
     min: Union[float, None]
-    q05: Union[float, None]
-    # q25: float
+    q02: Union[float, None]
+    q25: Union[float, None]
     median: Union[float, None]
-    # q75: float
-    q95: Union[float, None]
+    q75: Union[float, None]
+    q98: Union[float, None]
     max: Union[float, None]
     sd: Union[float, None]
 
@@ -214,7 +214,7 @@ class Trend(JsonBase):
     factor: Factor
     value: float
     parameter: ParameterBase
-    coordinates: Union[Coordinates, None]
+    # coordinates: Union[Coordinates, None]
     summary: Summary
     coverage: Coverage
 
