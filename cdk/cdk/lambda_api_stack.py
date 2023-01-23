@@ -116,12 +116,12 @@ class LambdaApiStack(Stack):
 
         log = aws_logs.LogGroup(
             self,
-            f"{id}-http-gateway-log",
+            f"{id}-http-gateway-log-{env_name}",
         )
 
         CfnStage(
             self,
-            f"{id}-stage",
+            f"{id}-stage-{env_name}",
             api_id=api.http_api_id,
             stage_name="$default",
             auto_deploy=True,
@@ -153,7 +153,7 @@ class LambdaApiStack(Stack):
             )
 
             cert = acm.Certificate.from_certificate_arn(
-                self, "openaq-api-cert", cert_arn
+                self, f"openaq-api-cert-{env_name}", cert_arn
             )
 
             cache_policy = cloudfront.CachePolicy(
@@ -187,7 +187,9 @@ class LambdaApiStack(Stack):
             )
 
             log_event_queue = aws_sqs.Queue(
-                self, f"openaq-api-cf-log-event-queue-{env_name}"
+                self,
+                f"openaq-api-cf-log-event-queue-{env_name}",
+                visibility_timeout=Duration.seconds(cf_logs_lambda_timeout),
             )
 
             log_bucket.add_event_notification(
