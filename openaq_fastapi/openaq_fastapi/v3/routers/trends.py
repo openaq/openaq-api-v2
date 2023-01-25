@@ -92,12 +92,15 @@ async def fetch_trends(q, db):
     if q.period_name == 'hour':
         fmt = 'HH24'
         dur = '01:00:00'
+        hrs = '24'
     elif q.period_name == 'day':
         fmt = 'ID'
-        dur = '24:00:00'        
+        dur = '24:00:00'
+        hrs = '7'
     elif q.period_name == 'month':
         fmt = 'MM'
         dur = '1 month'        
+        hrs = '12'
         
     query = QueryBuilder(q)
     sql = f"""
@@ -154,7 +157,7 @@ SELECT
      t.value_count::int
    , t.avg_seconds
    , t.log_seconds
-   , EXTRACT(EPOCH FROM last_datetime - first_datetime)/24
+   , EXTRACT(EPOCH FROM last_datetime - first_datetime)/{hrs}
 ) as coverage
  FROM trends t
  JOIN measurands m ON (t.measurands_id = m.measurands_id);
