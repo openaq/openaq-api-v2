@@ -52,6 +52,7 @@ from openaq_fastapi.v3.routers import (
     countries,
     tiles,
     providers,
+    sensors,
 )
 
 
@@ -227,6 +228,7 @@ app.include_router(countries.router)
 app.include_router(measurements.router)
 app.include_router(trends.router)
 app.include_router(providers.router)
+app.include_router(sensors.router)
 
 app.include_router(averages_router)
 app.include_router(cities_router)

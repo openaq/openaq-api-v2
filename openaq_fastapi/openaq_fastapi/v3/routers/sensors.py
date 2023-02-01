@@ -3,13 +3,24 @@ from typing import Union
 from fastapi import APIRouter, Depends, Query, Path
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.routers.measurements import fetch_measurements
-from openaq_fastapi.v3.models.responses import SensorsResponse, MeasurementsResponse
 
-from openaq_fastapi.v3.models.queries import Paging, QueryBaseModel, CountryQuery
+from openaq_fastapi.v3.models.responses import (
+    SensorsResponse,
+    MeasurementsResponse,
+)
+
+from openaq_fastapi.v3.models.queries import (
+    Paging,
+    QueryBaseModel,
+    QueryBuilder,
+)
 
 logger = logging.getLogger("sensors")
 
-router = APIRouter(prefix="/v3", tags=["v3"])
+router = APIRouter(
+    prefix="/v3",
+    tags=["v3"]
+)
 
 
 class SensorQuery(QueryBaseModel):
@@ -18,11 +29,25 @@ class SensorQuery(QueryBaseModel):
     )
 
     def where(self):
-        return "WHERE sensors_id = :sensors_id"
+        return "m.sensors_id = :sensors_id"
 
 
-class SensorsQueries(Paging, CountryQuery):
-    ...
+# class SensorsQueries(Paging, CountryQuery):
+#     ...
+
+
+# @router.get(
+#     "/sensors/{id}/measurements",
+#     response_model=MeasurementsResponse,
+#     summary="Get measurements by sensor ID",
+#     description="Provides a list of measurements by sensor ID",
+# )
+# async def sensor_measurements_get(
+#     sensor: SensorsQueries = Depends(SensorsQueries.depends()),
+#     db: DB = Depends(),
+# ):
+#     response = await fetch_measurements(sensor, db)
+#     return response
 
 
 @router.get(
@@ -39,22 +64,71 @@ async def sensor_get(
     return response
 
 
-@router.get(
-    "/sensors/{id}/measurements",
-    response_model=MeasurementsResponse,
-    summary="Get measurements by sensor ID",
-    description="Provides a list of measurements by sensor ID",
-)
-async def sensor_measurements_get(
-    sensor: SensorsQueries = Depends(SensorsQueries.depends()),
-    db: DB = Depends(),
-):
-    response = await fetch_measurements(sensor, db)
-    return response
+async def fetch_sensors(q, db):
 
+    query = QueryBuilder(q)
 
-async def fetch_sensors(where, db):
     sql = f"""
+WITH sensor AS (
+SELECT
+   m.sensors_id
+ , MIN(datetime - '1sec'::interval) as datetime_first
+ , MAX(datetime - '1sec'::interval) as datetime_last
+ , COUNT(1) as value_count
+ , AVG(value_avg) as value_avg
+ , STDDEV(value_avg) as value_sd
+ , MIN(value_avg) as value_min
+ , MAX(value_avg) as value_max
+ , PERCENTILE_CONT(0.02) WITHIN GROUP(ORDER BY value_avg) as value_p02
+ , PERCENTILE_CONT(0.25) WITHIN GROUP(ORDER BY value_avg) as value_p25
+ , PERCENTILE_CONT(0.5) WITHIN GROUP(ORDER BY value_avg) as value_p50
+ , PERCENTILE_CONT(0.75) WITHIN GROUP(ORDER BY value_avg) as value_p75
+ , PERCENTILE_CONT(0.98) WITHIN GROUP(ORDER BY value_avg) as value_p98
+ , current_timestamp as calculated_on
+ FROM hourly_rollups m
+  {query.where()}
+ GROUP BY 1)
+ SELECT c.sensors_id as id
+ , 'sensor' as name
+ , c.value_avg as value
+ , get_datetime_object(c.datetime_first, ts.tzid) as datetime_first
+ , get_datetime_object(c.datetime_last, ts.tzid) as datetime_last
+ , json_build_object(
+     'datetime', get_datetime_object(r.datetime_last, ts.tzid)
+    , 'value', r.value_latest
+    , 'coordinates', jsonb_build_object(
+        'lat', st_y(r.geom_latest)
+      , 'lon', st_x(r.geom_latest)
+    )
+ ) as latest
+ , json_build_object(
+    'id', s.measurands_id
+    , 'units', m.units
+    , 'name', m.measurand
+ ) as parameter
+ , json_build_object(
+    'sd', c.value_sd
+   , 'min', c.value_min
+   , 'q02', c.value_p02
+   , 'q25', c.value_p25
+   , 'median', c.value_p50
+   , 'q75', c.value_p75
+   , 'q98', c.value_p98
+   , 'max', c.value_max
+ ) as summary
+ , calculate_coverage(
+     c.value_count::int
+   , s.data_averaging_period_seconds
+   , s.data_logging_period_seconds
+   , EXTRACT(EPOCH FROM c.datetime_last - c.datetime_first)
+) as coverage
+ FROM sensor c
+ JOIN sensors s ON (c.sensors_id = s.sensors_id)
+ JOIN sensor_systems sy ON (s.sensor_systems_id = sy.sensor_systems_id)
+ JOIN sensor_nodes sn ON (sy.sensor_nodes_id = sn.sensor_nodes_id)
+ JOIN timezones ts ON (sn.timezones_id = ts.gid)
+ JOIN sensors_rollup r ON (c.sensors_id = r.sensors_id)
+ JOIN measurands m ON (s.measurands_id = m.measurands_id);
     """
-    response = await db.fetchPage(sql, where.params())
+    response = await db.fetchPage(sql, query.params())
     return response

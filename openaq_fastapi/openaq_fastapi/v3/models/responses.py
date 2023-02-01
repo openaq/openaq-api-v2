@@ -43,6 +43,39 @@ class GeoJSON(JsonBase):
     coordinates: List[Any] = []
 
 
+class Period(JsonBase):
+    label: str
+    interval: str
+    datetime_from: Union[DatetimeObject, None]
+    datetime_to: Union[DatetimeObject, None]
+
+
+class Coverage(JsonBase):
+    expected_count: int
+    expected_interval: str
+    observed_count: int
+    observed_interval: str
+    percent_complete: float  # percent of expected values
+    percent_coverage: float  # percent of time
+
+
+class Factor(JsonBase):
+    label: str
+    interval: Union[str, None]
+    order: Union[int, None]
+
+
+class Summary(JsonBase):
+    min: Union[float, None]
+    q02: Union[float, None]
+    q25: Union[float, None]
+    median: Union[float, None]
+    q75: Union[float, None]
+    q98: Union[float, None]
+    max: Union[float, None]
+    sd: Union[float, None]
+
+
 class CountryBase(JsonBase):
     id: Union[int, None]
     code: str
@@ -68,6 +101,12 @@ class ManufacturerBase(JsonBase):
     id: int
     name: str
     entity: EntityBase
+
+
+class Latest(JsonBase):
+    datetime: DatetimeObject
+    value: float
+    coordinates: Coordinates
 
 
 class InstrumentBase(JsonBase):
@@ -143,7 +182,10 @@ class Manufacturer(ManufacturerBase):
 class Sensor(SensorBase):
     datetime_first: DatetimeObject
     datetime_last: DatetimeObject
-    value_last: float
+    coverage: Coverage
+    # period: Period
+    latest: Latest
+    summary: Summary
 
 
 class Location(JsonBase):
@@ -163,41 +205,6 @@ class Location(JsonBase):
     distance: Union[float, None]
     datetime_first: DatetimeObject
     datetime_last: DatetimeObject
-
-
-class Period(JsonBase):
-    label: str
-    interval: str
-    datetime_from: Union[DatetimeObject, None]
-    datetime_to: Union[DatetimeObject, None]
-
-
-class Factor(JsonBase):
-    label: str
-    interval: Union[str, None]
-    order: Union[int, None]
-
-
-class Summary(JsonBase):
-    min: Union[float, None]
-    q02: Union[float, None]
-    q25: Union[float, None]
-    median: Union[float, None]
-    q75: Union[float, None]
-    q98: Union[float, None]
-    max: Union[float, None]
-    sd: Union[float, None]
-
-
-class Coverage(JsonBase):
-    expected_count: int
-    expected_interval: str
-    observed_count: int
-    observed_interval: str
-    percent_complete: float  # percent of expected values
-    percent_coverage: float  # percent of time
-    #  datetime_first: DatetimeObject
-    #  datetime_last: DatetimeObject
 
 
 class Measurement(JsonBase):
