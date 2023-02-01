@@ -18,6 +18,7 @@ router = APIRouter(
     tags=["v3"]
 )
 
+
 class FromDatetimeQuery(QueryBaseModel):
     from_datetime: Union[datetime, date, None] = Query(
         description="From when?"
@@ -44,6 +45,7 @@ class PeriodNameQuery(QueryBaseModel):
     def where(self) -> str:
         return ""
 
+
 class ParameterPathQuery(QueryBaseModel):
     measurands_id: int = Path(
         description="The parameter to query"
@@ -51,8 +53,8 @@ class ParameterPathQuery(QueryBaseModel):
 
     def where(self) -> str:
         return "s.measurands_id = :measurands_id"
-    
-    
+
+
 class LocationPathQuery(QueryBaseModel):
     locations_id: int = Path(
         description="Limit the results to a specific location by id", ge=1
@@ -92,16 +94,13 @@ async def fetch_trends(q, db):
     if q.period_name == 'hour':
         fmt = 'HH24'
         dur = '01:00:00'
-        hrs = '24'
     elif q.period_name == 'day':
         fmt = 'ID'
         dur = '24:00:00'
-        hrs = '7'
     elif q.period_name == 'month':
         fmt = 'MM'
-        dur = '1 month'        
-        hrs = '12'
-        
+        dur = '1 month'
+
     query = QueryBuilder(q)
     sql = f"""
 WITH trends AS (
@@ -110,7 +109,7 @@ SELECT
  , s.measurands_id
  , to_char(datetime - '1sec'::interval, '{fmt}') as factor
  , AVG(s.data_averaging_period_seconds) as avg_seconds
- , AVG(s.data_logging_period_seconds) as log_seconds 
+ , AVG(s.data_logging_period_seconds) as log_seconds
  , MIN(datetime - '1sec'::interval) as first_datetime
  , MAX(datetime - '1sec'::interval) as last_datetime
  , COUNT(1) as value_count
@@ -119,9 +118,9 @@ SELECT
  , MIN(value_avg) as value_min
  , MAX(value_avg) as value_max
  , PERCENTILE_CONT(0.02) WITHIN GROUP(ORDER BY value_avg) as value_p02
- , PERCENTILE_CONT(0.25) WITHIN GROUP(ORDER BY value_avg) as value_p25      
+ , PERCENTILE_CONT(0.25) WITHIN GROUP(ORDER BY value_avg) as value_p25
  , PERCENTILE_CONT(0.5) WITHIN GROUP(ORDER BY value_avg) as value_p50
- , PERCENTILE_CONT(0.75) WITHIN GROUP(ORDER BY value_avg) as value_p75      
+ , PERCENTILE_CONT(0.75) WITHIN GROUP(ORDER BY value_avg) as value_p75
  , PERCENTILE_CONT(0.98) WITHIN GROUP(ORDER BY value_avg) as value_p98
  , current_timestamp as calculated_on
  FROM hourly_rollups m
@@ -157,7 +156,7 @@ SELECT
      t.value_count::int
    , t.avg_seconds
    , t.log_seconds
-   , EXTRACT(EPOCH FROM last_datetime - first_datetime)/{hrs}
+   , expected_hours(first_datetime, last_datetime, '{q.period_name}', factor) * 3600.0
 ) as coverage
  FROM trends t
  JOIN measurands m ON (t.measurands_id = m.measurands_id);
