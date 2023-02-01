@@ -1,8 +1,14 @@
 from fastapi import APIRouter, Depends, Path, Query
 from datetime import date, datetime
 from openaq_fastapi.db import DB
-from typing import Union
-from openaq_fastapi.v3.models.responses import MeasurementsResponse
+from typing import Union, List
+from pydantic import Field
+from openaq_fastapi.v3.models.responses import (
+    MeasurementsResponse,
+    JsonBase,
+    DatetimeObject,
+    OpenAQResult,
+)
 from openaq_fastapi.v3.models.queries import (
     QueryBaseModel,
     QueryBuilder,
@@ -15,22 +21,22 @@ router = APIRouter(
 )
 
 
-class FromDatetimeQuery(QueryBaseModel):
-    from_datetime: Union[datetime, date] = Query(
+class DateFromQuery(QueryBaseModel):
+    date_from: Union[datetime, date] = Query(
         description="From when?"
     )
 
     def where(self) -> str:
-        return "datetime > :from_datetime"
+        return "datetime > :date_from"
 
 
-class ToDatetimeQuery(QueryBaseModel):
-    to_datetime: Union[datetime, date] = Query(
+class DateToQuery(QueryBaseModel):
+    date_to: Union[datetime, date] = Query(
         description="To when?"
     )
 
     def where(self) -> str:
-        return "datetime <= :to_datetime"
+        return "datetime <= :date_to"
 
 
 class LocationPathQuery(QueryBaseModel):
@@ -39,14 +45,14 @@ class LocationPathQuery(QueryBaseModel):
     )
 
     def where(self) -> str:
-        return "sensor_nodes_id = :locations_id"
+        return "sy.sensor_nodes_id = :locations_id"
 
 
 class LocationMeasurementsQueries(
         Paging,
         LocationPathQuery,
-        FromDatetimeQuery,
-        ToDatetimeQuery,
+        DateFromQuery,
+        DateToQuery,
 ):
     ...
 
@@ -167,6 +173,59 @@ async def fetch_measurements(q, db):
     JOIN measurands m ON (h.measurands_id = m.measurands_id)
     LIMIT 4;
         """
+
+    response = await db.fetchPage(sql, query.params())
+    return response
+
+
+# Remove from here down once we update the v2/measurements endpoint
+class MeasurementV2(JsonBase):
+    location_id: int = Field(..., alias='locationId')
+    parameter: str
+    value: float
+    date: DatetimeObject
+    unit: str
+
+
+class MeasurementsV2Response(OpenAQResult):
+    results: List[MeasurementV2]
+
+
+@router.get(
+    "/locations/{locations_id}/measurementsv2",
+    response_model=MeasurementsV2Response,
+    summary="Get measurements by location",
+    description="Provides a list of measurements by location ID",
+)
+async def measurements_get_v2(
+    measurements: LocationMeasurementsQueries = Depends(
+        LocationMeasurementsQueries.depends()
+    ),
+    db: DB = Depends(),
+):
+    response = await fetch_measurements_v2(measurements, db)
+    return response
+
+
+async def fetch_measurements_v2(q, db):
+    query = QueryBuilder(q)
+
+    sql = f"""
+    SELECT n.sensor_nodes_id as location_id
+    , get_datetime_object(h.datetime, 'utc') as date
+    , m.measurand as parameter
+    , m.units as unit
+    , h.value
+    {query.fields()}
+    {query.total()}
+    FROM measurements h
+    JOIN sensors s USING (sensors_id)
+    JOIN sensor_systems sy USING (sensor_systems_id)
+    JOIN measurands m ON (m.measurands_id = s.measurands_id)
+    JOIN sensor_nodes n ON (n.sensor_nodes_id = sy.sensor_nodes_id)
+    {query.where()}
+    {query.pagination()}
+    """
 
     response = await db.fetchPage(sql, query.params())
     return response
