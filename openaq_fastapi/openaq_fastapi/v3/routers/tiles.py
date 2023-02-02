@@ -53,6 +53,15 @@ class ActiveQuery(QueryBaseModel):
             return "active = :active"
 
 
+class ThresholdsQuery(QueryBaseModel):
+    period: int = Query(description="")
+    threshold: int = Query(description="")
+
+    def where(self) -> Union[str, None]:
+        if self.has("period") and self.has("threshold"):
+            return "threshold = :threshold AND period = :period"
+
+
 class TileBase(QueryBaseModel):
     z: int = (Path(..., ge=0, le=30, description="Mercator tiles's zoom level"),)
     x: int = (Path(..., description="Mercator tiles's column"),)
@@ -67,6 +76,13 @@ class Tile(
     MobileQuery,
     TileOwnersQuery,
     ActiveQuery,
+):
+    ...
+
+
+class ThresholdTile(
+    Tile,
+    ThresholdsQuery,
 ):
     ...
 
@@ -120,11 +136,11 @@ async def get_tile(
     response_class=Response,
     include_in_schema=True,
 )
-async def get_tile(
+async def get_threshold_tile(
     db: DB = Depends(),
-    tile: Tile = Depends(Tile.depends()),
+    threshold_tile: ThresholdTile = Depends(ThresholdTile.depends()),
 ):
-    vt = await fetch_threshold_tiles(tile, db)
+    vt = await fetch_threshold_tiles(threshold_tile, db)
     if vt is None:
         raise HTTPException(status_code=204, detail="no data found for this tile")
 
@@ -148,7 +164,6 @@ async def fetch_tiles(query, db):
                 , sensors_rollup.value_latest AS value
                 , sensors_rollup.datetime_last > (NOW() - INTERVAL '48 hours' ) AS active
                 , (locations_view_cached.provider->'id')::int AS providers_id 
-                
             FROM
                 locations_view_cached
             JOIN
@@ -197,45 +212,13 @@ async def fetch_threshold_tiles(query, db):
         ),
         thresholds AS (
             SELECT 
-                sensor_nodes_id,
-                measurands_id AS parameters_id,
-                (MAX(CASE WHEN days = 1 AND threshold_value = 5 THEN exceedance_count / total_count END) * 100)::int AS period_1_threshold_5,
-                (MAX(CASE WHEN days = 14 AND threshold_value = 5 THEN exceedance_count / total_count END) * 100)::real AS period_14_threshold_5,
-                (MAX(CASE WHEN days = 30 AND threshold_value = 5 THEN exceedance_count / total_count END) * 100)::real AS period_30_threshold_5,
-                (MAX(CASE WHEN days = 90 AND threshold_value = 5 THEN exceedance_count / total_count END) * 100)::real AS period_90_threshold_5,
-                (MAX(CASE WHEN days = 1 AND threshold_value = 10 THEN exceedance_count / total_count END) * 100)::real AS period_1_threshold_10,
-                (MAX(CASE WHEN days = 14 AND threshold_value = 10 THEN exceedance_count / total_count END) * 100)::real AS period_14_threshold_10,
-                (MAX(CASE WHEN days = 30 AND threshold_value = 10 THEN exceedance_count / total_count END) * 100)::real AS period_30_threshold_10,
-                (MAX(CASE WHEN days = 90 AND threshold_value = 10 THEN exceedance_count / total_count END) * 100)::real AS period_90_threshold_10,
-                (MAX(CASE WHEN days = 1 AND threshold_value = 15 THEN exceedance_count / total_count END) * 100)::real AS period_1_threshold_15,
-                (MAX(CASE WHEN days = 14 AND threshold_value = 15 THEN exceedance_count / total_count END) * 100)::real AS period_14_threshold_15,
-                (MAX(CASE WHEN days = 30 AND threshold_value = 15 THEN exceedance_count / total_count END) * 100)::real AS period_30_threshold_15,
-                (MAX(CASE WHEN days = 90 AND threshold_value = 15 THEN exceedance_count / total_count END) * 100)::real AS period_90_threshold_15,
-                (MAX(CASE WHEN days = 1 AND threshold_value = 20 THEN exceedance_count / total_count END) * 100)::real AS period_1_threshold_20,
-                (MAX(CASE WHEN days = 14 AND threshold_value = 20 THEN exceedance_count / total_count END) * 100)::real AS period_14_threshold_20,
-                (MAX(CASE WHEN days = 30 AND threshold_value = 20 THEN exceedance_count / total_count END) * 100)::real AS period_30_threshold_20,
-                (MAX(CASE WHEN days = 90 AND threshold_value = 20 THEN exceedance_count / total_count END) * 100)::real AS period_90_threshold_20,
-                (MAX(CASE WHEN days = 1 AND threshold_value = 40 THEN exceedance_count / total_count END) * 100)::real AS period_1_threshold_40,
-                (MAX(CASE WHEN days = 14 AND threshold_value = 40 THEN exceedance_count / total_count END) * 100)::real AS period_14_threshold_40,
-                (MAX(CASE WHEN days = 30 AND threshold_value = 40 THEN exceedance_count / total_count END) * 100)::real AS period_30_threshold_40,
-                (MAX(CASE WHEN days = 90 AND threshold_value = 40 THEN exceedance_count / total_count END) * 100)::real AS period_90_threshold_40,
-                (MAX(CASE WHEN days = 1 AND threshold_value = 100 THEN exceedance_count / total_count END) * 100)::real AS period_1_threshold_100,
-                (MAX(CASE WHEN days = 14 AND threshold_value = 100 THEN exceedance_count / total_count END) * 100)::real AS period_14_threshold_100,
-                (MAX(CASE WHEN days = 30 AND threshold_value = 100 THEN exceedance_count / total_count END) * 100)::real AS period_30_threshold_100,
-                (MAX(CASE WHEN days = 90 AND threshold_value = 100 THEN exceedance_count / total_count END) * 100)::real AS period_90_threshold_100,
-                (MAX(CASE WHEN days = 1 AND threshold_value = 200 THEN exceedance_count / total_count END) * 100)::real AS period_1_threshold_200,
-                (MAX(CASE WHEN days = 14 AND threshold_value = 200 THEN exceedance_count / total_count END) * 100)::real AS period_14_threshold_200,
-                (MAX(CASE WHEN days = 30 AND threshold_value = 200 THEN exceedance_count / total_count END) * 100)::real AS period_30_threshold_200,
-                (MAX(CASE WHEN days = 90 AND threshold_value = 200 THEN exceedance_count / total_count END) * 100)::real AS period_90_threshold_200,
-                (MAX(CASE WHEN days = 1 AND threshold_value = 250 THEN exceedance_count / total_count END) * 100)::real AS period_1_threshold_250,
-                (MAX(CASE WHEN days = 14 AND threshold_value = 250 THEN exceedance_count / total_count END) * 100)::real AS period_14_threshold_250,
-                (MAX(CASE WHEN days = 30 AND threshold_value = 250 THEN exceedance_count / total_count END) * 100)::real AS period_30_threshold_250,
-                (MAX(CASE WHEN days = 90 AND threshold_value = 250 THEN exceedance_count / total_count END) * 100)::real AS period_90_threshold_250
+                sensor_nodes_id
+                , measurands_id
+                , days AS period
+                , threshold_value AS threshold
+                , ((exceedance_count / total_count) * 100)::int AS exceedance
             FROM
                 sensor_node_range_exceedances
-            GROUP BY 
-                sensor_nodes_id,
-                measurands_id
         ),
         locations AS (
             SELECT
@@ -244,30 +227,9 @@ async def fetch_threshold_tiles(query, db):
                 , locations_view_cached.ismonitor 
                 , sensors.measurands_id AS parameters_id
                 , ST_AsMVTGeom(ST_Transform(locations_view_cached.geom, 3857), tile) AS mvt
-                , thresholds.period_1_threshold_5
-                , thresholds.period_14_threshold_5
-                , thresholds.period_30_threshold_5
-                , thresholds.period_90_threshold_5
-                , thresholds.period_1_threshold_10
-                , thresholds.period_14_threshold_10
-                , thresholds.period_30_threshold_10
-                , thresholds.period_90_threshold_10  
-                , thresholds.period_1_threshold_20
-                , thresholds.period_14_threshold_20
-                , thresholds.period_30_threshold_20
-                , thresholds.period_90_threshold_20
-                , thresholds.period_1_threshold_40
-                , thresholds.period_14_threshold_40
-                , thresholds.period_30_threshold_40
-                , thresholds.period_90_threshold_40  
-                , thresholds.period_1_threshold_100
-                , thresholds.period_14_threshold_100
-                , thresholds.period_30_threshold_100
-                , thresholds.period_90_threshold_100
-                , thresholds.period_1_threshold_250
-                , thresholds.period_14_threshold_250
-                , thresholds.period_30_threshold_250
-                , thresholds.period_90_threshold_250             
+                , thresholds.exceedance
+                , thresholds.period    
+                , thresholds.threshold       
                 , sensors_rollup.datetime_last > (NOW() - INTERVAL '48 hours' ) AS active
                 , (locations_view_cached.provider->'id')::int AS providers_id 
             FROM
@@ -277,10 +239,6 @@ async def fetch_threshold_tiles(query, db):
             ON
                 TRUE
             JOIN
-                thresholds
-            ON
-                thresholds.sensor_nodes_id = locations_view_cached.id
-            JOIN
                 sensor_systems
             ON
                 sensor_systems.sensor_nodes_id = locations_view_cached.id
@@ -288,6 +246,10 @@ async def fetch_threshold_tiles(query, db):
                 sensors
             ON
                 sensors.sensor_systems_id = sensor_systems.sensor_systems_id
+            JOIN
+                thresholds
+            ON
+                thresholds.sensor_nodes_id = locations_view_cached.id AND thresholds.measurands_id = sensors.measurands_id
             JOIN
                 sensors_rollup
             ON
@@ -297,30 +259,9 @@ async def fetch_threshold_tiles(query, db):
             SELECT
                 sensor_nodes_id
                 , mvt
-                , period_1_threshold_5
-                , period_14_threshold_5
-                , period_30_threshold_5
-                , period_90_threshold_5
-                , period_1_threshold_10
-                , period_14_threshold_10
-                , period_30_threshold_10
-                , period_90_threshold_10  
-                , period_1_threshold_20
-                , period_14_threshold_20
-                , period_30_threshold_20
-                , period_90_threshold_20
-                , period_1_threshold_40
-                , period_14_threshold_40
-                , period_30_threshold_40
-                , period_90_threshold_40  
-                , period_1_threshold_100
-                , period_14_threshold_100
-                , period_30_threshold_100
-                , period_90_threshold_100
-                , period_1_threshold_250
-                , period_14_threshold_250
-                , period_30_threshold_250
-                , period_90_threshold_250 
+                , period
+                , threshold
+                , exceedance
                 , active
                 , providers_id
                 , parameters_id
