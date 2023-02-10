@@ -76,6 +76,17 @@ class Summary(JsonBase):
     sd: Union[float, None]
 
 
+# temporary until we update the hourly rollups to match the
+# on the fly rollups
+class HourlySummary(JsonBase):
+    min: Union[float, None]
+    q05: Union[float, None]
+    median: Union[float, None]
+    q95: Union[float, None]
+    max: Union[float, None]
+    sd: Union[float, None]
+
+
 class CountryBase(JsonBase):
     id: Union[int, None]
     code: str
@@ -216,6 +227,15 @@ class Measurement(JsonBase):
     coverage: Coverage
 
 
+class HourlyMeasurement(JsonBase):
+    period: Period
+    value: float
+    parameter: ParameterBase
+    coordinates: Union[Coordinates, None]
+    summary: HourlySummary
+    coverage: Coverage
+
+
 # Similar to measurement but without timestamps
 class Trend(JsonBase):
     factor: Factor
@@ -235,6 +255,10 @@ class LocationsResponse(OpenAQResult):
 
 class MeasurementsResponse(OpenAQResult):
     results: List[Measurement]
+
+
+class HourlyMeasurementsResponse(OpenAQResult):
+    results: List[HourlyMeasurement]
 
 
 class TrendsResponse(OpenAQResult):

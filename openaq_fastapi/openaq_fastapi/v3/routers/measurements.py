@@ -4,7 +4,7 @@ from openaq_fastapi.db import DB
 from typing import Union, List
 from pydantic import Field
 from openaq_fastapi.v3.models.responses import (
-    MeasurementsResponse,
+    HourlyMeasurementsResponse,
     JsonBase,
     DatetimeObject,
     OpenAQResult,
@@ -59,7 +59,7 @@ class LocationMeasurementsQueries(
 
 @router.get(
     "/locations/{locations_id}/measurements",
-    response_model=MeasurementsResponse,
+    response_model=HourlyMeasurementsResponse,
     summary="Get measurements by location",
     description="Provides a list of measurements by location ID",
 )
@@ -92,7 +92,7 @@ async def fetch_measurements(q, db):
         , 'name', m.measurand
         ) as parameter
         , json_build_object(
-        'min', h.value_min
+          'min', h.value_min
         , 'q05', h.value_p05
         , 'median', h.value_p50
         , 'q95', h.value_p95
