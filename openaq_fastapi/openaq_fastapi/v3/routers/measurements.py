@@ -82,7 +82,7 @@ async def fetch_measurements(q, db):
         SELECT sy.sensor_nodes_id as id
         , json_build_object(
         'label', '1hour'
-        , 'datetime_from', get_datetime_object(h.datetime, 'utc')
+        , 'datetime_from', get_datetime_object(h.datetime - '1hour'::interval, 'utc')
         , 'datetime_to', get_datetime_object(h.datetime, 'utc')
         , 'interval',  '01:00:00'
         ) as period
@@ -101,7 +101,7 @@ async def fetch_measurements(q, db):
         , 'q98', h.value_p98
         , 'max', h.value_max
         ) as summary
-        , h.value_avg as value
+        , sig_digits(h.value_avg, 2) as value
         , calculate_coverage(
         h.value_count
         , s.data_averaging_period_seconds
