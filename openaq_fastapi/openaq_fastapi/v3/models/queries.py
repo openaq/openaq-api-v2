@@ -5,13 +5,15 @@ from typing import (
     Dict,
     List,
     Union,
+    Optional,
 )
 import weakref
 import itertools
 
 import humps
 from fastapi import Query
-from pydantic import BaseModel, conint, confloat, root_validator, parse_obj_as
+from datetime import date, datetime
+from pydantic import BaseModel, conint, confloat, root_validator
 from inspect import signature
 from fastapi.exceptions import ValidationError, HTTPException
 
@@ -369,6 +371,30 @@ class CountryQuery(QueryBaseModel):
             return "(country->'id')::int = ANY (:countries_id)"
         elif self.iso is not None:
             return "country->>'code' = :iso"
+
+
+class DateFromQuery(QueryBaseModel):
+    date_from: Optional[Union[datetime, date]] = Query(
+        description="From when?"
+    )
+
+    def where(self) -> str:
+        return "datetime > :date_from" if self.date_from else None
+
+
+class DateToQuery(QueryBaseModel):
+    date_to: Optional[Union[datetime, date]] = Query(
+        description="To when?"
+    )
+
+    def where(self) -> str:
+        return "datetime <= :date_to" if self.date_to else None
+
+
+class PeriodNameQuery(QueryBaseModel):
+    period_name: str = Query(
+        description="Period to aggregate. Month, day, hour"
+    )
 
 
 # Some spatial helper queries

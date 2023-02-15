@@ -136,6 +136,8 @@ class DB:
         if len(data) > 0:
             if "found" in data[0].keys():
                 kwargs["found"] = data[0]["found"]
+            else:
+                kwargs["found"] = len(data)
         else:
             kwargs["found"] = 0
 

@@ -10,6 +10,9 @@ logger = logging.getLogger("trends")
 from openaq_fastapi.v3.models.queries import (
     QueryBaseModel,
     QueryBuilder,
+    DateFromQuery,
+    DateToQuery,
+    PeriodNameQuery,
 )
 
 
@@ -17,33 +20,6 @@ router = APIRouter(
     prefix="/v3",
     tags=["v3"]
 )
-
-
-class FromDatetimeQuery(QueryBaseModel):
-    from_datetime: Union[datetime, date, None] = Query(
-        description="From when?"
-    )
-
-    def where(self) -> str:
-        return "datetime > :from_datetime"
-
-
-class ToDatetimeQuery(QueryBaseModel):
-    to_datetime: Union[datetime, date, None] = Query(
-        description="To when?"
-    )
-
-    def where(self) -> str:
-        return "datetime <= :to_datetime"
-
-
-class PeriodNameQuery(QueryBaseModel):
-    period_name: str = Query(
-        description="Period to aggregate. Month, day, hour"
-    )
-
-    def where(self) -> str:
-        return ""
 
 
 class ParameterPathQuery(QueryBaseModel):
@@ -67,8 +43,8 @@ class LocationPathQuery(QueryBaseModel):
 class LocationTrendsQueries(
         LocationPathQuery,
         ParameterPathQuery,
-        #FromDatetimeQuery,
-        #ToDatetimeQuery,
+        DateFromQuery,
+        DateToQuery,
         PeriodNameQuery,
 ):
     ...
@@ -159,7 +135,7 @@ SELECT
    , expected_hours(first_datetime, last_datetime, '{q.period_name}', factor) * 3600.0
 ) as coverage
  FROM trends t
- JOIN measurands m ON (t.measurands_id = m.measurands_id);
+ JOIN measurands m ON (t.measurands_id = m.measurands_id)
     """
     response = await db.fetchPage(sql, query.params())
     return response
