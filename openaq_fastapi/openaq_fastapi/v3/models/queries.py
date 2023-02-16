@@ -392,7 +392,7 @@ class DateToQuery(QueryBaseModel):
 
 
 class PeriodNameQuery(QueryBaseModel):
-    period_name: str = Query(
+    period_name: Union[str, None] = Query(
         description="Period to aggregate. Month, day, hour"
     )
 
