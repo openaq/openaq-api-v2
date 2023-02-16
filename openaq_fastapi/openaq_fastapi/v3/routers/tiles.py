@@ -225,7 +225,7 @@ async def fetch_threshold_tiles(query, db):
                 locations_view_cached.id AS sensor_nodes_id
                 , locations_view_cached.ismobile 
                 , locations_view_cached.ismonitor 
-                , sensors.measurands_id AS parameters_id
+                , sensors.measurands_id AS measurands_id
                 , ST_AsMVTGeom(ST_Transform(locations_view_cached.geom, 3857), tile) AS mvt
                 , thresholds.exceedance
                 , thresholds.period    
@@ -264,7 +264,7 @@ async def fetch_threshold_tiles(query, db):
                 , exceedance
                 , active
                 , providers_id
-                , parameters_id
+                , measurands_id
                 , ismonitor
                 , ismobile
             FROM

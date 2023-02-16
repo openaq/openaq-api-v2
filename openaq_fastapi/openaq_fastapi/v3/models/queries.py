@@ -374,18 +374,14 @@ class CountryQuery(QueryBaseModel):
 
 
 class DateFromQuery(QueryBaseModel):
-    date_from: Optional[Union[datetime, date]] = Query(
-        description="From when?"
-    )
+    date_from: Optional[Union[datetime, date]] = Query(description="From when?")
 
     def where(self) -> str:
         return "datetime > :date_from" if self.date_from else None
 
 
 class DateToQuery(QueryBaseModel):
-    date_to: Optional[Union[datetime, date]] = Query(
-        description="To when?"
-    )
+    date_to: Optional[Union[datetime, date]] = Query(description="To when?")
 
     def where(self) -> str:
         return "datetime <= :date_to" if self.date_to else None

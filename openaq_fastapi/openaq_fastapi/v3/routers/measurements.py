@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Path
 from openaq_fastapi.db import DB
-from typing import List
+from typing import List, Union
+from fastapi import Query
 from pydantic import Field
 from openaq_fastapi.v3.models.responses import (
     MeasurementsResponse,
@@ -9,6 +10,7 @@ from openaq_fastapi.v3.models.responses import (
     OpenAQResult,
 )
 from openaq_fastapi.v3.models.queries import (
+    CommaSeparatedList,
     QueryBaseModel,
     QueryBuilder,
     Paging,
@@ -17,10 +19,7 @@ from openaq_fastapi.v3.models.queries import (
     PeriodNameQuery,
 )
 
-router = APIRouter(
-    prefix="/v3",
-    tags=["v3"]
-)
+router = APIRouter(prefix="/v3", tags=["v3"])
 
 
 class LocationPathQuery(QueryBaseModel):
@@ -32,12 +31,22 @@ class LocationPathQuery(QueryBaseModel):
         return "sy.sensor_nodes_id = :locations_id"
 
 
+class MeasurementsParametersQuery(QueryBaseModel):
+
+    parameters_id: Union[CommaSeparatedList[int], None] = Query(description="")
+
+    def where(self) -> Union[str, None]:
+        if self.has("parameters_id"):
+            return "m.measurands_id = ANY (:parameters_id)"
+
+
 class LocationMeasurementsQueries(
-        Paging,
-        LocationPathQuery,
-        DateFromQuery,
-        DateToQuery,
-        PeriodNameQuery,
+    Paging,
+    LocationPathQuery,
+    DateFromQuery,
+    DateToQuery,
+    MeasurementsParametersQuery,
+    PeriodNameQuery,
 ):
     ...
 
@@ -60,10 +69,10 @@ async def measurements_get(
 
 async def fetch_measurements(q, db):
     query = QueryBuilder(q)
-    dur = '01:00:00'
+    dur = "01:00:00"
     expected_hours = 1
 
-    if q.period_name == 'hour':
+    if q.period_name == "hour":
         # Query for hourly data
         sql = f"""
         SELECT sy.sensor_nodes_id as id
@@ -106,12 +115,12 @@ async def fetch_measurements(q, db):
         """
     else:
         # Query for the aggregate data
-        if q.period_name == 'hour':
-            dur = '01:00:00'
-        elif q.period_name == 'day':
-            dur = '24:00:00'
-        elif q.period_name == 'month':
-            dur = '1 month'
+        if q.period_name == "hour":
+            dur = "01:00:00"
+        elif q.period_name == "day":
+            dur = "24:00:00"
+        elif q.period_name == "month":
+            dur = "1 month"
 
         sql = f"""
 WITH meas AS (
@@ -170,20 +179,20 @@ SELECT
     , 3600
     , 3600
     , EXTRACT(EPOCH FROM last_period - datetime)
- ) as coverage
+ ) as coverage,
  {query.total()}
  FROM meas t
  JOIN measurands m ON (t.measurands_id = m.measurands_id)
  {query.pagination()}
     """
-
+    print(sql, query.params())
     response = await db.fetchPage(sql, query.params())
     return response
 
 
 # Remove from here down once we update the v2/measurements endpoint
 class MeasurementV2(JsonBase):
-    location_id: int = Field(..., alias='locationId')
+    location_id: int = Field(..., alias="locationId")
     parameter: str
     value: float
     date: DatetimeObject
@@ -215,7 +224,7 @@ async def fetch_measurements_v2(q, db):
 
     sql = f"""
     SELECT n.sensor_nodes_id as location_id
-    , get_datetime_object(h.datetime, 'utc') as date
+    , get_datetime_object(h.datetime, 'utc') as datetime
     , m.measurand as parameter
     , m.units as unit
     , h.value
