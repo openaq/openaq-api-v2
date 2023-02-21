@@ -72,7 +72,7 @@ async def fetch_measurements(q, db):
     dur = "01:00:00"
     expected_hours = 1
 
-    if q.period_name == "hour":
+    if q.period_name in [None, "hour"]:
         # Query for hourly data
         sql = f"""
         SELECT sy.sensor_nodes_id as id
@@ -179,13 +179,12 @@ SELECT
     , 3600
     , 3600
     , EXTRACT(EPOCH FROM last_period - datetime)
- ) as coverage,
+ ) as coverage
  {query.total()}
  FROM meas t
  JOIN measurands m ON (t.measurands_id = m.measurands_id)
  {query.pagination()}
     """
-    print(sql, query.params())
     response = await db.fetchPage(sql, query.params())
     return response
 

@@ -46,9 +46,11 @@ class Source(BaseModel):
     organization: Union[str, None]
     lifecycle_stage: Union[str, None]
 
+
 class Manufacturer(BaseModel):
     model_name: str = Field(..., alias='modelName')
     manufacturer_name: str = Field(..., alias='manufacturerName')
+
 
 class Parameter(BaseModel):
     id: int
