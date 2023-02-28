@@ -118,6 +118,7 @@ class ParameterBase(JsonBase):
     id: int
     name: str
     units: str
+    display_name: Union[str, None]
 
 
 class SensorBase(JsonBase):
@@ -130,7 +131,6 @@ class SensorBase(JsonBase):
 
 
 class Parameter(ParameterBase):
-    display_name: Union[str, None]
     description: Union[str, None]
     locations_count: int
     measurements_count: int

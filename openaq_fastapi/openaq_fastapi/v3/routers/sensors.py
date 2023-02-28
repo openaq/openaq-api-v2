@@ -105,6 +105,7 @@ SELECT
     'id', s.measurands_id
     , 'units', m.units
     , 'name', m.measurand
+    , 'display_name', m.display
  ) as parameter
  , json_build_object(
     'sd', c.value_sd
@@ -122,13 +123,14 @@ SELECT
    , s.data_logging_period_seconds
    , EXTRACT(EPOCH FROM c.datetime_last - c.datetime_first)
 ) as coverage
- FROM sensor c
- JOIN sensors s ON (c.sensors_id = s.sensors_id)
+ FROM sensors s
  JOIN sensor_systems sy ON (s.sensor_systems_id = sy.sensor_systems_id)
  JOIN sensor_nodes sn ON (sy.sensor_nodes_id = sn.sensor_nodes_id)
  JOIN timezones ts ON (sn.timezones_id = ts.gid)
- JOIN sensors_rollup r ON (c.sensors_id = r.sensors_id)
- JOIN measurands m ON (s.measurands_id = m.measurands_id);
+ JOIN measurands m ON (s.measurands_id = m.measurands_id)
+ LEFT JOIN sensors_rollup r ON (s.sensors_id = r.sensors_id)
+ LEFT JOIN sensor c ON (c.sensors_id = s.sensors_id)
+ WHERE s.sensors_id = :sensors_id;
     """
     response = await db.fetchPage(sql, query.params())
     return response
