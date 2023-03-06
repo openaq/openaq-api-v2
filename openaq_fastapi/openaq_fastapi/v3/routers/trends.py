@@ -37,7 +37,7 @@ class LocationPathQuery(QueryBaseModel):
     )
 
     def where(self) -> str:
-        return "sensor_nodes_id = :locations_id"
+        return "sy.sensor_nodes_id = :locations_id"
 
 
 class LocationTrendsQueries(
@@ -83,11 +83,12 @@ WITH trends AS (
 SELECT
   sy.sensor_nodes_id
  , s.measurands_id
- , to_char(datetime - '1sec'::interval, '{fmt}') as factor
+ , ts.tzid
+ , to_char(timezone(ts.tzid, datetime - '1sec'::interval), '{fmt}') as factor
  , AVG(s.data_averaging_period_seconds) as avg_seconds
  , AVG(s.data_logging_period_seconds) as log_seconds
- , MIN(datetime - '1sec'::interval) as first_datetime
- , MAX(datetime - '1sec'::interval) as last_datetime
+ , MIN(datetime - '1sec'::interval) as datetime_from
+ , MAX(datetime - '1sec'::interval) as datetime_to
  , COUNT(1) as value_count
  , AVG(value_avg) as value_avg
  , STDDEV(value_avg) as value_sd
@@ -102,8 +103,10 @@ SELECT
  FROM hourly_rollups m
  JOIN sensors s ON (m.sensors_id = s.sensors_id)
  JOIN sensor_systems sy ON (s.sensor_systems_id = sy.sensor_systems_id)
+ JOIN sensor_nodes sn ON (sy.sensor_nodes_id = sn.sensor_nodes_id)
+ JOIN timezones ts ON (sn.timezones_id = ts.gid)
  {query.where()}
- GROUP BY 1, 2, 3)
+ GROUP BY 1, 2, 3, 4)
  SELECT sensor_nodes_id
  , jsonb_build_object(
     'label', factor
@@ -111,8 +114,6 @@ SELECT
     , 'order', factor::int
  ) as factor
  , value_avg as value
- , first_datetime
- , last_datetime
  , json_build_object(
     'id', t.measurands_id
     , 'units', m.units
@@ -127,12 +128,14 @@ SELECT
    , 'q75', t.value_p75
    , 'q98', t.value_p98
    , 'max', t.value_max
+   , 'datetime_from', get_datetime_object(datetime_from, tzid)
+   , 'datetime_to', get_datetime_object(datetime_to, tzid)
  ) as summary
  , calculate_coverage(
      t.value_count::int
    , t.avg_seconds
    , t.log_seconds
-   , expected_hours(first_datetime, last_datetime, '{q.period_name}', factor) * 3600.0
+   , expected_hours(datetime_from, datetime_to, '{q.period_name}', factor) * 3600.0
 ) as coverage
  FROM trends t
  JOIN measurands m ON (t.measurands_id = m.measurands_id)

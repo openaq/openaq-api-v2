@@ -74,6 +74,8 @@ class Summary(JsonBase):
     q98: Union[float, None]
     max: Union[float, None]
     sd: Union[float, None]
+    datetime_from: Union[DatetimeObject, None]
+    datetime_to: Union[DatetimeObject, None]
 
 
 class CountryBase(JsonBase):

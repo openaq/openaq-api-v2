@@ -78,8 +78,8 @@ async def fetch_measurements(q, db):
         SELECT sy.sensor_nodes_id as id
         , json_build_object(
         'label', '1hour'
-        , 'datetime_from', get_datetime_object(h.datetime - '1hour'::interval, 'utc')
-        , 'datetime_to', get_datetime_object(h.datetime, 'utc')
+        , 'datetime_from', get_datetime_object(h.datetime - '1hour'::interval, ts.tzid)
+        , 'datetime_to', get_datetime_object(h.datetime, ts.tzid)
         , 'interval',  '01:00:00'
         ) as period
         , json_build_object(
@@ -96,6 +96,8 @@ async def fetch_measurements(q, db):
         , 'q75', h.value_p75
         , 'q98', h.value_p98
         , 'max', h.value_max
+        , 'datetime_from', get_datetime_object(h.first_datetime, tzid)
+        , 'datetime_to', get_datetime_object(h.last_datetime, tzid)
         ) as summary
         , sig_digits(h.value_avg, 2) as value
         , calculate_coverage(
@@ -109,6 +111,8 @@ async def fetch_measurements(q, db):
         FROM hourly_rollups h
         JOIN sensors s USING (sensors_id)
         JOIN sensor_systems sy USING (sensor_systems_id)
+        JOIN sensor_nodes sn ON (sy.sensor_nodes_id = sn.sensor_nodes_id)
+        JOIN timezones ts ON (sn.timezones_id = ts.gid)
         JOIN measurands m ON (m.measurands_id = h.measurands_id)
         {query.where()}
         {query.pagination()}
@@ -127,12 +131,13 @@ WITH meas AS (
 SELECT
   sy.sensor_nodes_id
  , s.measurands_id
- , date_trunc(:period_name, datetime - '1sec'::interval) as datetime
+ , ts.tzid
+ , truncate_timestamp(datetime, :period_name, ts.tzid) as datetime
  , AVG(s.data_averaging_period_seconds) as avg_seconds
  , AVG(s.data_logging_period_seconds) as log_seconds
- , MAX(date_trunc(:period_name, datetime + '1{q.period_name} -1sec'::interval)) as last_period
- , MIN(datetime - '1sec'::interval) as first_datetime
- , MAX(datetime - '1sec'::interval) as last_datetime
+ , MAX(truncate_timestamp(datetime, :period_name, ts.tzid, '1{q.period_name}'::interval)) as last_period
+ , MIN(timezone(ts.tzid, datetime - '1sec'::interval)) as first_datetime
+ , MAX(timezone(ts.tzid, datetime - '1sec'::interval)) as last_datetime
  , COUNT(1) as value_count
  , AVG(value_avg) as value_avg
  , STDDEV(value_avg) as value_sd
@@ -147,18 +152,18 @@ SELECT
  FROM hourly_rollups m
  JOIN sensors s ON (m.sensors_id = s.sensors_id)
  JOIN sensor_systems sy ON (s.sensor_systems_id = sy.sensor_systems_id)
+ JOIN sensor_nodes sn ON (sy.sensor_nodes_id = sn.sensor_nodes_id)
+ JOIN timezones ts ON (sn.timezones_id = ts.gid)
  {query.where()}
- GROUP BY 1, 2, 3)
- SELECT sensor_nodes_id
+ GROUP BY 1, 2, 3, 4)
+ SELECT t.sensor_nodes_id
  , json_build_object(
     'label', '1{q.period_name}'
-    , 'datetime_from', get_datetime_object(datetime, 'utc')
-    , 'datetime_to', get_datetime_object(last_period, 'utc')
+    , 'datetime_from', get_datetime_object(datetime, t.tzid)
+    , 'datetime_to', get_datetime_object(last_period, t.tzid)
     , 'interval',  '{dur}'
     ) as period
  , sig_digits(value_avg, 2) as value
- , first_datetime
- , last_datetime
  , json_build_object(
     'id', t.measurands_id
     , 'units', m.units
@@ -173,6 +178,8 @@ SELECT
    , 'q75', t.value_p75
    , 'q98', t.value_p98
    , 'max', t.value_max
+   , 'datetime_from', get_datetime_object(first_datetime, tzid)
+   , 'datetime_to', get_datetime_object(last_datetime, tzid)
  ) as summary
  , calculate_coverage(
      value_count::int
@@ -182,6 +189,8 @@ SELECT
  ) as coverage
  {query.total()}
  FROM meas t
+ --JOIN sensor_nodes sn ON (t.sensor_nodes_id = sn.sensor_nodes_id)
+ --JOIN timezones ts ON (sn.timezones_id = ts.gid)
  JOIN measurands m ON (t.measurands_id = m.measurands_id)
  {query.pagination()}
     """
