@@ -57,6 +57,8 @@ class Coverage(JsonBase):
     observed_interval: str
     percent_complete: float  # percent of expected values
     percent_coverage: float  # percent of time
+    datetime_from: Union[DatetimeObject, None]
+    datetime_to: Union[DatetimeObject, None]
 
 
 class Factor(JsonBase):
@@ -74,8 +76,6 @@ class Summary(JsonBase):
     q98: Union[float, None]
     max: Union[float, None]
     sd: Union[float, None]
-    datetime_from: Union[DatetimeObject, None]
-    datetime_to: Union[DatetimeObject, None]
 
 
 class CountryBase(JsonBase):

@@ -96,8 +96,6 @@ async def fetch_measurements(q, db):
         , 'q75', h.value_p75
         , 'q98', h.value_p98
         , 'max', h.value_max
-        , 'datetime_from', get_datetime_object(h.first_datetime, tzid)
-        , 'datetime_to', get_datetime_object(h.last_datetime, tzid)
         ) as summary
         , sig_digits(h.value_avg, 2) as value
         , calculate_coverage(
@@ -105,6 +103,9 @@ async def fetch_measurements(q, db):
         , s.data_averaging_period_seconds
         , s.data_logging_period_seconds
         , {expected_hours} * 3600
+        )||jsonb_build_object(
+          'datetime_from', get_datetime_object(h.first_datetime, tzid)
+        , 'datetime_to', get_datetime_object(h.last_datetime, tzid)
         ) as coverage
         {query.fields()}
         {query.total()}
@@ -178,15 +179,16 @@ SELECT
    , 'q75', t.value_p75
    , 'q98', t.value_p98
    , 'max', t.value_max
-   , 'datetime_from', get_datetime_object(first_datetime, tzid)
-   , 'datetime_to', get_datetime_object(last_datetime, tzid)
  ) as summary
  , calculate_coverage(
      value_count::int
     , 3600
     , 3600
     , EXTRACT(EPOCH FROM last_period - datetime)
- ) as coverage
+ )||jsonb_build_object(
+          'datetime_from', get_datetime_object(first_datetime, tzid)
+        , 'datetime_to', get_datetime_object(last_datetime, tzid)
+        ) as coverage
  {query.total()}
  FROM meas t
  --JOIN sensor_nodes sn ON (t.sensor_nodes_id = sn.sensor_nodes_id)

@@ -128,17 +128,21 @@ SELECT
    , 'q75', t.value_p75
    , 'q98', t.value_p98
    , 'max', t.value_max
-   , 'datetime_from', get_datetime_object(datetime_from, tzid)
-   , 'datetime_to', get_datetime_object(datetime_to, tzid)
  ) as summary
  , calculate_coverage(
      t.value_count::int
    , t.avg_seconds
    , t.log_seconds
-   , expected_hours(datetime_from, datetime_to, '{q.period_name}', factor) * 3600.0
-) as coverage
+  , expected_hours(datetime_from, datetime_to, '{q.period_name}', factor) * 3600.0
+)||jsonb_build_object(
+          'datetime_from', get_datetime_object(datetime_from, tzid)
+        , 'datetime_to', get_datetime_object(datetime_to, tzid)
+ ) as coverage
  FROM trends t
  JOIN measurands m ON (t.measurands_id = m.measurands_id)
     """
+
+    logger.debug(f"expected_hours(datetime_from, datetime_to, '{q.period_name}', factor) * 3600.0")
+
     response = await db.fetchPage(sql, query.params())
     return response
