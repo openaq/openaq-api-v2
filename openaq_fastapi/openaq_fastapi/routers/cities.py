@@ -1,6 +1,6 @@
 import logging
 from enum import Enum
-from typing import Union
+from typing import Union, List
 
 from fastapi import APIRouter, Depends, Query
 from openaq_fastapi.models.responses import CitiesResponse, CitiesResponseV1
@@ -19,6 +19,37 @@ class CitiesOrder(str, Enum):
     firstUpdated = "firstUpdated"
     lastUpdated = "lastUpdated"
 
+class CitiesOrderV1(str, Enum):
+    city = "city"
+    country = "country"
+    location = "locations"
+    count = "count"
+
+class CitiesV1(APIBase):
+    order_by: CitiesOrderV1 = Query(
+        "city", description="Order by a field e.g. ?order_by=city", example="city"
+    )
+
+    country: Union[List[str], None] = Query(
+        None,
+        min_length=2,
+        max_length=2,
+        regex="[a-zA-Z][a-zA-Z]",
+        description="Limit results by a certain country using two letter country code. e.g. ?country=US or ?country=US&country=MX",
+        example="US",
+    )
+
+    def where(self):
+        wheres = []
+        for f, v in self:
+            if v is not None:
+                if f == "country":
+                    wheres.append(
+                        """
+                        country = ANY(:country)
+                        """
+                    )
+        return " TRUE "
 
 class Cities(City, Country, APIBase):
     order_by: CitiesOrder = Query(
@@ -104,15 +135,11 @@ async def cities_get(db: DB = Depends(), cities: Cities = Depends(Cities.depends
 )
 async def cities_getv1(
     db: DB = Depends(),
-    cities: Cities = Depends(Cities.depends()),
+    cities: CitiesV1 = Depends(CitiesV1.depends()),
 ):
     order_by = cities.order_by
-    if cities.order_by == "lastUpdated":
-        order_by = "8"
-    elif cities.order_by == "firstUpdated":
-        order_by = "7"
-    elif cities.order_by == "country":
-        order_by = "code"
+    if cities.order_by == "country":
+        order_by = "country"
     elif cities.order_by == "count":
         order_by = "count"
     elif cities.order_by == "city":
@@ -127,6 +154,7 @@ async def cities_getv1(
             , sn.city AS city
             , SUM(sr.value_count) AS "count"
             , COUNT(DISTINCT sn.sensor_nodes_id) AS locations
+            , COUNT(1) OVER() as found
         FROM 
             sensors_rollup sr
         JOIN 
