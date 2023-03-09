@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Union
 
 from fastapi import APIRouter, Depends, Query
-from openaq_fastapi.models.responses import CitiesResponse, converter
+from openaq_fastapi.models.responses import CitiesResponse, CitiesResponseV1
 import jq
 from ..db import DB
 from ..models.queries import APIBase, City, Country
@@ -22,9 +22,7 @@ class CitiesOrder(str, Enum):
 
 class Cities(City, Country, APIBase):
     order_by: CitiesOrder = Query(
-        "city", 
-        description="Order by a field e.g. ?order_by=city",
-        example="city"
+        "city", description="Order by a field e.g. ?order_by=city", example="city"
     )
     entity: Union[str, None] = None
 
@@ -54,11 +52,9 @@ class Cities(City, Country, APIBase):
     response_model=CitiesResponse,
     summary="Get cities",
     description="Provides a list of cities supported by the platform",
-    tags=["v2"]
+    tags=["v2"],
 )
-async def cities_get(
-    db: DB = Depends(), cities: Cities = Depends(Cities.depends())
-):
+async def cities_get(db: DB = Depends(), cities: Cities = Depends(Cities.depends())):
     order_by = cities.order_by
     if cities.order_by == "lastUpdated":
         order_by = "8"
@@ -92,9 +88,8 @@ async def cities_get(
     LIMIT :limit
     )
     SELECT citiescount as count, to_jsonb(t)-'{{citiescount}}'::text[] as json FROM t
-
     """
-    params=cities.params()
+    params = cities.params()
     output = await db.fetchOpenAQResult(q, params)
 
     return output
@@ -102,33 +97,55 @@ async def cities_get(
 
 @router.get(
     "/v1/cities",
-    response_model=CitiesResponse,
+    response_model=CitiesResponseV1,
     tags=["v1"],
     summary="Get cities",
-    description="Provides a list of cities supported by the platform"
+    description="Provides a list of cities supported by the platform",
 )
 async def cities_getv1(
-    db: DB = Depends(), cities: Cities = Depends(Cities.depends()),
+    db: DB = Depends(),
+    cities: Cities = Depends(Cities.depends()),
 ):
-    cities.entity = "government"
-    data = await cities_get(db, cities)
-    meta = data.meta
-    res = data.results
+    order_by = cities.order_by
+    if cities.order_by == "lastUpdated":
+        order_by = "8"
+    elif cities.order_by == "firstUpdated":
+        order_by = "7"
+    elif cities.order_by == "country":
+        order_by = "code"
+    elif cities.order_by == "count":
+        order_by = "count"
+    elif cities.order_by == "city":
+        order_by = "city"
+    elif cities.order_by == "locations":
+        order_by = "locations"
+    q = f"""
+        SELECT 
+            count(*) over () as citiescount
+            , c.iso AS country
+            , sn.city AS "name"
+            , sn.city AS city
+            , SUM(sr.value_count) AS "count"
+            , COUNT(DISTINCT sn.sensor_nodes_id) AS locations
+        FROM 
+            sensors_rollup sr
+        JOIN 
+            sensors s USING (sensors_id)
+        JOIN
+            sensor_systems ss USING (sensor_systems_id)
+        JOIN
+            sensor_nodes sn USING (sensor_nodes_id)
+        JOIN 
+            countries c USING (countries_id)
+        WHERE
+        {cities.where()}
+        and city is not null
+        GROUP BY c.iso, sn.city
+        ORDER BY {order_by} {cities.sort}
+        OFFSET :offset
+        LIMIT :limit
+    """
+    params = cities.params()
+    output = await db.fetchPage(q, params)
 
-    if len(res) == 0:
-        return data
-
-    v1_jq = jq.compile(
-        """
-        .[] | . as $m |
-            {
-                country: .country,
-                name: .city,
-                city: .city,
-                count: .count,
-                locations: .locations
-            }
-        """
-    )
-
-    return converter(meta, res, v1_jq)
+    return output
