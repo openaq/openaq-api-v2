@@ -48,8 +48,8 @@ class Source(BaseModel):
 
 
 class Manufacturer(BaseModel):
-    model_name: str = Field(..., alias='modelName')
-    manufacturer_name: str = Field(..., alias='manufacturerName')
+    model_name: str = Field(..., alias="modelName")
+    manufacturer_name: str = Field(..., alias="manufacturerName")
 
 
 class Parameter(BaseModel):
@@ -57,12 +57,12 @@ class Parameter(BaseModel):
     unit: str
     count: int
     average: float
-    last_value: float = Field(..., alias='lastValue')
+    last_value: float = Field(..., alias="lastValue")
     parameter: str
-    display_name: Union[str, None] = Field(None, alias='displayName')
-    last_updated: str = Field(..., alias='lastUpdated')
-    parameter_id: int = Field(..., alias='parameterId')
-    first_updated: str = Field(..., alias='firstUpdated')
+    display_name: Union[str, None] = Field(None, alias="displayName")
+    last_updated: str = Field(..., alias="lastUpdated")
+    parameter_id: int = Field(..., alias="parameterId")
+    first_updated: str = Field(..., alias="firstUpdated")
     manufacturers: Union[List[Manufacturer], None]
 
 
@@ -74,6 +74,7 @@ class OpenAQResult(BaseModel):
 
 # /v2/averages
 
+
 class AveragesRow(BaseModel):
     id: Union[List[int], int]
     hour: Union[datetime, None]
@@ -84,11 +85,11 @@ class AveragesRow(BaseModel):
     dow: Union[int, None]
     name: Union[List[str],str]
     average: float
-    name: Union[List[str],str]
-    measurement_count: int # TODO make camelCase
+    name: Union[List[str], str]
+    measurement_count: int  # TODO make camelCase
     parameter: str
-    parameter_id: int = Field(..., alias='parameterId')
-    display_name: str = Field(..., alias='displayName')
+    parameter_id: int = Field(..., alias="parameterId")
+    display_name: str = Field(..., alias="displayName")
     unit: Union[str, None]
     first_datetime: datetime
     last_datetime: datetime
@@ -100,36 +101,57 @@ class AveragesResponse(OpenAQResult):
 
 # /v2/countries
 
+
 class CountriesRow(BaseModel):
     code: str
     name: str
     locations: int
-    first_updated: str = Field(..., alias='firstUpdated')
-    last_updated: str = Field(..., alias='lastUpdated')
+    first_updated: str = Field(..., alias="firstUpdated")
+    last_updated: str = Field(..., alias="lastUpdated")
     parameters: List[str]
     count: int
     cities: int
     sources: int
 
+
 class CountriesResponse(OpenAQResult):
     results: List[CountriesRow]
 
+
+# /v1/cities
+
+
+class CityRowV1(BaseModel):
+    country: str
+    name: str
+    city: str
+    count: int
+    locations: int
+
+
+class CitiesResponseV1(OpenAQResult):
+    results: List[CityRowV1]
+
+
 # /v2/cities
+
 
 class CityRow(BaseModel):
     country: str
     city: str
     count: int
     locations: int
-    first_updated: str = Field(..., alias='firstUpdated')
-    last_updated: str = Field(..., alias='lastUpdated')
+    first_updated: str = Field(..., alias="firstUpdated")
+    last_updated: str = Field(..., alias="lastUpdated")
     parameters: List[str]
+
 
 class CitiesResponse(OpenAQResult):
     results: List[CityRow]
 
 
 # /v1/latest
+
 
 class AveragingPeriodV1(BaseModel):
     value: Union[int, None]
@@ -139,10 +161,10 @@ class AveragingPeriodV1(BaseModel):
 class LatestMeasurementRow(BaseModel):
     parameter: str
     value: float
-    last_updated: str = Field(..., alias='lastUpdated')
+    last_updated: str = Field(..., alias="lastUpdated")
     unit: str
-    source_name: str = Field(..., alias='sourceName')
-    averaging_period: AveragingPeriodV1 = Field(..., alias='averagingPeriod')
+    source_name: str = Field(..., alias="sourceName")
+    averaging_period: AveragingPeriodV1 = Field(..., alias="averagingPeriod")
 
 
 class LatestRowV1(BaseModel):
@@ -152,16 +174,18 @@ class LatestRowV1(BaseModel):
     coordinates: Coordinates
     measurements: List[LatestMeasurementRow]
 
+
 class LatestResponseV1(OpenAQResult):
     results: List[LatestRowV1]
 
 
 # /v2/latest
 
+
 class LatestMeasurement(BaseModel):
     parameter: str
     value: float
-    last_updated: str = Field(..., alias='lastUpdated')
+    last_updated: str = Field(..., alias="lastUpdated")
     unit: str
 
 
@@ -177,8 +201,8 @@ class LatestResponse(OpenAQResult):
     results: List[LatestRow]
 
 
-
 # /v1/locations
+
 
 class CountsByMeasurementItem(BaseModel):
     parameter: str
@@ -192,20 +216,23 @@ class LocationsRowV1(BaseModel):
     cities: List[str]
     location: str
     locations: List[str]
-    source_name: str = Field(..., alias='sourceName')
-    source_names: List[str] = Field(..., alias='sourceNames')
-    source_type: str = Field(..., alias='sourceType')
-    source_types: List[str] = Field(..., alias='sourceTypes')
+    source_name: str = Field(..., alias="sourceName")
+    source_names: List[str] = Field(..., alias="sourceNames")
+    source_type: str = Field(..., alias="sourceType")
+    source_types: List[str] = Field(..., alias="sourceTypes")
     coordinates: Coordinates
-    first_updated: str = Field(..., alias='firstUpdated')
-    last_updated: str = Field(..., alias='lastUpdated')
+    first_updated: str = Field(..., alias="firstUpdated")
+    last_updated: str = Field(..., alias="lastUpdated")
     parameters: List[str]
-    counts_by_measurement: List[CountsByMeasurementItem] = Field(..., alias='countsByMeasurement')
+    counts_by_measurement: List[CountsByMeasurementItem] = Field(
+        ..., alias="countsByMeasurement"
+    )
     count: int
 
 
 class LocationsResponseV1(OpenAQResult):
     results: List[LocationsRowV1]
+
 
 # /v2/locations
 def warn_on_null(v):
@@ -219,24 +246,25 @@ class LocationsRow(BaseModel):
     entity: Union[str, None]
     country: Union[str, None]
     sources: Union[List[Source], None]
-    is_mobile: bool = Field(..., alias='isMobile')
-    is_analysis: Union[bool, None] = Field(None, alias='isAnalysis')
+    is_mobile: bool = Field(..., alias="isMobile")
+    is_analysis: Union[bool, None] = Field(None, alias="isAnalysis")
     parameters: List[Parameter]
-    sensor_type: Union[str, None] = Field(None, alias='sensorType')
+    sensor_type: Union[str, None] = Field(None, alias="sensorType")
     coordinates: Union[Coordinates, None]
-    last_updated: str = Field(..., alias='lastUpdated')
-    first_updated: str = Field(..., alias='firstUpdated')
+    last_updated: str = Field(..., alias="lastUpdated")
+    first_updated: str = Field(..., alias="firstUpdated")
     measurements: int
     bounds: Union[List[float], None]
     manufacturers: Union[List[Manufacturer], None]
 
     @validator("is_nullable", check_fields=False)
     def check_nullable(cls, v, values, **kwargs):
-        not_nullable = ['entity']
+        not_nullable = ["entity"]
         offset = values["limit"] * (values["page"] - 1)
         # if offset + values["limit"] > 100000:
         #     raise ValueError("offset + limit must be < 100000")
         return offset
+
 
 class LocationsResponse(OpenAQResult):
     results: List[LocationsRow]
@@ -244,11 +272,13 @@ class LocationsResponse(OpenAQResult):
 
 # /v2/manufacturers
 
+
 class ManufacturersResponse(OpenAQResult):
     results: List[str]
 
 
 # /v1/measurements
+
 
 class MeasurementsRowV1(BaseModel):
     location: str
@@ -267,8 +297,9 @@ class MeasurementsResponseV1(OpenAQResult):
 
 # /v2/measurements
 
+
 class MeasurementsRow(BaseModel):
-    location_id: int = Field(..., alias='locationId')
+    location_id: int = Field(..., alias="locationId")
     location: str
     parameter: str
     value: float
@@ -277,16 +308,18 @@ class MeasurementsRow(BaseModel):
     coordinates: Union[Coordinates, None]
     country: Union[str, None]
     city: Union[str, None]
-    is_mobile: bool = Field(..., alias='isMobile')
-    is_analysis: Union[bool, None] = Field(None, alias='isAnalysis')
+    is_mobile: bool = Field(..., alias="isMobile")
+    is_analysis: Union[bool, None] = Field(None, alias="isAnalysis")
     entity: str
-    sensor_type: str = Field(..., alias='sensorType')
+    sensor_type: str = Field(..., alias="sensorType")
 
 
 class MeasurementsResponse(OpenAQResult):
     results: List[MeasurementsRow]
 
+
 # /v2/parameters
+
 
 class ModelsResponse(OpenAQResult):
     results: List[str]
@@ -294,14 +327,15 @@ class ModelsResponse(OpenAQResult):
 
 # /v2/parameters
 
+
 class ParametersRow(BaseModel):
     id: int
     name: str
-    display_name: Union[str, None] = Field(None, alias='displayName')
+    display_name: Union[str, None] = Field(None, alias="displayName")
     description: str
-    preferred_unit: str = Field(..., alias='preferredUnit')
-    is_core: Union[bool, None] = Field(None, alias='isCore')
-    max_color_value: Union[float, None] = Field(None, alias='maxColorValue')
+    preferred_unit: str = Field(..., alias="preferredUnit")
+    is_core: Union[bool, None] = Field(None, alias="isCore")
+    max_color_value: Union[float, None] = Field(None, alias="maxColorValue")
 
 
 class ParametersResponse(OpenAQResult):
@@ -311,6 +345,7 @@ class ParametersResponse(OpenAQResult):
 # /v2/projects
 
 # TODO convert fields to camelCase
+
 
 class ProjectsSource(BaseModel):
     id: str
@@ -325,19 +360,20 @@ class ProjectsRow(BaseModel):
     id: int
     name: str
     subtitle: str
-    is_mobile: bool = Field(..., alias='isMobile')
-    is_analysis: Union[bool, None] = Field(None, alias='isAnalysis')
+    is_mobile: bool = Field(..., alias="isMobile")
+    is_analysis: Union[bool, None] = Field(None, alias="isAnalysis")
     entity: Union[str, None]
-    sensor_type: Union[str, None] = Field(None, alias='sensorType')
+    sensor_type: Union[str, None] = Field(None, alias="sensorType")
     locations: int
-    location_ids: List[int] = Field(..., alias='locationIds')
+    location_ids: List[int] = Field(..., alias="locationIds")
     countries: List[str]
     parameters: List[Parameter]
     bbox: Union[List[float], None]
     measurements: int
-    first_updated: str = Field(..., alias='firstUpdated')
-    last_updated: str  = Field(..., alias='lastUpdated')
+    first_updated: str = Field(..., alias="firstUpdated")
+    last_updated: str = Field(..., alias="lastUpdated")
     sources: List[ProjectsSource]
+
 
 class ProjectsResponse(OpenAQResult):
     results: List[ProjectsRow]
@@ -353,7 +389,7 @@ class SourcesRowV1(BaseModel):
     city: Union[str, None]
     country: str
     description: Union[str, None]
-    source_url: AnyUrl = Field(..., alias='sourceURL')
+    source_url: AnyUrl = Field(..., alias="sourceURL")
     resolution: Union[str, None]
     contacts: List[str]
     active: bool
@@ -362,7 +398,9 @@ class SourcesRowV1(BaseModel):
 class SourcesResponseV1(OpenAQResult):
     results: List[SourcesRowV1]
 
+
 # /v2/sources
+
 
 class Datum(BaseModel):
     url: Union[str, None]
@@ -374,15 +412,18 @@ class Datum(BaseModel):
 class SourcesRow(BaseModel):
     data: Union[Datum, None]
     readme: Union[str, None]
-    source_id: int = Field(..., alias='sourceId')
+    source_id: int = Field(..., alias="sourceId")
     locations: int
-    source_name: str = Field(..., alias='sourceName')
-    source_slug: Union[str, None] = Field(None, alias='sourceSlug')
+    source_name: str = Field(..., alias="sourceName")
+    source_slug: Union[str, None] = Field(None, alias="sourceSlug")
+
 
 class SourcesResponse(OpenAQResult):
     results: List[SourcesRow]
 
+
 # /v2/summary
+
 
 class SummaryRow(BaseModel):
     count: int
