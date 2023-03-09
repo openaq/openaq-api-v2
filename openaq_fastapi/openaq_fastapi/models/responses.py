@@ -142,6 +142,9 @@ class CityRow(BaseModel):
     first_updated: str = Field(..., alias="firstUpdated")
     last_updated: str = Field(..., alias="lastUpdated")
     parameters: List[str]
+    
+    class Config:
+        allow_population_by_field_name = True
 
 
 class CitiesResponse(OpenAQResult):
