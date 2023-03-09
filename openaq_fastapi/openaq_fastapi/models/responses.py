@@ -81,7 +81,7 @@ class AveragesRow(BaseModel):
     month: Union[date, None]
     year: Union[date, None]
     hod: Union[int, None]
-    dom: Union[int, None]
+    dow: Union[int, None]
     name: Union[List[str],str]
     average: float
     name: Union[List[str],str]
@@ -90,6 +90,8 @@ class AveragesRow(BaseModel):
     parameter_id: int = Field(..., alias='parameterId')
     display_name: str = Field(..., alias='displayName')
     unit: Union[str, None]
+    first_datetime: datetime
+    last_datetime: datetime
 
 
 class AveragesResponse(OpenAQResult):

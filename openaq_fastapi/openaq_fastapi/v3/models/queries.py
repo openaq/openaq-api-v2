@@ -1,6 +1,7 @@
 import inspect
 import logging
 from types import FunctionType, GenericAlias
+from enum import Enum
 from typing import (
     Dict,
     List,
@@ -274,7 +275,7 @@ class QueryBaseModel(BaseModel):
 # see the db.py method
 class Paging(BaseModel):
     limit: int = Query(
-        100,
+        1,
         gt=0,
         le=1000,
         description="""Change the number of results returned.
@@ -374,23 +375,41 @@ class CountryQuery(QueryBaseModel):
 
 
 class DateFromQuery(QueryBaseModel):
-    date_from: Optional[Union[datetime, date]] = Query(description="From when?")
+    date_from: Optional[Union[datetime, date]] = Query(
+        "2022-10-01",
+        description="From when?"
+    )
 
     def where(self) -> str:
         return "datetime > :date_from" if self.date_from else None
 
 
 class DateToQuery(QueryBaseModel):
-    date_to: Optional[Union[datetime, date]] = Query(description="To when?")
+    date_to: Optional[Union[datetime, date]] = Query(
+        datetime.utcnow(),
+        description="To when?"
+    )
 
     def where(self) -> str:
         return "datetime <= :date_to" if self.date_to else None
 
 
+class PeriodNames(str, Enum):
+    hour = "hour"
+    day = "day"
+    month = "month"
+    year = "year"
+    hod = "hod"
+    dow = "dow"
+    moy = "moy"
+
+
 class PeriodNameQuery(QueryBaseModel):
-    period_name: Union[str, None] = Query(
+    period_name: Union[PeriodNames, None] = Query(
+        "hour",
         description="Period to aggregate. Month, day, hour"
     )
+
 
 
 # Some spatial helper queries
