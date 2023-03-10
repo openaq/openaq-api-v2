@@ -98,6 +98,17 @@ class AveragesRow(BaseModel):
 class AveragesResponse(OpenAQResult):
     results: List[AveragesRow]
 
+# /v1/countries
+
+class CountriesRowV1(BaseModel):
+    code: str
+    name: str
+    locations: int
+    count: int
+    cities: int
+
+class CountriesResponseV1(OpenAQResult):
+    results: List[CountriesRowV1]
 
 # /v2/countries
 
