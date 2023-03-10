@@ -10,12 +10,15 @@ from ..models.queries import (
 )
 
 from openaq_fastapi.models.responses import (
-    ParametersResponse, converter
+    ParametersResponse, ParametersResponseV1, converter
 )
 import jq
 logger = logging.getLogger("parameters")
 
 router = APIRouter()
+
+class ParametersV1(APIBase):
+    order_by: Literal["id", "name", "preferredUnit"] = Query("id")
 
 
 class Parameters(SourceName, APIBase):
@@ -37,56 +40,48 @@ async def parameters_get(
     q = f"""
     WITH t AS (
     SELECT
-        measurands_id as id,
-        measurand as name,
-        display as "displayName",
-        coalesce(description, display) as description,
-        units as "preferredUnit",
-        is_core as "isCore",
-        max_color_value as "maxColorValue"
-    FROM measurands
-    WHERE display is not null and is_core is not null
-    ORDER BY "{parameters.order_by}" {parameters.sort}
-    )
-    SELECT count(*) OVER () as count,
-    jsonb_strip_nulls(to_jsonb(t)) as json FROM t
+        measurands_id as id
+        , measurand as name
+        , display as "displayName"
+        , coalesce(description, display) as description
+        , units as "preferredUnit"
+        , COUNT(1) OVER() as found
+
+    FROM 
+        measurands
     LIMIT :limit
     OFFSET :offset
     """
 
-    output = await db.fetchOpenAQResult(q, parameters.params())
+    output = await db.fetchPage(q, parameters.params())
 
     return output
 
 
 @router.get(
     "/v1/parameters", 
-    response_model=ParametersResponse, 
+    response_model=ParametersResponseV1, 
     summary="Get parameters",
     description="Provides a list of parameters supported by the platform",
     tags=["v1"]
 )
 async def parameters_getv1(
     db: DB = Depends(),
-    parameters: Parameters = Depends(Parameters.depends()),
+    parameters: ParametersV1 = Depends(ParametersV1.depends()),
 ):
-    data = await parameters_get(db, parameters)
-    meta = data.meta
-    res = data.results
+    q = f"""
+    SELECT
+        measurands_id as id
+        , measurand as name
+        , display as "displayName"
+        , coalesce(description, display) as description
+        , units as "preferredUnit"
+    FROM measurands
+    ORDER BY "{parameters.order_by}" {parameters.sort}
+    LIMIT :limit
+    OFFSET :offset
+    """
 
-    if len(res) == 0:
-        return data
+    output = await db.fetchPage(q, parameters.params())
 
-    v1_jq = jq.compile(
-        """
-        .[] | . as $m |
-            {
-                id: .id,
-                name: .name,
-                description: .description,
-                preferredUnit: .preferredUnit
-            }
-        """
-    )
-
-    return converter(meta, res, v1_jq)
+    return output

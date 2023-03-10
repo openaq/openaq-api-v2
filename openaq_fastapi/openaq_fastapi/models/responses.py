@@ -21,7 +21,7 @@ def converter(meta, data, jq):
 
 class Meta(BaseModel):
     name: str = "openaq-api"
-    license: str = "CC BY 4.0d"
+    license: str = ""
     website: str = "/"
     page: int = 1
     limit: int = 100
@@ -321,11 +321,28 @@ class MeasurementsResponse(OpenAQResult):
     results: List[MeasurementsRow]
 
 
-# /v2/parameters
+# /v2/models
 
 
 class ModelsResponse(OpenAQResult):
     results: List[str]
+
+
+# /v1/parameters
+
+
+class ParametersRowV1(BaseModel):
+    id: int
+    name: str
+    description: str
+    preferred_unit: str = Field(..., alias="preferredUnit")
+
+    class Config:
+        allow_population_by_field_name = True
+
+
+class ParametersResponseV1(OpenAQResult):
+    results: List[ParametersRowV1]
 
 
 # /v2/parameters
@@ -337,9 +354,9 @@ class ParametersRow(BaseModel):
     display_name: Union[str, None] = Field(None, alias="displayName")
     description: str
     preferred_unit: str = Field(..., alias="preferredUnit")
-    is_core: Union[bool, None] = Field(None, alias="isCore")
-    max_color_value: Union[float, None] = Field(None, alias="maxColorValue")
 
+    class Config:
+        allow_population_by_field_name = True
 
 class ParametersResponse(OpenAQResult):
     results: List[ParametersRow]
