@@ -12,7 +12,6 @@ from ..models.queries import (
 from openaq_fastapi.models.responses import (
     ParametersResponse, ParametersResponseV1, converter
 )
-import jq
 logger = logging.getLogger("parameters")
 
 router = APIRouter()
@@ -21,7 +20,7 @@ class ParametersV1(APIBase):
     order_by: Literal["id", "name", "preferredUnit"] = Query("id")
 
 
-class Parameters(SourceName, APIBase):
+class Parameters(APIBase):
     order_by: Literal["id", "name", "preferredUnit"] = Query("id")
 
 
@@ -46,9 +45,9 @@ async def parameters_get(
         , coalesce(description, display) as description
         , units as "preferredUnit"
         , COUNT(1) OVER() as found
-
     FROM 
         measurands
+    ORDER BY "{parameters.order_by}" {parameters.sort}
     LIMIT :limit
     OFFSET :offset
     """
