@@ -29,7 +29,6 @@ class TileProvidersQuery(QueryBaseModel):
 
     def where(self) -> Union[str, None]:
         if self.has("providers_id"):
-            print(self.providers_id)
             return "providers_id = ANY (:providers_id)"
 
 

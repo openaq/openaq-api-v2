@@ -77,5 +77,8 @@ async def fetch_parameters(query, db):
     {query_builder.where()}
     {query_builder.pagination()}
     """
+    print(sql)
+    print(query_builder.pagination())
+    print(query_builder.params())
     response = await db.fetchPage(sql, query_builder.params())
     return response
