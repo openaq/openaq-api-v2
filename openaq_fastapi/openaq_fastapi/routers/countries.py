@@ -39,9 +39,9 @@ class CountriesV1(APIBase):
         "code", description="Order by a field e.g. ?order_by=code", example="code"
     )
     limit: int = Query(
-        200,
-        description="Limit the number of results returned. e.g. limit=200 will return up to 200 results",
-        example="200",
+        100,
+        description="Limit the number of results returned. e.g. limit=100 will return up to 100 results",
+        example="100",
     )
 
     def where(self):
@@ -64,9 +64,9 @@ class Countries(Country, APIBase):
         "name", description="Order by a field e.g. ?order_by=name", example="name"
     )
     limit: int = Query(
-        200,
-        description="Limit the number of results returned. e.g. limit=200 will return up to 200 results",
-        example="200",
+        100,
+        description="Limit the number of results returned. e.g. limit=100 will return up to 100 results",
+        example="100",
     )
 
     def where(self):
