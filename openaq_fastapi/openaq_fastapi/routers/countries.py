@@ -134,8 +134,8 @@ async def countries_get(
         , MAX(sr.datetime_last)::TEXT AS last_updated
         , array_agg(DISTINCT m.measurand) AS parameters
         , SUM(sr.value_count) AS "count"
-        , count (sn.city) AS cities
-        , count (p.source_name) AS sources
+        , count (DISTINCT sn.city) AS cities
+        , count (DISTINCT p.source_name) AS sources
         
 
         FROM 
@@ -194,7 +194,7 @@ async def countries_getv1(
         SELECT 
 	    c.iso AS code
         , c.name
-        , count (sn.city) AS cities
+        , count (DISTINCT sn.city) AS cities
         , SUM(sr.value_count) AS "count"
         , COUNT(DISTINCT sn.sensor_nodes_id) AS locations
        
