@@ -83,7 +83,7 @@ class AveragesRow(BaseModel):
     year: Union[date, None]
     hod: Union[int, None]
     dow: Union[int, None]
-    name: Union[List[str],str]
+    name: Union[List[str], str]
     average: float
     name: Union[List[str], str]
     measurement_count: int  # TODO make camelCase
@@ -98,7 +98,9 @@ class AveragesRow(BaseModel):
 class AveragesResponse(OpenAQResult):
     results: List[AveragesRow]
 
+
 # /v1/countries
+
 
 class CountriesRowV1(BaseModel):
     code: str
@@ -107,8 +109,10 @@ class CountriesRowV1(BaseModel):
     count: int
     cities: int
 
+
 class CountriesResponseV1(OpenAQResult):
     results: List[CountriesRowV1]
+
 
 # /v2/countries
 
@@ -123,6 +127,9 @@ class CountriesRow(BaseModel):
     count: int
     cities: int
     sources: int
+
+    class Config:
+        allow_population_by_field_name = True
 
 
 class CountriesResponse(OpenAQResult):
@@ -155,7 +162,7 @@ class CityRow(BaseModel):
     first_updated: str = Field(..., alias="firstUpdated")
     last_updated: str = Field(..., alias="lastUpdated")
     parameters: List[str]
-    
+
     class Config:
         allow_population_by_field_name = True
 

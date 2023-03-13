@@ -13,6 +13,7 @@ logger = logging.getLogger("countries")
 
 router = APIRouter()
 
+
 class CountriesOrder(str, Enum):
     code = "code"
     name = "name"
@@ -24,6 +25,7 @@ class CountriesOrder(str, Enum):
     cities = "cities"
     sources = "sources"
 
+
 class CountriesOrderV1(str, Enum):
     code = "code"
     count = "count"
@@ -31,59 +33,77 @@ class CountriesOrderV1(str, Enum):
     cities = "cities"
     name = "name"
 
+
 class CountriesV1(APIBase):
     order_by: CountriesOrderV1 = Query(
         "code", description="Order by a field e.g. ?order_by=code", example="code"
     )
-    
+    limit: int = Query(
+        200,
+        description="Limit the number of results returned. e.g. limit=200 will return up to 200 results",
+        example="200",
+    )
+
+    def where(self):
+        wheres = []
+        for f, v in self:
+            if v is not None:
+                if f == "country":
+                    wheres.append(
+                        """
+                        c.iso = ANY(:country)
+                        """
+                    )
+        if len(wheres) > 0:
+            return (" AND ").join(wheres)
+        return " TRUE "
+
+
 class Countries(Country, APIBase):
     order_by: CountriesOrder = Query(
-        "name",
-        description="Order by a field e.g. ?order_by=name",
-        example="code"
+        "name", description="Order by a field e.g. ?order_by=name", example="name"
     )
-    # limit: int = Query(
-    #     200,
-    #     description="Limit the number of results returned. e.g. limit=200 will return up to 200 results",
-    #     example="200"
-    # )
+    limit: int = Query(
+        200,
+        description="Limit the number of results returned. e.g. limit=200 will return up to 200 results",
+        example="200",
+    )
 
-    # def where(self):
-    #     wheres = []
-    #     for f, v in self:
-    #         if v is not None:
-    #             if f == "country":
-    #                 wheres.append(
-    #                     """ 
-    #                     country = ANY(:country)
-    #                     """
-    #                 )
-    #     if len(wheres) > 0:
-    #         return (" AND ").join(wheres)
-    #     return " TRUE "
+    def where(self):
+        wheres = []
+        for f, v in self:
+            if v is not None:
+                if f == "country":
+                    wheres.append(
+                        """
+                        c.iso = ANY(:country)
+                        """
+                    )
+        if len(wheres) > 0:
+            return (" AND ").join(wheres)
+        return " TRUE "
 
 
-# @router.get(
-#     "/v1/countries/{country_id}",
-#     response_model=CountriesResponse,
-#     summary="Get country by ID",
-#     description="Provides a single country by country ID",
-#     tags=["v1"],
-# )
-# @router.get(
-#     "/v2/countries/{country_id}",
-#     response_model=CountriesResponse,
-#     summary="Get country by ID",
-#     description="Provides a single country by country ID",
-#     tags=["v2"],
-# )
-
+@router.get(
+    "/v1/countries/{country_id}",
+    response_model=CountriesResponse,
+    summary="Get country by ID",
+    description="Provides a single country by country ID",
+    tags=["v1"],
+)
+@router.get(
+    "/v2/countries/{country_id}",
+    response_model=CountriesResponse,
+    summary="Get country by ID",
+    description="Provides a single country by country ID",
+    tags=["v2"],
+)
 @router.get(
     "/v2/countries",
     response_model=CountriesResponse,
     summary="Get countries",
     description="Provides a list of countries",
-    tags=["v2"]
+    tags=["v2"],
 )
 async def countries_get(
     db: DB = Depends(),
@@ -116,7 +136,8 @@ async def countries_get(
         , SUM(sr.value_count) AS "count"
         , count (sn.city) AS cities
         , count (p.source_name) AS sources
-        , COUNT(1) OVER() as found
+        
+
         FROM 
             sensors_rollup sr
         JOIN 
@@ -132,24 +153,27 @@ async def countries_get(
         JOIN 
             providers p USING (providers_id)
         WHERE
-        c.iso IS NOT NULL
-        GROUP BY c.iso, sn.city, c.name
+        {countries.where()} 
+        AND c.iso IS NOT NULL
+        GROUP BY code, c.name
         ORDER BY {order_by} {countries.sort}
         OFFSET :offset
         LIMIT :limit
         """
-    # print(q)
+
     params = countries.params()
     output = await db.fetchPage(q, params)
 
     return output
+
 
 @router.get(
     "/v1/countries",
     response_model=CountriesResponseV1,
     summary="Get countries",
     description="Provides a list of countries",
-    tags=["v1"])
+    tags=["v1"],
+)
 async def countries_getv1(
     db: DB = Depends(),
     countries: Countries = Depends(CountriesV1.depends()),
@@ -173,7 +197,7 @@ async def countries_getv1(
         , count (sn.city) AS cities
         , SUM(sr.value_count) AS "count"
         , COUNT(DISTINCT sn.sensor_nodes_id) AS locations
-        , COUNT(1) OVER() AS found
+       
         FROM 
             sensors_rollup sr
         JOIN 
@@ -185,8 +209,10 @@ async def countries_getv1(
         JOIN 
             countries c USING (countries_id)
         WHERE
+        {countries.where()}
+        AND
         c.iso IS NOT NULL
-        GROUP BY c.iso, c.name
+        GROUP BY code, c.name
         ORDER BY {order_by} {countries.sort}
         OFFSET :offset
         LIMIT :limit
