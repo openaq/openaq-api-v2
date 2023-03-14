@@ -37,7 +37,6 @@ async def parameters_get(
 ):
 
     q = f"""
-    WITH t AS (
     SELECT
         measurands_id as id
         , measurand as name
