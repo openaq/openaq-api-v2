@@ -12,9 +12,7 @@ from ..models.queries import (
     SourceName,
 )
 
-from ..models.responses import (
-    SourcesResponse, SourcesResponseV1
-)
+from ..models.responses import SourcesResponse, SourcesResponseV1
 
 logger = logging.getLogger("sources")
 
@@ -31,7 +29,7 @@ class Sources(SourceName, APIBase):
     order_by: SourcesOrder = Query(
         "sourceName",
         description="Field by which to order the results e.g. ?order_by=sourceName or ?order_by=firstUpdated",
-        example="sourceName"
+        example="sourceName",
     )
 
     def where(self):
@@ -55,7 +53,7 @@ class Sources(SourceName, APIBase):
     response_model=SourcesResponse,
     summary="Sources",
     description="Provides a list of sources",
-    tags=["v2"]
+    tags=["v2"],
 )
 async def sources_get(
     db: DB = Depends(),
@@ -126,7 +124,7 @@ class SourcesV1(APIBase):
     response_model=SourcesResponseV1,
     summary="Sources",
     description="Provides a list of sources",
-    tags=["v1"]
+    tags=["v1"],
 )
 async def sources_v1_get(
     db: DB = Depends(),
@@ -139,7 +137,41 @@ async def sources_v1_get(
     else:
         ob = sources.order_by
 
-    q = f"""
+        ## NEEDS WORK
+    q = f""" 
+    SELECT
+        sn.metadata -> 'attribution' -> 0 ->> 'url' AS url,
+        a.name AS adapter,
+        p.metadata ->> 'name' AS name,
+        sn.city AS city,
+        c.iso AS country,
+        p.description AS description,
+        p.metadata -> 'url' AS "sourceURL",
+        p.metadata ->> 'resolution' AS resolution,
+        p.metadata ->> 'contacts' AS contacts,
+        p.is_active AS active
+    FROM
+        sensors_rollup sr
+        JOIN sensors s USING (sensors_id)
+        JOIN sensor_systems ss USING (sensor_systems_id)
+        JOIN sensor_nodes sn USING (sensor_nodes_id)
+        JOIN countries c USING (countries_id)
+        JOIN measurands m USING (measurands_id)
+        JOIN providers p USING (providers_id)
+        JOIN adapters a ON (p.adapters_id = a.adapters_id)
+    GROUP BY
+        url,
+        a.name,
+        p.metadata,
+        sn.city,
+        c.iso,
+        p.is_active,
+        p.description 
+
+        LIMIT :limit
+        OFFSET :offset
+    """
+    old_query = f"""
     WITH t AS (
     SELECT
         data
@@ -153,7 +185,7 @@ async def sources_v1_get(
         data FROM t;
     """
 
-    output = await db.fetchOpenAQResult(q, qparams)
+    output = await db.fetchPage(q, qparams)
 
     return output
 
@@ -163,11 +195,11 @@ async def sources_v1_get(
     summary="Source Readme",
     description="Provides a readme for a given source by the source slug",
     response_class=HTMLResponse,
-    tags=["v2"]
+    tags=["v2"],
 )
 async def readme_get(
     db: DB = Depends(),
-    slug: str = Path(..., example='london_mobile'),
+    slug: str = Path(..., example="london_mobile"),
 ):
     q = """
         SELECT readme FROM sources WHERE slug=:slug
@@ -175,9 +207,7 @@ async def readme_get(
 
     readme = await db.fetchval(q, {"slug": slug})
     if readme is None:
-        raise HTTPException(
-            status_code=404, detail=f"No readme found for {slug}."
-        )
+        raise HTTPException(status_code=404, detail=f"No readme found for {slug}.")
 
     readme = str.replace(readme, "\\", "")
 
