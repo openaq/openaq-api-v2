@@ -141,7 +141,6 @@ class CountriesResponse(OpenAQResult):
 
 class CityRowV1(BaseModel):
     country: str
-    name: str
     city: str
     count: int
     locations: int
