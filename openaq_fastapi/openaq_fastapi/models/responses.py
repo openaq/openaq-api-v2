@@ -388,7 +388,7 @@ class ProjectsResponse(OpenAQResult):
 class SourcesRowV1(BaseModel):
     url: str
     adapter: str
-    name: str
+    name: Union[str, None]
     city: Union[str, None]
     country: str
     description: Union[str, None]

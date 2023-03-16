@@ -101,7 +101,16 @@ async def sources_get(
 
 
 class SourcesV1Order(str, Enum):
+    url = "url"
+    adapter = "adapter"
     name = "name"
+    city = "city"
+    country = "country"
+    description = "description"
+    sourceURL = "soureceURL"
+    resolution = "resolution"
+    contacts = "contacts"
+    active = "active"
 
 
 class SourcesV1(APIBase):
@@ -142,7 +151,7 @@ async def sources_v1_get(
     SELECT
         sn.metadata -> 'attribution' -> 0 ->> 'url' AS url,
         a.name AS adapter,
-        p.metadata ->> 'name' AS name,
+        coalesce( p.metadata ->> 'name', '' ) AS name,
         sn.city AS city,
         c.iso AS country,
         p.description AS description,
@@ -159,6 +168,8 @@ async def sources_v1_get(
         JOIN measurands m USING (measurands_id)
         JOIN providers p USING (providers_id)
         JOIN adapters a ON (p.adapters_id = a.adapters_id)
+    WHERE 'name' IS NOT NULL
+
     GROUP BY
         url,
         a.name,
@@ -184,9 +195,9 @@ async def sources_v1_get(
     SELECT count(*) OVER () as count,
         data FROM t;
     """
-
+    print("did we make it?")
     output = await db.fetchPage(q, qparams)
-
+    print("output:", output)
     return output
 
 
