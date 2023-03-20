@@ -107,7 +107,7 @@ class SourcesV1Order(str, Enum):
     city = "city"
     country = "country"
     description = "description"
-    sourceURL = "soureceURL"
+    sourceURL = "sourceURL"
     resolution = "resolution"
     contacts = "contacts"
     active = "active"
@@ -148,39 +148,47 @@ async def sources_v1_get(
 
         ## NEEDS WORK
     q = f""" 
-    SELECT
+    WITH t AS (SELECT
         sn.metadata -> 'attribution' -> 0 ->> 'url' AS url,
         a.name AS adapter,
-        coalesce( p.metadata ->> 'name', '' ) AS name,
-        sn.city AS city,
-        c.iso AS country,
+        p.metadata ->> 'name' AS name,
+        '' AS city,
+        '' AS country,
         p.description AS description,
-        p.metadata -> 'url' AS "sourceURL",
+        p.metadata ->> 'url' AS source_url,
         p.metadata ->> 'resolution' AS resolution,
-        p.metadata ->> 'contacts' AS contacts,
+        jsonb_array_elements_text(COALESCE(p.metadata -> 'contacts', '[]')) AS contacts,
         p.is_active AS active
     FROM
         sensors_rollup sr
         JOIN sensors s USING (sensors_id)
         JOIN sensor_systems ss USING (sensor_systems_id)
         JOIN sensor_nodes sn USING (sensor_nodes_id)
-        JOIN countries c USING (countries_id)
-        JOIN measurands m USING (measurands_id)
         JOIN providers p USING (providers_id)
         JOIN adapters a ON (p.adapters_id = a.adapters_id)
-    WHERE 'name' IS NOT NULL
-
-    GROUP BY
-        url,
-        a.name,
-        p.metadata,
-        sn.city,
-        c.iso,
-        p.is_active,
-        p.description 
-
-        LIMIT :limit
-        OFFSET :offset
+		   )
+    SELECT DISTINCT
+		url
+		, adapter
+		, name
+		, city
+		, country
+		, description
+		, source_url
+		, resolution
+		, array_agg(DISTINCT contacts) AS contacts
+		, active
+	FROM t
+	GROUP BY
+		url
+		, adapter
+		, name
+		, city
+		, country
+		, description
+		, source_url
+		, resolution
+		, active
     """
     old_query = f"""
     WITH t AS (
