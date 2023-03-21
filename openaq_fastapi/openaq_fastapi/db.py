@@ -55,7 +55,7 @@ async def db_pool(pool):
 
     logger.debug(f"Checking for existing pool: {pool}")
     if pool is None:
-        logger.debug('Creating a new pool')
+        logger.debug("Creating a new pool")
         pool = await asyncpg.create_pool(
             settings.DATABASE_READ_URL,
             command_timeout=14,
@@ -142,6 +142,9 @@ class DB:
                 kwargs["found"] = len(data)
         else:
             kwargs["found"] = 0
+
+        # Remove any reference to the 'name' attribute from kwargs (conflicting keys)
+        kwargs.pop("name", None)
 
         output = OpenAQResult(meta=Meta.parse_obj(kwargs), results=data)
         return output

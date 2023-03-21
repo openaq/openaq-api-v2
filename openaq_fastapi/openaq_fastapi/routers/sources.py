@@ -95,7 +95,7 @@ async def sources_get(
         to_jsonb(t) FROM t;
     """
 
-    output = await db.fetchOpenAQResult(q, qparams)
+    output = await db.fetchPage(q, qparams)
 
     return output
 
@@ -139,7 +139,6 @@ async def sources_v1_get(
     db: DB = Depends(),
     sources: SourcesV1 = Depends(SourcesV1.depends()),
 ):
-    qparams = sources.params()
 
     if sources.order_by == "name":
         ob = "source_name"
@@ -149,16 +148,16 @@ async def sources_v1_get(
         ## NEEDS WORK
     q = f""" 
     WITH t AS (SELECT
-        sn.metadata -> 'attribution' -> 0 ->> 'url' AS url,
-        a.name AS adapter,
-        p.metadata ->> 'name' AS name,
-        '' AS city,
-        '' AS country,
-        p.description AS description,
-        p.metadata ->> 'url' AS source_url,
-        p.metadata ->> 'resolution' AS resolution,
-        jsonb_array_elements_text(COALESCE(p.metadata -> 'contacts', '[]')) AS contacts,
-        p.is_active AS active
+        sn.metadata -> 'attribution' -> 0 ->> 'url' AS url
+        , a.name AS adapter
+        , coalesce( p.metadata ->> 'name', '' ) AS name
+        , '' AS city
+        , '' AS country
+        , p.description AS description
+        , p.metadata ->> 'url' AS source_url
+        , p.metadata ->> 'resolution' AS resolution
+        , jsonb_array_elements_text(COALESCE(p.metadata -> 'contacts', '[]')) AS contacts
+        , p.is_active AS active
     FROM
         sensors_rollup sr
         JOIN sensors s USING (sensors_id)
@@ -185,7 +184,7 @@ async def sources_v1_get(
 		, name
 		, city
 		, country
-		, description
+        , description
 		, source_url
 		, resolution
 		, active
@@ -204,6 +203,7 @@ async def sources_v1_get(
         data FROM t;
     """
     print("did we make it?")
+    qparams = sources.params()
     output = await db.fetchPage(q, qparams)
     print("output:", output)
     return output
