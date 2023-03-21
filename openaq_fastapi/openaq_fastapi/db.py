@@ -134,17 +134,12 @@ class DB:
 
         data = await self.fetch(query, kwargs)
         if len(data) > 0:
-            print("DATA")
-            print("found" in data[0].keys())
             if "found" in data[0].keys():
                 kwargs["found"] = data[0]["found"]
             else:
                 kwargs["found"] = len(data)
         else:
             kwargs["found"] = 0
-
-        # Remove any reference to the 'name' attribute from kwargs (conflicting keys)
-        kwargs.pop("name", None)
 
         output = OpenAQResult(meta=Meta.parse_obj(kwargs), results=data)
         return output

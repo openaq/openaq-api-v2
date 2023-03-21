@@ -63,6 +63,42 @@ async def sources_get(
 
     #
     q = f"""
+    
+    SELECT
+    jsonb_build_object(
+        'url', sn.metadata -> 'attribution' -> 0 ->> 'url',
+        'data_avg_dur', hr.value_avg,
+        'organization', NULL,
+        'lifecycle_stage', CASE
+            WHEN (sn.metadata ->> 'is_analysis'::text)::boolean THEN 'Analysis result'
+            ELSE NULL
+        END
+    ) AS data,
+    NULL AS readme,
+    sn.source_id AS "sourceId",
+    p.source_name AS "sourceName",
+    NULL AS "sourceSlug"
+    count(*) as locations
+FROM
+    sensors_rollup sr
+    JOIN sensors s USING (sensors_id)
+    JOIN sensor_systems ss USING (sensor_systems_id)
+    JOIN sensor_nodes sn USING (sensor_nodes_id)
+    JOIN countries c USING (countries_id)
+    JOIN measurands m USING (measurands_id)
+    JOIN providers p USING (providers_id)
+    JOIN hourly_rollups hr USING (sensors_id)
+    JOIN adapters a ON (p.adapters_id = a.adapters_id)
+GROUP BY
+    sn.metadata,
+    hr.value_avg,
+    sn.source_id,
+    p.source_name
+OFFSET :offset
+LIMIT :limit
+    """
+
+    old_q = f"""
     WITH t AS (
     SELECT
         sources_id as "sourceId",
@@ -114,7 +150,7 @@ class SourcesV1Order(str, Enum):
 
 
 class SourcesV1(APIBase):
-    name: Union[str, None] = None
+    # name: Union[str, None] = None
     order_by: SourcesV1Order = Query("name")
 
     def where(self):
@@ -148,14 +184,14 @@ async def sources_v1_get(
         ## NEEDS WORK
     q = f""" 
     WITH t AS (SELECT
-        sn.metadata -> 'attribution' -> 0 ->> 'url' AS url
+        COALESCE(sn.metadata -> 'attribution' -> 0 ->> 'url', '') AS url
         , a.name AS adapter
-        , coalesce( p.metadata ->> 'name', '' ) AS name
+        , COALESCE( p.metadata ->> 'name', '' ) AS name
         , '' AS city
         , '' AS country
         , p.description AS description
-        , p.metadata ->> 'url' AS source_url
-        , p.metadata ->> 'resolution' AS resolution
+        , COALESCE(p.metadata ->> 'url', '') AS source_url
+        , COALESCE(p.metadata ->> 'resolution', '') AS resolution
         , jsonb_array_elements_text(COALESCE(p.metadata -> 'contacts', '[]')) AS contacts
         , p.is_active AS active
     FROM

@@ -386,11 +386,11 @@ class ProjectsResponse(OpenAQResult):
 
 
 class SourcesRowV1(BaseModel):
-    url: Union[str, None]
-    adapter: Union[str, None]
-    name: Union[str, None]
+    url: str
+    adapter: str
+    name: str
     city: Union[str, None]
-    country: Union[str, None]
+    country: str
     description: Union[str, None]
     source_url: AnyUrl = Field(..., alias="sourceURL")
     resolution: Union[str, None]
