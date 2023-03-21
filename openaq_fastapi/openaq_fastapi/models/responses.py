@@ -85,7 +85,7 @@ class AveragesRow(BaseModel):
     dow: Union[int, None]
     name: Union[List[str], str]
     average: float
-    name: Union[List[str], str]
+    name: Union[List[str], str]  # Name defined twice?
     measurement_count: int  # TODO make camelCase
     parameter: str
     parameter_id: int = Field(..., alias="parameterId")
@@ -386,11 +386,11 @@ class ProjectsResponse(OpenAQResult):
 
 
 class SourcesRowV1(BaseModel):
-    url: str
-    adapter: str
+    url: Union[str, None]
+    adapter: Union[str, None]
     name: Union[str, None]
     city: Union[str, None]
-    country: str
+    country: Union[str, None]
     description: Union[str, None]
     source_url: AnyUrl = Field(..., alias="sourceURL")
     resolution: Union[str, None]
