@@ -23,20 +23,23 @@ async def summary_get(
     db: DB = Depends(),
 ):
     q = f"""
-    WITH t as (
-        SELECT
-            approximate_row_count('measurements') as count,
-            count(distinct sensor_nodes_id) as locations,
-            count(distinct country) as countries,
-            count(distinct city) as cities,
-            count(distinct sources_id) as sources
-        FROM
-            sensor_nodes
-            LEFT JOIN sensor_nodes_sources USING (sensor_nodes_id)
-    ) SELECT 1 as count, to_jsonb(t) as json FROM t
-    ;
+    WITH t AS (
+    SELECT
+        SUM(sr.value_count) AS count
+        , COUNT(DISTINCT sn.sensor_nodes_id) AS locations
+        , COUNT(DISTINCT sn.country) AS countries
+        , COUNT(DISTINCT sn.city) AS cities
+        , COUNT(DISTINCT sn.providers_id) AS sources
+    FROM
+        sensors_rollup sr
+        JOIN sensors s ON sr.sensors_id = s.sensors_id
+        JOIN sensor_systems ss ON s.sensor_systems_id = ss.sensor_systems_id
+        JOIN sensor_nodes sn ON ss.sensor_nodes_id = sn.sensor_nodes_id
+    )
+    SELECT *
+    FROM t;
     """
 
-    output = await db.fetchOpenAQResult(q, {"page": 1, "limit": 1000})
+    output = await db.fetchPage(q, {"page": 1, "limit": 1000})
 
     return output
