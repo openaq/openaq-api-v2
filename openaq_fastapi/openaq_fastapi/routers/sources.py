@@ -64,38 +64,53 @@ async def sources_get(
     #
     q = f"""
     
-    SELECT
-    jsonb_build_object(
-        'url', sn.metadata -> 'attribution' -> 0 ->> 'url',
-        'data_avg_dur', hr.value_avg,
-        'organization', NULL,
-        'lifecycle_stage', CASE
-            WHEN (sn.metadata ->> 'is_analysis'::text)::boolean THEN 'Analysis result'
-            ELSE NULL
-        END
-    ) AS data,
-    NULL AS readme,
-    sn.source_id AS "sourceId",
-    p.source_name AS "sourceName",
-    NULL AS "sourceSlug"
-    count(*) as locations
+    WITH l AS (
+	SELECT
+		p.source_name AS "sourceName"
+		, COUNT(DISTINCT sn.sensor_nodes_id) AS locations
+	FROM
+		sensors_rollup sr
+		JOIN sensors s USING (sensors_id)
+		JOIN sensor_systems ss USING (sensor_systems_id)
+		JOIN sensor_nodes sn USING (sensor_nodes_id)
+		JOIN providers p USING (providers_id)
+		JOIN adapters a ON (p.adapters_id = a.adapters_id)
+	WHERE
+		p.source_name IS NOT NULL
+	GROUP BY
+		p.source_name
+)
+SELECT DISTINCT ON (p.source_name)
+	json_build_object(
+		'url', COALESCE(sn.metadata -> 'attribution' -> 0 ->> 'url', '')
+		, 'data_avg_dur', NULL
+		, 'organization', NULL
+		, 'lifecycle_stage', CASE
+			WHEN (sn.metadata ->> 'is_analysis'::text)::boolean THEN 'Analysis result'
+			ELSE NULL
+		END
+	) AS data
+	, NULL AS readme
+	, '42'::INTEGER AS "sourceId"
+	, l.locations
+	, p.source_name AS "sourceName"
+	, NULL AS "sourceSlug"
 FROM
-    sensors_rollup sr
-    JOIN sensors s USING (sensors_id)
-    JOIN sensor_systems ss USING (sensor_systems_id)
-    JOIN sensor_nodes sn USING (sensor_nodes_id)
-    JOIN countries c USING (countries_id)
-    JOIN measurands m USING (measurands_id)
-    JOIN providers p USING (providers_id)
-    JOIN hourly_rollups hr USING (sensors_id)
-    JOIN adapters a ON (p.adapters_id = a.adapters_id)
+	sensors_rollup sr
+	JOIN sensors s USING (sensors_id)
+	JOIN sensor_systems ss USING (sensor_systems_id)
+	JOIN sensor_nodes sn USING (sensor_nodes_id)
+	JOIN providers p USING (providers_id)
+	JOIN adapters a ON (p.adapters_id = a.adapters_id)
+	JOIN l ON (p.source_name = l."sourceName")
 GROUP BY
-    sn.metadata,
-    hr.value_avg,
-    sn.source_id,
-    p.source_name
-OFFSET :offset
-LIMIT :limit
+	p.source_name
+	, sn.source_id
+	, sn.metadata
+	, l.locations
+ORDER BY
+	p.source_name
+
     """
 
     old_q = f"""

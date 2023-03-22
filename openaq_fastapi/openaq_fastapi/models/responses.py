@@ -423,6 +423,9 @@ class SourcesRow(BaseModel):
     source_name: str = Field(..., alias="sourceName")
     source_slug: Union[str, None] = Field(None, alias="sourceSlug")
 
+    class Config:
+        allow_population_by_field_name = True
+
 
 class SourcesResponse(OpenAQResult):
     results: List[SourcesRow]
