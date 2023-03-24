@@ -61,89 +61,43 @@ async def sources_get(
 ):
     qparams = sources.params()
 
-    #
     q = f"""
-    
-    WITH l AS (
-	SELECT
+    WITH l AS 
+    (
+	SELECT 
 		p.source_name AS "sourceName"
-		, COUNT(DISTINCT sn.sensor_nodes_id) AS locations
-	FROM
-		sensors_rollup sr
-		JOIN sensors s USING (sensors_id)
-		JOIN sensor_systems ss USING (sensor_systems_id)
-		JOIN sensor_nodes sn USING (sensor_nodes_id)
-		JOIN providers p USING (providers_id)
-		JOIN adapters a ON (p.adapters_id = a.adapters_id)
-	WHERE
-		p.source_name IS NOT NULL
-	GROUP BY
+		, COUNT(*) as locations
+	FROM 
+		sensor_nodes sn
+	JOIN 
+		providers p ON (sn.providers_id = p.providers_id)
+	GROUP BY 
 		p.source_name
-)
-SELECT DISTINCT ON (p.source_name)
-	json_build_object(
-		'url', COALESCE(sn.metadata -> 'attribution' -> 0 ->> 'url', '')
-		, 'data_avg_dur', NULL
-		, 'organization', NULL
-		, 'lifecycle_stage', CASE
-			WHEN (sn.metadata ->> 'is_analysis'::text)::boolean THEN 'Analysis result'
-			ELSE NULL
-		END
-	) AS data
-	, NULL AS readme
-	, '42'::INTEGER AS "sourceId"
-	, l.locations
-	, p.source_name AS "sourceName"
-	, NULL AS "sourceSlug"
-FROM
-	sensors_rollup sr
-	JOIN sensors s USING (sensors_id)
-	JOIN sensor_systems ss USING (sensor_systems_id)
-	JOIN sensor_nodes sn USING (sensor_nodes_id)
-	JOIN providers p USING (providers_id)
-	JOIN adapters a ON (p.adapters_id = a.adapters_id)
-	JOIN l ON (p.source_name = l."sourceName")
-GROUP BY
-	p.source_name
-	, sn.source_id
-	, sn.metadata
-	, l.locations
-ORDER BY
-	p.source_name
-
-    """
-
-    old_q = f"""
-    WITH t AS (
-    SELECT
-        sources_id as "sourceId",
-        slug as "sourceSlug",
-        sources.name as "sourceName",
-        sources.metadata as data,
-        case when readme is not null then
-        '/v2/sources/readmes/' || slug
-        else null end as readme,
-        --sum(value_count) as count,
-        count(*) as locations
-        --to_char(min(first_datetime),'YYYY-MM-DD') as "firstUpdated",
-        --to_char(max(last_datetime), 'YYYY-MM-DD') as "lastUpdated",
-        --array_agg(DISTINCT measurand) as parameters
-    FROM sources
-    LEFT JOIN sensor_nodes_sources USING (sources_id)
-    LEFT JOIN sensor_systems USING (sensor_nodes_id)
-    LEFT JOIN sensors USING (sensor_systems_id)
-    --LEFT JOIN rollups USING (sensors_id, measurands_id)
-    --LEFT JOIN groups_view USING (groups_id, measurands_id)
-    --WHERE rollup='total' AND groups_view.type='node'
-    WHERE {sources.where()}
-    GROUP BY
-    1,2,3,4,5
-    ORDER BY "{sources.order_by}" {sources.sort}
-    OFFSET :offset
-    LIMIT :limit
-    )
-    SELECT count(*) OVER () as count,
-        to_jsonb(t) FROM t;
+	)
+    SELECT 
+        p.metadata AS data
+        , 
+        CASE 
+        WHEN p.readme IS NOT NULL 
+        THEN
+        '/v2/sources/readmes/' || p.slug
+        ELSE NULL 
+        END 
+        AS readme
+        , p.providers_id AS "sourceId"
+        , l.locations
+        , p.source_name AS "sourceName"
+        , p.slug "sourceSlug"
+    FROM
+        providers p
+        JOIN l ON (p.source_name = l."sourceName")
+    GROUP BY 
+        p.source_name
+        , s.metadata
+        , s.readme
+        , p.providers_id
+        , l.locations
+        , s.slug
     """
 
     output = await db.fetchPage(q, qparams)
@@ -196,9 +150,10 @@ async def sources_v1_get(
     else:
         ob = sources.order_by
 
-        ## NEEDS WORK
     q = f""" 
-    WITH t AS (SELECT
+    WITH t AS 
+	(
+	SELECT
         COALESCE(sn.metadata -> 'attribution' -> 0 ->> 'url', '') AS url
         , a.name AS adapter
         , COALESCE( p.metadata ->> 'name', '' ) AS name
@@ -209,14 +164,13 @@ async def sources_v1_get(
         , COALESCE(p.metadata ->> 'resolution', '') AS resolution
         , jsonb_array_elements_text(COALESCE(p.metadata -> 'contacts', '[]')) AS contacts
         , p.is_active AS active
-    FROM
-        sensors_rollup sr
-        JOIN sensors s USING (sensors_id)
-        JOIN sensor_systems ss USING (sensor_systems_id)
-        JOIN sensor_nodes sn USING (sensor_nodes_id)
-        JOIN providers p USING (providers_id)
-        JOIN adapters a ON (p.adapters_id = a.adapters_id)
-		   )
+    FROM 
+		sensor_nodes sn
+	JOIN 
+		providers p ON (sn.providers_id = p.providers_id)
+    JOIN 
+    	adapters a ON (p.adapters_id = a.adapters_id)
+   	)
     SELECT DISTINCT
 		url
 		, adapter
@@ -230,9 +184,9 @@ async def sources_v1_get(
 		, active
 	FROM t
 	GROUP BY
-		url
+		name
 		, adapter
-		, name
+		, url
 		, city
 		, country
         , description
@@ -240,23 +194,9 @@ async def sources_v1_get(
 		, resolution
 		, active
     """
-    old_query = f"""
-    WITH t AS (
-    SELECT
-        data
-    FROM sources_from_openaq
-    WHERE {sources.where()}
-    ORDER BY {ob}
-    LIMIT :limit
-    OFFSET :offset
-    )
-    SELECT count(*) OVER () as count,
-        data FROM t;
-    """
-    print("did we make it?")
+
     qparams = sources.params()
     output = await db.fetchPage(q, qparams)
-    print("output:", output)
     return output
 
 
