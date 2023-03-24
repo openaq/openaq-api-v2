@@ -151,9 +151,7 @@ async def sources_v1_get(
         ob = sources.order_by
 
     q = f""" 
-    WITH t AS 
-	(
-	SELECT
+    WITH t AS (SELECT
         COALESCE(sn.metadata -> 'attribution' -> 0 ->> 'url', '') AS url
         , a.name AS adapter
         , COALESCE( p.metadata ->> 'name', '' ) AS name
@@ -164,13 +162,14 @@ async def sources_v1_get(
         , COALESCE(p.metadata ->> 'resolution', '') AS resolution
         , jsonb_array_elements_text(COALESCE(p.metadata -> 'contacts', '[]')) AS contacts
         , p.is_active AS active
-    FROM 
-		sensor_nodes sn
-	JOIN 
-		providers p ON (sn.providers_id = p.providers_id)
-    JOIN 
-    	adapters a ON (p.adapters_id = a.adapters_id)
-   	)
+    FROM
+        sensors_rollup sr
+        JOIN sensors s USING (sensors_id)
+        JOIN sensor_systems ss USING (sensor_systems_id)
+        JOIN sensor_nodes sn USING (sensor_nodes_id)
+        JOIN providers p USING (providers_id)
+        JOIN adapters a ON (p.adapters_id = a.adapters_id)
+		   )
     SELECT DISTINCT
 		url
 		, adapter
@@ -184,9 +183,9 @@ async def sources_v1_get(
 		, active
 	FROM t
 	GROUP BY
-		name
+		url
 		, adapter
-		, url
+		, name
 		, city
 		, country
         , description
