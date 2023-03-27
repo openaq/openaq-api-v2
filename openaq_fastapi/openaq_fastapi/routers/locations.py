@@ -488,34 +488,74 @@ async def locationsv1_get(
         hidejson = ""
 
     q = f"""
-    	SELECT
-        sn.sensor_nodes_id AS id,
-        COALESCE(c.iso, '') AS country,
-        COALESCE(sn.city, '') AS city,
-        ARRAY[COALESCE(sn.city, '')] AS cities,
-        COALESCE(sn.site_name, '') AS location,
-        ARRAY[COALESCE(sn.site_name, '')] AS locations,
-        COALESCE(p.source_name, '') AS source_name,
-        ARRAY[COALESCE(p.source_name, '')] AS source_names,
-        'foo' AS "sourceType",
-        ARRAY['baz'] AS "sourceTypes",
-        json_build_object('latitude', ST_Y(sn.geom), 'longitude', ST_X(sn.geom)) AS coordinates,
-        MIN(sr.datetime_first)::TEXT AS first_updated,
-        MAX(sr.datetime_last)::TEXT AS last_updated,
-        ARRAY['pm25'] AS parameters,
-        jsonb_build_array(json_build_object('parameter', 'pm25', 'count', 4578)) AS "countsByMeasurement",    
-        42 AS count
-        FROM
-        sensors_rollup sr
-        JOIN sensors s USING (sensors_id)
-        JOIN sensor_systems ss USING (sensor_systems_id)
-        JOIN sensor_nodes sn USING (sensor_nodes_id)
-        JOIN countries c USING (countries_id)
-        JOIN providers p USING (providers_id)
-        GROUP BY
-        sn.sensor_nodes_id,
-        c.iso,
-        p.source_name;
+        WITH aggregated_data AS (
+            SELECT
+                sn.sensor_nodes_id
+                , c.iso
+                , sn.city
+                , sn.site_name
+                , p.source_name
+                , sn.geom
+                , sr.datetime_first
+                , sr.datetime_last
+                , m.measurand
+                , sr.value_count
+            FROM
+                sensors_rollup sr
+            JOIN
+                sensors s USING (sensors_id)
+            JOIN
+                measurands m ON m.measurands_id = s.measurands_id
+            JOIN
+                sensor_systems ss USING (sensor_systems_id)
+            JOIN
+                sensor_nodes sn USING (sensor_nodes_id)
+            JOIN
+                countries c USING (countries_id)
+            JOIN
+                providers p USING (providers_id)
+        ),
+        counts_per_parameter AS (
+            SELECT
+                sensor_nodes_id
+                , measurand
+                , SUM(value_count) AS param_count
+            FROM
+                aggregated_data
+            GROUP BY
+                sensor_nodes_id,
+                measurand
+            )
+            SELECT
+                sensor_nodes_id AS id
+                , COALESCE(iso, '') AS country
+                , COALESCE(city, '') AS city
+                , ARRAY[COALESCE(city, '')] AS cities
+                , COALESCE(site_name, '') AS location
+                , ARRAY[COALESCE(site_name, '')] AS locations
+                , COALESCE(source_name, '') AS source_name
+                , ARRAY[COALESCE(source_name, '')] AS source_names
+                , 'government' AS "sourceType"
+                , ARRAY['government'] AS "sourceTypes"
+                , json_build_object('latitude', ST_Y(geom), 'longitude', ST_X(geom)) AS coordinates
+                , MIN(datetime_first)::TEXT AS first_updated
+                , MAX(datetime_last)::TEXT AS last_updated
+                , array_agg(DISTINCT measurand) AS parameters
+                , json_agg(json_build_object('parameter', measurand, 'count', param_count)) AS "countsByMeasurement"
+                , SUM(value_count) AS count
+            FROM
+                aggregated_data
+            JOIN
+                counts_per_parameter USING (sensor_nodes_id, measurand)
+            GROUP BY
+                id
+                , iso
+                , city
+                , site_name
+                , source_name
+                , geom
+                LIMIT :limit
+                OFFSET :offset;
 
         """
 
