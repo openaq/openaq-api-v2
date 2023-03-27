@@ -486,25 +486,24 @@ async def locationsv1_get(
     hidejson = "rawData,"
     if locations.dumpRaw:
         hidejson = ""
+
     q = f"""
     	SELECT
         sn.sensor_nodes_id AS id,
         COALESCE(c.iso, '') AS country,
         COALESCE(sn.city, '') AS city,
         ARRAY[COALESCE(sn.city, '')] AS cities,
-        sn.site_name AS location,
+        COALESCE(sn.site_name, '') AS location,
         ARRAY[COALESCE(sn.site_name, '')] AS locations,
         COALESCE(p.source_name, '') AS source_name,
         ARRAY[COALESCE(p.source_name, '')] AS source_names,
         'foo' AS "sourceType",
         ARRAY['baz'] AS "sourceTypes",
-        jsonb_build_array('latitude', ST_Y(sn.geom), 'longitude', ST_X(sn.geom)) AS coordinates,
+        json_build_object('latitude', ST_Y(sn.geom), 'longitude', ST_X(sn.geom)) AS coordinates,
         MIN(sr.datetime_first)::TEXT AS first_updated,
         MAX(sr.datetime_last)::TEXT AS last_updated,
         ARRAY['pm25'] AS parameters,
-        jsonb_build_array(
-        jsonb_build_object('parameter', 'pm25', 'count', 88807),
-        jsonb_build_object('parameter', 'o3', 'count', 31120)) AS countsByMeasurement,
+        jsonb_build_array(json_build_object('parameter', 'pm25', 'count', 4578)) AS "countsByMeasurement",    
         42 AS count
         FROM
         sensors_rollup sr
