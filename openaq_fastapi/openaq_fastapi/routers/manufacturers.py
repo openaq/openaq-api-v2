@@ -12,11 +12,13 @@ router = APIRouter()
 
 
 @router.get(
-    "/v2/manufacturers", 
-    response_model=ManufacturersResponse, 
+    "/v2/manufacturers",
+    include_in_schema=False,
+    response_model=ManufacturersResponse,
     summary="Get manufacturers",
     description="Provides a list of sensor manufacturers",
-    tags=["v2"])
+    tags=["v2"],
+)
 async def mfr_get(db: DB = Depends()):
 
     q = """
@@ -33,11 +35,13 @@ async def mfr_get(db: DB = Depends()):
 
 
 @router.get(
-    "/v2/models", 
+    "/v2/models",
+    include_in_schema=False,
     response_model=ModelsResponse,
-    summary="Get models", 
+    summary="Get models",
     description="Provides a list of sensor models",
-    tags=["v2"])
+    tags=["v2"],
+)
 async def model_get(db: DB = Depends()):
 
     q = """

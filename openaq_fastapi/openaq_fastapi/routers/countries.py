@@ -4,11 +4,9 @@ from fastapi import APIRouter, Depends, Query
 from enum import Enum
 from ..db import DB
 from ..models.queries import APIBase, Country
-from openaq_fastapi.models.responses import (
-    CountriesResponse,
-    converter
-)
+from openaq_fastapi.models.responses import CountriesResponse, converter
 import jq
+
 logger = logging.getLogger("countries")
 
 router = APIRouter()
@@ -26,12 +24,12 @@ class Countries(Country, APIBase):
     order_by: CountriesOrder = Query(
         "country",
         description="Order by a field e.g. ?order_by=country",
-        example="country"
+        example="country",
     )
     limit: int = Query(
         200,
         description="Limit the number of results returned. e.g. limit=200 will return up to 200 results",
-        example="200"
+        example="200",
     )
 
     def where(self):
@@ -47,6 +45,7 @@ class Countries(Country, APIBase):
 
 @router.get(
     "/v1/countries/{country_id}",
+    include_in_schema=False,
     response_model=CountriesResponse,
     summary="Get country by ID",
     description="Provides a single country by country ID",
@@ -54,6 +53,7 @@ class Countries(Country, APIBase):
 )
 @router.get(
     "/v2/countries/{country_id}",
+    include_in_schema=False,
     response_model=CountriesResponse,
     summary="Get country by ID",
     description="Provides a single country by country ID",
@@ -61,10 +61,11 @@ class Countries(Country, APIBase):
 )
 @router.get(
     "/v2/countries",
+    include_in_schema=False,
     response_model=CountriesResponse,
     summary="Get countries",
     description="Providecs a list of countries",
-    tags=["v2"]
+    tags=["v2"],
 )
 async def countries_get(
     db: DB = Depends(),
@@ -103,12 +104,15 @@ async def countries_get(
 
     return output
 
+
 @router.get(
     "/v1/countries",
+    include_in_schema=False,
     response_model=CountriesResponse,
     summary="Get countries",
     description="Providecs a list of countries",
-    tags=["v1"])
+    tags=["v1"],
+)
 async def countries_getv1(
     db: DB = Depends(),
     countries: Countries = Depends(Countries.depends()),
@@ -119,7 +123,6 @@ async def countries_getv1(
 
     if len(res) == 0:
         return data
-
 
     v1_jq = jq.compile(
         """

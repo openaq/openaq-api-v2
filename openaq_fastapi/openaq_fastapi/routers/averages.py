@@ -68,10 +68,12 @@ class AveragesQueries(
 
 @router.get(
     "/v2/averages",
+    include_in_schema=False,
     response_model=AveragesResponse,
     summary="Get averaged values",
     description="",
-    tags=["v2"])
+    tags=["v2"],
+)
 async def averages_v3_get(
     db: DB = Depends(),
     av: AveragesQueries = Depends(AveragesQueries.depends()),

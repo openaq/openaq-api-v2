@@ -12,9 +12,7 @@ from ..models.queries import (
     SourceName,
 )
 
-from ..models.responses import (
-    SourcesResponse, SourcesResponseV1
-)
+from ..models.responses import SourcesResponse, SourcesResponseV1
 
 logger = logging.getLogger("sources")
 
@@ -31,7 +29,7 @@ class Sources(SourceName, APIBase):
     order_by: SourcesOrder = Query(
         "sourceName",
         description="Field by which to order the results e.g. ?order_by=sourceName or ?order_by=firstUpdated",
-        example="sourceName"
+        example="sourceName",
     )
 
     def where(self):
@@ -52,10 +50,11 @@ class Sources(SourceName, APIBase):
 
 @router.get(
     "/v2/sources",
+    include_in_schema=False,
     response_model=SourcesResponse,
     summary="Sources",
     description="Provides a list of sources",
-    tags=["v2"]
+    tags=["v2"],
 )
 async def sources_get(
     db: DB = Depends(),
@@ -123,10 +122,11 @@ class SourcesV1(APIBase):
 
 @router.get(
     "/v1/sources",
+    include_in_schema=False,
     response_model=SourcesResponseV1,
     summary="Sources",
     description="Provides a list of sources",
-    tags=["v1"]
+    tags=["v1"],
 )
 async def sources_v1_get(
     db: DB = Depends(),
@@ -160,14 +160,15 @@ async def sources_v1_get(
 
 @router.get(
     "/v2/sources/readme/{slug}",
+    include_in_schema=False,
     summary="Source Readme",
     description="Provides a readme for a given source by the source slug",
     response_class=HTMLResponse,
-    tags=["v2"]
+    tags=["v2"],
 )
 async def readme_get(
     db: DB = Depends(),
-    slug: str = Path(..., example='london_mobile'),
+    slug: str = Path(..., example="london_mobile"),
 ):
     q = """
         SELECT readme FROM sources WHERE slug=:slug
@@ -175,9 +176,7 @@ async def readme_get(
 
     readme = await db.fetchval(q, {"slug": slug})
     if readme is None:
-        raise HTTPException(
-            status_code=404, detail=f"No readme found for {slug}."
-        )
+        raise HTTPException(status_code=404, detail=f"No readme found for {slug}.")
 
     readme = str.replace(readme, "\\", "")
 
