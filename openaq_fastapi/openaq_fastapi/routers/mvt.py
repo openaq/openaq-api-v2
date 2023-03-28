@@ -130,10 +130,6 @@ async def get_tile(
     db: DB = Depends(),
     t: MobileTile = Depends(MobileTile.depends()),
 ):
-    print(t.paramcols())
-    print(t.where())
-    print(t.paramgroup())
-
     query = f"""
         WITH
         tile AS (

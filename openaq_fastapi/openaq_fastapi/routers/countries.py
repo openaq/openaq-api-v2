@@ -1,11 +1,15 @@
 import logging
-
+from typing import Union, List
 from fastapi import APIRouter, Depends, Query
 from enum import Enum
 from ..db import DB
 from ..models.queries import APIBase, Country
-from openaq_fastapi.models.responses import CountriesResponse, converter
-import jq
+
+from openaq_fastapi.models.responses import (
+    CountriesResponse,
+    CountriesResponseV1,
+)
+
 
 logger = logging.getLogger("countries")
 
@@ -13,23 +17,33 @@ router = APIRouter()
 
 
 class CountriesOrder(str, Enum):
-    country = "country"
+    code = "code"
+    name = "name"
+    locations = "locations"
     firstUpdated = "firstUpdated"
     lastUpdated = "lastUpdated"
-    locations = "locations"
+    parameters = "parameters"
     count = "count"
+    cities = "cities"
+    sources = "sources"
 
 
-class Countries(Country, APIBase):
-    order_by: CountriesOrder = Query(
-        "country",
-        description="Order by a field e.g. ?order_by=country",
-        example="country",
+class CountriesOrderV1(str, Enum):
+    code = "code"
+    count = "count"
+    locations = "locations"
+    cities = "cities"
+    name = "name"
+
+
+class CountriesV1(APIBase):
+    order_by: CountriesOrderV1 = Query(
+        "code", description="Order by a field e.g. ?order_by=code", example="code"
     )
     limit: int = Query(
-        200,
-        description="Limit the number of results returned. e.g. limit=200 will return up to 200 results",
-        example="200",
+        100,
+        description="Limit the number of results returned. e.g. limit=100 will return up to 100 results",
+        example="100",
     )
 
     def where(self):
@@ -37,7 +51,37 @@ class Countries(Country, APIBase):
         for f, v in self:
             if v is not None:
                 if f == "country":
-                    wheres.append(" code = ANY(:country) ")
+                    wheres.append(
+                        """
+                        c.iso = ANY(:country)
+                        """
+                    )
+        if len(wheres) > 0:
+            return (" AND ").join(wheres)
+        return " TRUE "
+
+
+class Countries(Country, APIBase):
+    order_by: CountriesOrder = Query(
+        "name", description="Order by a field e.g. ?order_by=name", example="name"
+    )
+    limit: int = Query(
+        100,
+        description="Limit the number of results returned. e.g. limit=100 will return up to 100 results",
+        example="100",
+
+    )
+
+    def where(self):
+        wheres = []
+        for f, v in self:
+            if v is not None:
+                if f == "country":
+                    wheres.append(
+                        """
+                        c.iso = ANY(:country)
+                        """
+                    )
         if len(wheres) > 0:
             return (" AND ").join(wheres)
         return " TRUE "
@@ -64,7 +108,7 @@ class Countries(Country, APIBase):
     include_in_schema=False,
     response_model=CountriesResponse,
     summary="Get countries",
-    description="Providecs a list of countries",
+    description="Provides a list of countries",
     tags=["v2"],
 )
 async def countries_get(
@@ -74,33 +118,57 @@ async def countries_get(
     order_by = countries.order_by
     if countries.order_by == "lastUpdated":
         order_by = "8"
+    elif countries.order_by == "code":
+        order_by = "code"
     elif countries.order_by == "firstUpdated":
         order_by = "7"
     elif countries.order_by == "country":
-        order_by = "code"
+        order_by = "country"
     elif countries.order_by == "count":
         order_by = "count"
     elif countries.order_by == "locations":
         order_by = "locations"
+    elif countries.order_by == "name":
+        order_by = "name"
 
     q = f"""
-    WITH t AS (
-    SELECT
-    count(*) over () as countriescount,
-        *
-    FROM country_stats
-    WHERE
-    {countries.where()}
-    AND code is not null
-    ORDER BY {order_by} {countries.sort}
-    OFFSET :offset
-    LIMIT :limit
-    )
-    SELECT countriescount as count, to_jsonb(t)-'{{countriescount}}'::text[] as json FROM t
+        SELECT 	
+        c.iso AS code
+        , c.name
+        , COUNT(DISTINCT sn.sensor_nodes_id) AS locations
+        , MIN(sr.datetime_first)::TEXT AS first_updated
+        , MAX(sr.datetime_last)::TEXT AS last_updated
+        , array_agg(DISTINCT m.measurand) AS parameters
+        , SUM(sr.value_count) AS "count"
+        , count (DISTINCT sn.city) AS cities
+        , count (DISTINCT p.source_name) AS sources
+        
 
-    """
+        FROM 
+            sensors_rollup sr
+        JOIN 
+            sensors s USING (sensors_id)
+        JOIN
+            sensor_systems ss USING (sensor_systems_id)
+        JOIN
+            sensor_nodes sn USING (sensor_nodes_id)
+        JOIN 
+            countries c USING (countries_id)
+        JOIN
+            measurands m USING (measurands_id)
+        JOIN 
+            providers p USING (providers_id)
+        WHERE
+        {countries.where()} 
+        AND c.iso IS NOT NULL
+        GROUP BY code, c.name
+        ORDER BY {order_by} {countries.sort}
+        OFFSET :offset
+        LIMIT :limit
+        """
+
     params = countries.params()
-    output = await db.fetchOpenAQResult(q, params)
+    output = await db.fetchPage(q, params)
 
     return output
 
@@ -111,31 +179,54 @@ async def countries_get(
     response_model=CountriesResponse,
     summary="Get countries",
     description="Providecs a list of countries",
+
     tags=["v1"],
 )
 async def countries_getv1(
     db: DB = Depends(),
-    countries: Countries = Depends(Countries.depends()),
+    countries: Countries = Depends(CountriesV1.depends()),
 ):
-    data = await countries_get(db, countries)
-    meta = data.meta
-    res = data.results
 
-    if len(res) == 0:
-        return data
+    order_by = countries.order_by
+    if countries.order_by == "code":
+        order_by = "code"
+    elif countries.order_by == "count":
+        order_by = "count"
+    elif countries.order_by == "cities":
+        order_by = "cities"
+    elif countries.order_by == "locations":
+        order_by = "locations"
+    elif countries.order_by == "name":
+        order_by = "name"
 
-    v1_jq = jq.compile(
+    q = f"""
+        SELECT 
+	    c.iso AS code
+        , c.name
+        , count (DISTINCT sn.city) AS cities
+        , SUM(sr.value_count) AS "count"
+        , COUNT(DISTINCT sn.sensor_nodes_id) AS locations
+       
+        FROM 
+            sensors_rollup sr
+        JOIN 
+            sensors s USING (sensors_id)
+        JOIN
+            sensor_systems ss USING (sensor_systems_id)
+        JOIN
+            sensor_nodes sn USING (sensor_nodes_id)
+        JOIN 
+            countries c USING (countries_id)
+        WHERE
+        {countries.where()}
+        AND
+        c.iso IS NOT NULL
+        GROUP BY code, c.name
+        ORDER BY {order_by} {countries.sort}
+        OFFSET :offset
+        LIMIT :limit
         """
-        .[] | . as $m |
-            {
-                code: .code,
-                count: .count,
-                locations: .locations,
-                cities: .cities,
-                name:.name
-            }
+    params = countries.params()
+    output = await db.fetchPage(q, params)
 
-        """
-    )
-
-    return converter(meta, res, v1_jq)
+    return output

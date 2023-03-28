@@ -275,7 +275,7 @@ class QueryBaseModel(BaseModel):
 # see the db.py method
 class Paging(BaseModel):
     limit: int = Query(
-        1,
+        100,
         gt=0,
         le=1000,
         description="""Change the number of results returned.
