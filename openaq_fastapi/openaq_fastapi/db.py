@@ -1,6 +1,9 @@
 import logging
-import time
 import os
+import time
+from asyncio.exceptions import TimeoutError
+from datetime import datetime
+from typing import Dict
 
 import asyncpg
 import orjson
@@ -8,10 +11,10 @@ from aiocache import SimpleMemoryCache, cached
 from aiocache.plugins import HitMissRatioPlugin, TimingPlugin
 from buildpg import render
 from fastapi import HTTPException, Request
-from asyncio.exceptions import TimeoutError
 
 from openaq_fastapi.settings import settings
 
+from .models.auth import User
 from .models.responses import Meta, OpenAQResult
 
 logger = logging.getLogger("db")
@@ -55,7 +58,7 @@ async def db_pool(pool):
 
     logger.debug(f"Checking for existing pool: {pool}")
     if pool is None:
-        logger.debug('Creating a new pool')
+        logger.debug("Creating a new pool")
         pool = await asyncpg.create_pool(
             settings.DATABASE_READ_URL,
             command_timeout=14,
@@ -81,6 +84,16 @@ class DB:
             getattr(self.request.app.state, "pool", None)
         )
         return self.request.app.state.pool
+
+    async def execute(self, query: str, kwargs: Dict):
+        pool = await self.pool()
+        async with pool.acquire() as con:
+            async with con.transaction():
+                rquery, args = render(query, **kwargs)
+                try:
+                    await con.execute(rquery, *args)
+                except Exception as e:
+                    logger.error(e)
 
     @cached(settings.API_CACHE_TIMEOUT, **cache_config)
     async def fetch(self, query, kwargs):
@@ -115,6 +128,16 @@ class DB:
         )
         return r
 
+    async def fetch_cursor(self, cursor, query, kwargs):
+        if cursor == None:
+            return self.fetch(query, kwargs)
+        else:
+            cursor.execute(
+                query,
+                **kwargs,
+            )
+            return cursor.fetchall()
+
     async def fetchrow(self, query, kwargs):
         r = await self.fetch(query, kwargs)
         if len(r) > 0:
@@ -143,6 +166,26 @@ class DB:
 
         output = OpenAQResult(meta=Meta.parse_obj(kwargs), results=data)
         return output
+
+    async def create_user(self, user: User) -> str:
+        """
+        calls the create_user plpgsql function to create a new user and entity records
+        """
+        query = """
+        SELECT * FROM create_user(:full_name, :email_address, :password_hash, :ip_address, :entity_type)
+        """
+        verification_token = await self.fetch(query, user.dict())
+        return verification_token[0][0]
+
+    async def get_user_token(self, users_id: int) -> str:
+        """
+        calls the get_user_token plpgsql function to vefiry user email and generate API token
+        """
+        query = """
+        SELECT * FROM get_user_token(:users_id)
+        """
+        api_token = await self.fetch(query, users_id)
+        return api_token[0][0]
 
     async def fetchOpenAQResult(self, query, kwargs):
         rows = await self.fetch(query, kwargs)

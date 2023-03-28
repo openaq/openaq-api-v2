@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     DATABASE_WRITE_URL: Union[str, None]
     API_CACHE_TIMEOUT: int = 900
     USE_SHARED_POOL: bool = False
-    LOG_LEVEL: str = 'INFO'
+    LOG_LEVEL: str = "INFO"
     LOG_BUCKET: str = None
     DOMAIN_NAME: str = None
 
@@ -28,18 +28,28 @@ class Settings(BaseSettings):
     RATE_AMOUNT_KEY: Union[int, None] = None
     RATE_TIME: Union[int, None] = None
 
-    @validator('DATABASE_READ_URL', allow_reuse=True)
-    def get_read_url(cls, v, values):
-        return v or f"postgresql://{values['DATABASE_READ_USER']}:{values['DATABASE_READ_PASSWORD']}@{values['DATABASE_HOST']}:{values['DATABASE_PORT']}/{values['DATABASE_DB']}"
+    API_KEY: bool = False
+    SECRET_KEY: str
+    EMAIL_SENDER: str
 
-    @validator('DATABASE_WRITE_URL', allow_reuse=True)
+    @validator("DATABASE_READ_URL", allow_reuse=True)
+    def get_read_url(cls, v, values):
+        return (
+            v
+            or f"postgresql://{values['DATABASE_READ_USER']}:{values['DATABASE_READ_PASSWORD']}@{values['DATABASE_HOST']}:{values['DATABASE_PORT']}/{values['DATABASE_DB']}"
+        )
+
+    @validator("DATABASE_WRITE_URL", allow_reuse=True)
     def get_write_url(cls, v, values):
-        return v or f"postgresql://{values['DATABASE_WRITE_USER']}:{values['DATABASE_WRITE_PASSWORD']}@{values['DATABASE_HOST']}:{values['DATABASE_PORT']}/{values['DATABASE_DB']}"
+        return (
+            v
+            or f"postgresql://{values['DATABASE_WRITE_USER']}:{values['DATABASE_WRITE_PASSWORD']}@{values['DATABASE_HOST']}:{values['DATABASE_PORT']}/{values['DATABASE_DB']}"
+        )
 
     class Config:
         parent = Path(__file__).resolve().parent.parent.parent
-        if 'DOTENV' in environ:
-            env_file = Path.joinpath(parent, environ['DOTENV'])
+        if "DOTENV" in environ:
+            env_file = Path.joinpath(parent, environ["DOTENV"])
         else:
             env_file = Path.joinpath(parent, ".env")
 

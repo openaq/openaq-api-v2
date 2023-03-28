@@ -3,7 +3,7 @@ import logging
 import traceback
 from pathlib import Path
 import time
-from typing import Any, List
+from typing import Any, List, Union
 
 import orjson
 from fastapi import FastAPI, Request
@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from mangum import Mangum
 from pydantic import BaseModel, ValidationError, validator
+from redis.asyncio.cluster import RedisCluster
 from starlette.responses import JSONResponse, RedirectResponse
 
 from openaq_fastapi.db import db_pool
@@ -26,7 +27,7 @@ from openaq_fastapi.models.logging import (
 
 from openaq_fastapi.middleware import (
     CacheControlMiddleware,
-    StripParametersMiddleware,
+    # StripParametersMiddleware,
     TotalTimeMiddleware,
     RateLimiterMiddleWare,
     LoggingMiddleware,
@@ -42,6 +43,7 @@ from openaq_fastapi.routers.parameters import router as parameters_router
 from openaq_fastapi.routers.projects import router as projects_router
 from openaq_fastapi.routers.sources import router as sources_router
 from openaq_fastapi.routers.summary import router as summary_router
+from openaq_fastapi.routers.auth import router as auth_router
 
 # V3 routers
 from openaq_fastapi.v3.routers import (
@@ -102,23 +104,73 @@ app = FastAPI(
     docs_url="/docs",
 )
 
-redis_client = None  # initialize for generalize_schema.py
 
-if settings.RATE_LIMITING:
-    logger.debug("Connecting to redis")
-    import redis
+def redis_connect() -> Union[RedisCluster, None]:
+    if settings.RATE_LIMITING:
+        try:
+            cluster = RedisCluster(
+                host=settings.REDIS_HOST,
+                port=settings.REDIS_PORT,
+                decode_responses=True,
+                socket_timeout=5,
+            )
+            return cluster
+        except Exception as e:
+            logging.error(
+                InfrastructureErrorLog(detail=f"failed to connect to redis: {e}")
+            )
 
-    try:
-        redis_client = redis.RedisCluster(
-            host=settings.REDIS_HOST,
-            port=settings.REDIS_PORT,
-            decode_responses=True,
-            skip_full_coverage_check=True,
-            socket_timeout=5,
-        )
-    except Exception as e:
-        logging.error(InfrastructureErrorLog(detail=f"failed to connect to redis: {e}"))
-    logger.debug("Redis connected")
+
+redis_client = None
+
+
+def add_rate_limiter(redis_client: Union[RedisCluster, None]):
+    if settings.RATE_LIMITING == True:
+        if redis_client:
+            app.add_middleware(
+                RateLimiterMiddleWare,
+                rate_amount=settings.RATE_AMOUNT,
+                rate_amount_key=settings.RATE_AMOUNT_KEY,
+                rate_time=datetime.timedelta(minutes=settings.RATE_TIME),
+            )
+        else:
+            logger.warning(
+                WarnLog(
+                    detail="valid redis client not provided but RATE_LIMITING set to TRUE"
+                )
+            )
+
+
+@app.on_event("startup")
+async def startup_event():
+    """
+    Application startup:
+    register the database
+    """
+    if not hasattr(app.state, "pool"):
+        logger.info("initializing connection pool")
+        app.state.pool = await db_pool(None)
+        logger.info("Connection pool established")
+    if not hasattr(app.state, "redis_client"):
+        logger.debug("Connecting to redis")
+        redis_client = await redis_connect()
+        logger.debug("Redis connected")
+        add_rate_limiter(redis_client)
+        app.state.redis_client = redis_client
+    if hasattr(app.state, "counter"):
+        app.state.counter += 1
+    else:
+        app.state.counter = 0
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Application shutdown: de-register the database connection."""
+    if hasattr(app.state, "pool") and not settings.USE_SHARED_POOL:
+        logger.info("Closing connection")
+        await app.state.pool.close()
+        delattr(app.state, "pool")
+        logger.info("Connection closed")
 
 
 app.add_middleware(
@@ -128,26 +180,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(StripParametersMiddleware)
+# app.add_middleware(StripParametersMiddleware)
 app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
 app.add_middleware(TotalTimeMiddleware)
 app.add_middleware(LoggingMiddleware)
-
-if settings.RATE_LIMITING is True:
-    if redis_client:
-        app.add_middleware(
-            RateLimiterMiddleWare,
-            redis_client=redis_client,
-            rate_amount=settings.RATE_AMOUNT,
-            rate_amount_key=settings.RATE_AMOUNT_KEY,
-            rate_time=datetime.timedelta(minutes=settings.RATE_TIME),
-        )
-    else:
-        logger.warning(
-            WarnLog(
-                detail="valid redis client not provided but RATE_LIMITING set to TRUE"
-            )
-        )
 
 
 class OpenAQValidationResponseDetail(BaseModel):
@@ -176,33 +212,6 @@ async def openaq_exception_handler(request: Request, exc: ValidationError):
     logger.debug(traceback.format_exc())
     logger.error(ModelValidationError(request=request, detail=exc.json()).json())
     return ORJSONResponse(status_code=500, content={"message": "internal server error"})
-
-
-@app.on_event("startup")
-async def startup_event():
-    """
-    Application startup:
-    register the database
-    """
-    if not hasattr(app.state, "pool"):
-        logger.info("initializing connection pool")
-        app.state.pool = await db_pool(None)
-        logger.info("Connection pool established")
-
-    if hasattr(app.state, "counter"):
-        app.state.counter += 1
-    else:
-        app.state.counter = 0
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Application shutdown: de-register the database connection."""
-    if hasattr(app.state, "pool") and not settings.USE_SHARED_POOL:
-        logger.info("Closing connection")
-        await app.state.pool.close()
-        delattr(app.state, "pool")
-        logger.info("Connection closed")
 
 
 @app.get("/ping", include_in_schema=False)
@@ -241,6 +250,7 @@ app.include_router(parameters_router)
 app.include_router(projects_router)
 app.include_router(sources_router)
 app.include_router(summary_router)
+app.include_router(auth_router)
 
 
 static_dir = Path.joinpath(Path(__file__).resolve().parent, "static")

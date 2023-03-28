@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenAQ API Registration</title>
+    <style>
+        .main {
+            background-color: white;
+            display:flex;
+            min-height: 100vh;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .content {
+            width: 800px;
+        }
+    </style>
+</head>
+<body>
+    <header></header>
+    <main class="main">
+        <div class="content">
+            <form method="post">
+                <input type="radio" id="individual-radio" name="entity-type" value="Person">
+                <label for="individual-radio">Individual</label>
+                <input type="radio" id="organization-radio" name="entity-type" value="Organization">
+                <label for="organization-radio">Organization</label>
+                <label for="name-input">Full name</label>
+                <input type="text" id="name-input">
+                <label for="email-input">Email</label>
+                <input type="email" name="email-input" id="email-input">
+                <label for="password-input">Password</label>
+                <input type="password" name="password" id="password-input">
+                <label for="password-confirm-input">Confirm Password</label>
+                <input type="password" name="password-confirm" id="password-confirm-input">
+            </form>
+        </div>
+    </main>
+</body>
+</html>

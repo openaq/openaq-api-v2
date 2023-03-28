@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <title>OpenAQ Request Email Validation</title>
+</head>
+<body>
+    <header class="header">
+        <div class="header-contents">
+            <a href="/" class="header-logo" aria-label="openaq logo">
+                <img src="../logo.svg" alt="openaq logo">
+            </a>
+        </div>
+    </header>
+    <main class="main">
+        <div class="content">
+            <div class="form-header">
+                <h1 class="type-display-1 gradient-title">Request new email validation</h1>
+            </div>
+            <form method="post" class="request-validation-form">
+                <div class="form-element">
+                    <label for="email-input" class="type-subtitle-3 text-sky-120">Email</label>
+                    <input type="email" name="email-input" id="email-input" class="text-input js-email-input"  placeholder=" " autocomplete="on" required>
+                    </div>                    
+                <div class="form-submit">
+                    <button class="btn btn-primary submit-btn js-submit-btn">Submit</button>
+                </div>
+            </form>
+        </div>
+    </main>
+    <script type="module" src="index.js"></script>
+</body>
+</html>
