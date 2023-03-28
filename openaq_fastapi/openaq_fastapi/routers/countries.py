@@ -4,10 +4,12 @@ from fastapi import APIRouter, Depends, Query
 from enum import Enum
 from ..db import DB
 from ..models.queries import APIBase, Country
+
 from openaq_fastapi.models.responses import (
     CountriesResponse,
     CountriesResponseV1,
 )
+
 
 logger = logging.getLogger("countries")
 
@@ -67,6 +69,7 @@ class Countries(Country, APIBase):
         100,
         description="Limit the number of results returned. e.g. limit=100 will return up to 100 results",
         example="100",
+
     )
 
     def where(self):
@@ -86,6 +89,7 @@ class Countries(Country, APIBase):
 
 @router.get(
     "/v1/countries/{country_id}",
+    include_in_schema=False,
     response_model=CountriesResponse,
     summary="Get country by ID",
     description="Provides a single country by country ID",
@@ -93,6 +97,7 @@ class Countries(Country, APIBase):
 )
 @router.get(
     "/v2/countries/{country_id}",
+    include_in_schema=False,
     response_model=CountriesResponse,
     summary="Get country by ID",
     description="Provides a single country by country ID",
@@ -100,6 +105,7 @@ class Countries(Country, APIBase):
 )
 @router.get(
     "/v2/countries",
+    include_in_schema=False,
     response_model=CountriesResponse,
     summary="Get countries",
     description="Provides a list of countries",
@@ -169,15 +175,18 @@ async def countries_get(
 
 @router.get(
     "/v1/countries",
-    response_model=CountriesResponseV1,
+    include_in_schema=False,
+    response_model=CountriesResponse,
     summary="Get countries",
-    description="Provides a list of countries",
+    description="Providecs a list of countries",
+
     tags=["v1"],
 )
 async def countries_getv1(
     db: DB = Depends(),
     countries: Countries = Depends(CountriesV1.depends()),
 ):
+
     order_by = countries.order_by
     if countries.order_by == "code":
         order_by = "code"

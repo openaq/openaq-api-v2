@@ -19,11 +19,13 @@ class CitiesOrder(str, Enum):
     firstUpdated = "firstUpdated"
     lastUpdated = "lastUpdated"
 
+
 class CitiesOrderV1(str, Enum):
     city = "city"
     country = "country"
     location = "locations"
     count = "count"
+
 
 class CitiesV1(APIBase):
     order_by: CitiesOrderV1 = Query(
@@ -50,6 +52,7 @@ class CitiesV1(APIBase):
                         """
                     )
         return " TRUE "
+
 
 class Cities(City, Country, APIBase):
     order_by: CitiesOrder = Query(
@@ -80,6 +83,7 @@ class Cities(City, Country, APIBase):
 
 @router.get(
     "/v2/cities",
+    include_in_schema=False,
     response_model=CitiesResponse,
     summary="Get cities",
     description="Provides a list of cities supported by the platform",
@@ -138,6 +142,7 @@ async def cities_get(db: DB = Depends(), cities: Cities = Depends(Cities.depends
 
 @router.get(
     "/v1/cities",
+    include_in_schema=False,
     response_model=CitiesResponseV1,
     tags=["v1"],
     summary="Get cities",
