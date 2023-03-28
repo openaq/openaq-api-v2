@@ -483,9 +483,6 @@ async def locationsv1_get(
     locations: Locations = Depends(Locations.depends()),
 ):
     qparams = locations.params()
-    hidejson = "rawData,"
-    if locations.dumpRaw:
-        hidejson = ""
 
     q = f"""
         WITH aggregated_data AS (
@@ -553,9 +550,7 @@ async def locationsv1_get(
                 , city
                 , site_name
                 , source_name
-                , geom
-                LIMIT :limit
-                OFFSET :offset;
+                , geom;
 
         """
 
