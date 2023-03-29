@@ -215,6 +215,7 @@ class MeasurementsV2Response(OpenAQResult):
 
 @router.get(
     "/locations/{locations_id}/measurementsv2",
+    include_in_schema=False,
     response_model=MeasurementsV2Response,
     summary="Get measurements by location",
     description="Provides a list of measurements by location ID",
