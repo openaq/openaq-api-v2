@@ -29,7 +29,6 @@ class TileProvidersQuery(QueryBaseModel):
 
     def where(self) -> Union[str, None]:
         if self.has("providers_id"):
-            print(self.providers_id)
             return "providers_id = ANY (:providers_id)"
 
 
@@ -115,9 +114,9 @@ class MobileTile(TileBase):
 
 @router.get(
     "/locations/tiles/{z}/{x}/{y}.pbf",
+    include_in_schema=False,
     responses={200: {"content": {"application/x-protobuf": {}}}},
     response_class=Response,
-    include_in_schema=True,
 )
 async def get_tile(
     db: DB = Depends(),
@@ -132,9 +131,9 @@ async def get_tile(
 
 @router.get(
     "/thresholds/tiles/{z}/{x}/{y}.pbf",
+    include_in_schema=False,
     responses={200: {"content": {"application/x-protobuf": {}}}},
     response_class=Response,
-    include_in_schema=True,
 )
 async def get_threshold_tile(
     db: DB = Depends(),

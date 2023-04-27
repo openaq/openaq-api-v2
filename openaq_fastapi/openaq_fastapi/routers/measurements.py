@@ -29,12 +29,12 @@ import io
 
 from openaq_fastapi.models.responses import OpenAQResult, converter
 
-logger = logging.getLogger('measurements')
+logger = logging.getLogger("measurements")
 
 router = APIRouter()
 
 
-def meas_csv(rows,includefields):
+def meas_csv(rows, includefields):
     output = io.StringIO()
     writer = csv.writer(output)
     header = [
@@ -50,7 +50,7 @@ def meas_csv(rows,includefields):
         "latitude",
         "longitude",
     ]
-    #include_fields in csv header
+    # include_fields in csv header
     if includefields is not None:
         include_fields = includefields.split(",")
         available_fields = ["sourceName", "attribution", "averagingPeriod"]
@@ -73,7 +73,7 @@ def meas_csv(rows,includefields):
                 r["coordinates"]["latitude"],
                 r["coordinates"]["longitude"],
             ]
-            #include_fields in csv data
+            # include_fields in csv data
             if includefields is not None:
                 include_fields = includefields.split(",")
                 available_fields = ["sourceName", "attribution", "averagingPeriod"]
@@ -100,44 +100,33 @@ class Measurements(
     order_by: MeasOrder = Query("datetime")
     sort: Sort = Query("desc")
     isMobile: Union[bool, None] = Query(
-        None,
-        description="Location is mobile e.g. ?isMobile=true",
-        example="true"
+        None, description="Location is mobile e.g. ?isMobile=true", example="true"
     )
-    isAnalysis: Union[bool, None] =  Query(
+    isAnalysis: Union[bool, None] = Query(
         None,
         description="Data is the product of a previous analysis/aggregation and not raw measurements e.g. ?isAnalysis=false",
-        example="true"
+        example="true",
     )
     project: Union[int, None] = Query(None)
     entity: Union[EntityTypes, None] = Query(None)
-    sensorType: Union[SensorTypes, None] =  Query(
+    sensorType: Union[SensorTypes, None] = Query(
         None,
         description="Filter by sensor type (i,e. reference grade, low-cost sensor) e.g. ?sensorType=reference%20grade",
-        example="reference%20grade"
+        example="reference%20grade",
     )
-    value_from: Union[float, None] =  Query(
-        None,
-        description="",
-        example=""
-    )
-    value_to: Union[float, None] =  Query(
-        None,
-        description="",
-        example=""
-    )
-    include_fields: Union[str, None] =  Query(
+    value_from: Union[float, None] = Query(None, description="", example="")
+    value_to: Union[float, None] = Query(None, description="", example="")
+    include_fields: Union[str, None] = Query(
         None,
         description="Additional fields to include in response e.g. ?include_fields=sourceName",
-        example="sourceName"
+        example="sourceName",
     )
 
     def where(self):
         wheres = []
         if self.lon and self.lat:
             wheres.append(
-                " st_dwithin(st_makepoint(:lon, :lat)::geography,"
-                " b.geog, :radius) "
+                " st_dwithin(st_makepoint(:lon, :lat)::geography," " b.geog, :radius) "
             )
         for f, v in self:
             if v is not None:
@@ -180,10 +169,11 @@ class Measurements(
 
 @router.get(
     "/v2/measurements",
+    include_in_schema=False,
     summary="Get measurements",
     description="",
     response_model=MeasurementsResponse,
-    tags=["v2"]
+    tags=["v2"],
 )
 async def measurements_get(
     db: DB = Depends(),
@@ -288,9 +278,7 @@ async def measurements_get(
     if date_to is None:
         date_to = range_end
     else:
-        date_to = min(
-            date_to, range_end, datetime.utcnow().replace(tzinfo=UTC)
-        )
+        date_to = min(date_to, range_end, datetime.utcnow().replace(tzinfo=UTC))
 
     dq = float((date_to - date_from).total_seconds())  # duration of query
     dd = float((range_end - range_start).total_seconds())  # duration of data
@@ -340,9 +328,7 @@ async def measurements_get(
     if includes is not None:
         include_fields = includes.split(",")
         available_fields = ["sourceName", "attribution", "averagingPeriod"]
-        include_fields = [
-            f',"{f}"' for f in include_fields if f in available_fields
-        ]
+        include_fields = [f',"{f}"' for f in include_fields if f in available_fields]
         fields = "".join(include_fields)
     else:
         fields = ""
@@ -464,11 +450,9 @@ async def measurements_get(
 
     if format == "csv":
         return Response(
-            content=meas_csv(results,includes),
+            content=meas_csv(results, includes),
             media_type="text/csv",
-            headers={
-                "Content-Disposition": "attachment;filename=measurements.csv"
-            },
+            headers={"Content-Disposition": "attachment;filename=measurements.csv"},
         )
 
     output = OpenAQResult(meta=meta, results=results)
@@ -480,9 +464,10 @@ async def measurements_get(
 
 @router.get(
     "/v1/measurements",
+    include_in_schema=False,
     summary="Get a list of measurements",
     response_model=MeasurementsResponseV1,
-    tags=["v1"]
+    tags=["v1"],
 )
 async def measurements_get_v1(
     db: DB = Depends(),
@@ -497,11 +482,9 @@ async def measurements_get_v1(
 
     if format == "csv":
         return Response(
-            content=meas_csv(res,includes),
+            content=meas_csv(res, includes),
             media_type="text/csv",
-            headers={
-                "Content-Disposition": "attachment;filename=measurements.csv"
-            },
+            headers={"Content-Disposition": "attachment;filename=measurements.csv"},
         )
 
     if len(res) == 0:

@@ -6,7 +6,13 @@ from fastapi import APIRouter, Depends, Query
 from pydantic.typing import Union
 from enum import Enum
 
-from ..models.responses import LatestResponse, LatestResponseV1, LocationsResponse, LocationsResponseV1, converter
+from ..models.responses import (
+    LatestResponse,
+    LatestResponseV1,
+    LocationsResponse,
+    LocationsResponseV1,
+    converter,
+)
 from ..db import DB
 from ..models.queries import (
     APIBase,
@@ -44,14 +50,10 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
         description="Order by a field",
     )
     sort: Union[Sort, None] = Query(
-        "desc",
-        description="Sort Direction e.g. sort=desc",
-        example="desc"
+        "desc", description="Sort Direction e.g. sort=desc", example="desc"
     )
     isMobile: Union[bool, None] = Query(
-        None,
-        description="Location is mobile e.g. ?isMobile=true",
-        example="true"
+        None, description="Location is mobile e.g. ?isMobile=true", example="true"
     )
     isAnalysis: Union[bool, None] = Query(
         None,
@@ -60,32 +62,30 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
             "analysis/aggregation and not raw measurements "
             "e.g. ?isAnalysis=true "
         ),
-        example="true"
+        example="true",
     )
     sourceName: Union[List[str], None] = Query(
         None,
         description="Name of the data source e.g. ?sourceName=Houston%20Mobile",
-        example="Houston%20Mobile"
+        example="Houston%20Mobile",
     )
     entity: Union[EntityTypes, None] = Query(
         None,
         description="Source entity type. e.g. ?entity=government",
-        example="government"
+        example="government",
     )
     sensorType: Union[SensorTypes, None] = Query(
         None,
         description="Type of Sensor e.g. ?sensorType=reference%20grade",
-        example="reference%20grade"
+        example="reference%20grade",
     )
     modelName: Union[List[str], None] = Query(
-        None,
-        description="Model Name of Sensor e.g. ?modelName=AE33",
-        example="AE33"
+        None, description="Model Name of Sensor e.g. ?modelName=AE33", example="AE33"
     )
     manufacturerName: Union[List[str], None] = Query(
         None,
         description="Manufacturer of Sensor e.g. ?manufacturer=Ecotech",
-        example="Ecotech"
+        example="Ecotech",
     )
     dumpRaw: Union[bool, None] = False
 
@@ -193,7 +193,7 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
                     )
         wheres.append(self.where_geo())
         wheres.append(" id not in (61485,61505,61506) ")
-        if self.order_by == 'random':
+        if self.order_by == "random":
             wheres.append("\"lastUpdated\" > now() - '2 weeks'::interval")
         wheres = [w for w in wheres if w is not None]
         if len(wheres) > 0:
@@ -203,20 +203,23 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
 
 @router.get(
     "/v2/locations/{location_id}",
+    include_in_schema=False,
     response_model=LocationsResponse,
     summary="Get a location by ID",
     description="Provides a location by location ID",
-    tags=["v2"]
+    tags=["v2"],
 )
 @router.get(
     "/v2/locations",
+    include_in_schema=False,
     response_model=LocationsResponse,
     summary="Get locations",
     description="Provides a list of locations",
-    tags=["v2"]
+    tags=["v2"],
 )
 async def locations_get(
-    db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
+    db: DB = Depends(),
+    locations: Locations = Depends(Locations.depends()),
 ):
 
     qparams = locations.params()
@@ -286,27 +289,30 @@ async def locations_get(
 
 @router.get(
     "/v2/latest/{location_id}",
+    include_in_schema=False,
     response_model=LatestResponse,
     summary="Get latest measurements by location ID",
     description="Provides latest measurements for a locations by location ID",
-    tags=["v2"]
+    tags=["v2"],
 )
 @router.get(
     "/v2/latest",
+    include_in_schema=False,
     response_model=LatestResponse,
     summary="Get latest measurements",
     description="Provides a list of locations with latest measurements",
-    tags=["v2"]
+    tags=["v2"],
 )
 async def latest_get(
-    db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
+    db: DB = Depends(),
+    locations: Locations = Depends(Locations.depends()),
 ):
 
     data = await locations_get(db, locations)
     meta = data.meta
     res = data.results
 
-    #dprint(res)
+    # dprint(res)
     latest_jq = jq.compile(
         """
         .[] |
@@ -333,7 +339,8 @@ async def latest_get(
 
 
 async def v1_base(
-    db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
+    db: DB = Depends(),
+    locations: Locations = Depends(Locations.depends()),
 ):
     locations.entity = "government"
     qparams = locations.params()
@@ -384,19 +391,21 @@ async def v1_base(
 
 @router.get(
     "/v1/latest/{location_id}",
+    include_in_schema=False,
     response_model=LatestResponseV1,
     summary="Get latest measurements by location ID",
-    tags=["v1"]
+    tags=["v1"],
 )
 @router.get(
     "/v1/latest",
+    include_in_schema=False,
     response_model=LatestResponseV1,
     summary="Get latest measurements",
-    tags=["v1"]
+    tags=["v1"],
 )
 async def latest_v1_get(
-        db: DB = Depends(),
-        locations: Locations = Depends(Locations.depends()),
+    db: DB = Depends(),
+    locations: Locations = Depends(Locations.depends()),
 ):
 
     found = 0
@@ -458,27 +467,28 @@ JOIN meas ON (meas.id = loc.id)
         found = data[0][5]
 
     return LatestResponseV1(
-        meta={
-            'found': found,
-            'page': qparams['page'],
-            'limit': qparams['limit']
-        },
-        results=data
+        meta={"found": found, "page": qparams["page"], "limit": qparams["limit"]},
+        results=data,
     )
+
 
 @router.get(
     "/v1/locations/{location_id}",
+    include_in_schema=False,
     response_model=LocationsResponseV1,
     summary="Get location by ID",
-    tags=["v1"]
+    tags=["v1"],
 )
 @router.get(
     "/v1/locations",
+    include_in_schema=False,
     response_model=LocationsResponseV1,
     summary="Get locations",
-    tags=["v1"])
+    tags=["v1"],
+)
 async def locationsv1_get(
-    db: DB = Depends(), locations: Locations = Depends(Locations.depends()),
+    db: DB = Depends(),
+    locations: Locations = Depends(Locations.depends()),
 ):
     data = await v1_base(db, locations)
     meta = data.meta
