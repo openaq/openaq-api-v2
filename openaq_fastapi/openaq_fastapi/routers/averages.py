@@ -3,6 +3,7 @@ import logging
 from dateutil.tz import UTC
 from fastapi import APIRouter, Depends, Query
 from typing import Union, List
+from enum import Enum
 from ..db import DB
 from ..models.queries import (
     APIBase,
@@ -33,6 +34,19 @@ logger = logging.getLogger("averages")
 router = APIRouter()
 
 
+class SpatialTypes(str, Enum):
+    country = "country"
+    location = "location"
+    total = "total"
+
+
+class SpatialTypeQuery(QueryBaseModel):
+    spatial: Union[SpatialTypes, None] = Query(
+        "location",
+        description="Define how you want to aggregate in space"
+    )
+
+
 class LocationQuery(QueryBaseModel):
     locations_id: int = Query(
         70084,
@@ -57,6 +71,7 @@ class ParametersQuery(QueryBaseModel):
 
 class AveragesQueries(
     Paging,
+    SpatialTypeQuery,
     LocationQuery,
     DateFromQuery,
     DateToQuery,

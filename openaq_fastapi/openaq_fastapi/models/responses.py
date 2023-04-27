@@ -77,13 +77,13 @@ class OpenAQResult(BaseModel):
 
 class AveragesRow(BaseModel):
     id: Union[List[int], int]
+    name: Union[List[str], str]
     hour: Union[datetime, None]
     day: Union[date, None]
     month: Union[date, None]
     year: Union[date, None]
     hod: Union[int, None]
     dow: Union[int, None]
-    name: Union[List[str],str]
     average: float
     name: Union[List[str], str]
     measurement_count: int  # TODO make camelCase
