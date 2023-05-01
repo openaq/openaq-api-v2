@@ -348,14 +348,15 @@ def fix_datetime(
             seconds=d.second,
             microseconds=d.microsecond,
         )
+    logger.debug(f"Validating date/times: {type(d)} - {d}")
     return d
 
 
 class DateRange(OBaseModel):
-    date_from: Union[datetime, date, None] = fix_datetime("2000-01-01")
-    date_to: Union[datetime, date, None] = fix_datetime(datetime.utcnow())
-    date_from_adj: Union[datetime, date, None] = None
-    date_to_adj: Union[datetime, date, None] = None
+    date_from: Union[datetime, date, str, int, None] = fix_datetime("2000-01-01")
+    date_to: Union[datetime, date, str, int, None] = fix_datetime(datetime.utcnow())
+    date_from_adj: Union[datetime, date, str, int, None] = None
+    date_to_adj: Union[datetime, date, str, int, None] = None
 
     @validator(
         "date_from",
