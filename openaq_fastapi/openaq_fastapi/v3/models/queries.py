@@ -387,11 +387,11 @@ class DateFromQuery(QueryBaseModel):
             return None
         elif isinstance(self.date_from, datetime):
             if self.date_from.tzinfo is None:
-                return "datetime > (:date_from AT TIME ZONE tzid)"
+                return "datetime > (:date_from::timestamp AT TIME ZONE tzid)"
             else:
                 return "datetime > :date_from"                
         elif isinstance(self.date_from, date):
-            return "datetime > (:date_from AT TIME ZONE tzid)"        
+            return "datetime > (:date_from::timestamp AT TIME ZONE tzid)"        
 
 
 class DateToQuery(QueryBaseModel):
@@ -405,11 +405,11 @@ class DateToQuery(QueryBaseModel):
             return None
         elif isinstance(self.date_to, datetime):
             if self.date_to.tzinfo is None:
-                return "datetime <= (:date_to AT TIME ZONE tzid)"
+                return "datetime <= (:date_to::timestamp AT TIME ZONE tzid)"
             else:
                 return "datetime <= :date_to"                
         elif isinstance(self.date_to, date):
-            return "datetime <= (:date_to AT TIME ZONE tzid)"        
+            return "datetime <= (:date_to::timestamp AT TIME ZONE tzid)"        
 
 
 class PeriodNames(str, Enum):
