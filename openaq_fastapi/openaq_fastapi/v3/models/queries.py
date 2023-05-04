@@ -31,6 +31,8 @@ ignore_in_docs = [
 ]
 
 
+
+
 def parameter_dependency_from_model(name: str, model_cls):
     """
     Takes a pydantic model class as input and creates
@@ -372,7 +374,7 @@ class CountryQuery(QueryBaseModel):
             return "(country->'id')::int = ANY (:countries_id)"
         elif self.iso is not None:
             return "country->>'code' = :iso"
-
+        
 
 class DateFromQuery(QueryBaseModel):
     date_from: Optional[Union[datetime, date]] = Query(
@@ -381,7 +383,15 @@ class DateFromQuery(QueryBaseModel):
     )
 
     def where(self) -> str:
-        return "datetime > :date_from" if self.date_from else None
+        if self.date_from is None:
+            return None
+        elif isinstance(self.date_from, datetime):
+            if self.date_from.tzinfo is None:
+                return "datetime > (:date_from AT TIME ZONE tzid)"
+            else:
+                return "datetime > :date_from"                
+        elif isinstance(self.date_from, date):
+            return "datetime > (:date_from AT TIME ZONE tzid)"        
 
 
 class DateToQuery(QueryBaseModel):
@@ -391,7 +401,15 @@ class DateToQuery(QueryBaseModel):
     )
 
     def where(self) -> str:
-        return "datetime <= :date_to" if self.date_to else None
+        if self.date_to is None:
+            return None
+        elif isinstance(self.date_to, datetime):
+            if self.date_to.tzinfo is None:
+                return "datetime <= (:date_to AT TIME ZONE tzid)"
+            else:
+                return "datetime <= :date_to"                
+        elif isinstance(self.date_to, date):
+            return "datetime <= (:date_to AT TIME ZONE tzid)"        
 
 
 class PeriodNames(str, Enum):
