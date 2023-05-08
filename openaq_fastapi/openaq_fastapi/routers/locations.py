@@ -19,7 +19,7 @@ from ..models.queries import (
     City,
     Country,
     Geo,
-    HasGeo,
+    # HasGeo,
     Location,
     Measurands,
     Sort,
@@ -29,7 +29,9 @@ from ..models.queries import (
 
 logger = logging.getLogger("locations")
 
-router = APIRouter()
+router = APIRouter(
+    include_in_schema=True
+)
 
 
 class LocationsOrder(str, Enum):
@@ -44,7 +46,15 @@ class LocationsOrder(str, Enum):
     distance = "distance"
 
 
-class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
+class Locations(
+        Location,
+        City,
+        Country,
+        Geo,
+        Measurands,
+      #  HasGeo,
+        APIBase
+):
     order_by: LocationsOrder = Query(
         "lastUpdated",
         description="Order by a field",
@@ -117,13 +127,19 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
                         wheres.append("name = ANY(:project)")
                 elif f == "location":
                     if all(isinstance(x, int) for x in v):
-                        wheres.append(" id = ANY(:location) ")
+                        wheres.append(" l.id = ANY(:location) ")
                     else:
                         wheres.append(" name = ANY(:location) ")
                 elif f == "country":
                     wheres.append(" country = ANY(:country) ")
                 elif f == "city":
                     wheres.append(" city = ANY(:city) ")
+                elif f == "parameter_id":
+                    wheres.append(
+                        """
+                        parameters @> jsonb_build_array(jsonb_build_object('id', :parameter_id::int))
+                        """
+                    )
                 elif f == "parameter":
                     if all(isinstance(x, int) for x in v):
                         wheres.append(
@@ -192,7 +208,6 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
                             """
                     )
         wheres.append(self.where_geo())
-        wheres.append(" id not in (61485,61505,61506) ")
         if self.order_by == "random":
             wheres.append("\"lastUpdated\" > now() - '2 weeks'::interval")
         wheres = [w for w in wheres if w is not None]
@@ -203,7 +218,6 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
 
 @router.get(
     "/v2/locations/{location_id}",
-    include_in_schema=False,
     response_model=LocationsResponse,
     summary="Get a location by ID",
     description="Provides a location by location ID",
@@ -211,7 +225,6 @@ class Locations(Location, City, Country, Geo, Measurands, HasGeo, APIBase):
 )
 @router.get(
     "/v2/locations",
-    include_in_schema=False,
     response_model=LocationsResponse,
     summary="Get locations",
     description="Provides a list of locations",
@@ -233,63 +246,73 @@ async def locations_get(
     # the order by inside row_number ensures that the right sort
     # method is used to determine the row number
     q = f"""
-        WITH t1 AS (
-            SELECT
-                id,
-                name,
-                "sensorType",
-                entity,
-                "isMobile",
-                "isAnalysis",
-                city,
-                country,
-                sources,
-                manufacturers,
-                case WHEN "isMobile" then null else coordinates end as coordinates,
-                measurements,
-                "firstUpdated",
-                "lastUpdated",
-                json as "rawData",
-                geog,
-                bounds,
-                parameters
-                , row_number() over (ORDER BY {locations.order()}) as row
-            FROM locations_base_v2
-            WHERE
-            {locations.where()}
-            ORDER BY {locations.order()}
-            LIMIT :limit
-            OFFSET :offset
-        ),
-        nodes AS (
-            SELECT count(distinct id) as nodes
-            FROM locations_base_v2
-            WHERE
-            {locations.where()}
-        ),
-        t2 AS (
-        SELECT
-        row,
-        jsonb_strip_nulls(
-            to_jsonb(t1) - '{{{hidejson}source_name,geog,row}}'::text[]
-        ) as json
-        FROM t1
-        GROUP BY row,
-        t1
-        , json
-        )
-        SELECT nodes as count, json
-        FROM t2, nodes
-        ORDER BY row
-        ;
-        """
-    output = await db.fetchOpenAQResult(q, qparams)
+-----------------------------
+WITH nodes_instruments AS (
+-----------------------------
+  SELECT sn.sensor_nodes_id as id
+  , jsonb_agg(DISTINCT jsonb_build_object(
+     'modelName', i.label
+     , 'manufacturerName', mc.full_name
+  )) as manufacturers
+  FROM sensor_nodes sn
+  JOIN sensor_systems ss USING (sensor_nodes_id)
+  JOIN instruments i USING (instruments_id)
+  JOIN entities mc ON (mc.entities_id = i.manufacturer_entities_id)
+  GROUP BY sn.sensor_nodes_id
+-------------------------------
+), nodes_measurements_count AS (
+-------------------------------
+  SELECT sn.sensor_nodes_id as id
+  , SUM(value_count) as measurements  
+  , jsonb_agg(jsonb_build_object(
+    'id', m.measurands_id
+    , 'parameter', m.measurand
+    , 'parameterId', m.measurands_id
+    , 'unit', m.units
+    , 'displayName', m.measurand||' '||m.units
+    , 'count', sl.value_count
+    , 'average', sl.value_avg
+    , 'lastValue', sl.value_latest
+    , 'firstUpdated', sl.datetime_first
+    , 'lastUpdated', sl.datetime_last    
+    )) as parameters
+  FROM sensor_nodes sn
+  JOIN sensor_systems ss USING (sensor_nodes_id)
+  JOIN sensors s USING (sensor_systems_id)
+  JOIN sensors_rollup sl USING (sensors_id)
+  JOIN measurands m USING (measurands_id)
+  GROUP BY sensor_nodes_id)
+--------------------------
+SELECT l.id
+    , name
+    , ismobile as "isMobile"
+    , ismonitor as "isMonitor"    
+    , city
+    , country->>'code' as country
+    , datetime_first->>'utc' as "firstUpdated"
+    , datetime_last->>'utc' as "lastUpdated"    
+    , coordinates
+    , sensors
+    , timezone
+    , bbox(geom) as bounds
+    , i.manufacturers
+    , COALESCE(s.measurements, 0) as measurements
+    , s.parameters
+    , COUNT(1) OVER() as found
+    FROM locations_view_cached l
+    JOIN nodes_instruments i ON (l.id = i.id)
+    LEFT JOIN nodes_measurements_count s ON (l.id = s.id)    
+    WHERE {locations.where()}
+    ORDER BY {locations.order()}
+    LIMIT :limit
+    OFFSET :offset
+    """
+    output = await db.fetchPage(q, qparams)
     return output
 
 
 @router.get(
     "/v2/latest/{location_id}",
-    include_in_schema=False,
     response_model=LatestResponse,
     summary="Get latest measurements by location ID",
     description="Provides latest measurements for a locations by location ID",
@@ -297,7 +320,6 @@ async def locations_get(
 )
 @router.get(
     "/v2/latest",
-    include_in_schema=False,
     response_model=LatestResponse,
     summary="Get latest measurements",
     description="Provides a list of locations with latest measurements",
@@ -391,14 +413,12 @@ async def v1_base(
 
 @router.get(
     "/v1/latest/{location_id}",
-    include_in_schema=False,
     response_model=LatestResponseV1,
     summary="Get latest measurements by location ID",
     tags=["v1"],
 )
 @router.get(
     "/v1/latest",
-    include_in_schema=False,
     response_model=LatestResponseV1,
     summary="Get latest measurements",
     tags=["v1"],
@@ -474,14 +494,12 @@ JOIN meas ON (meas.id = loc.id)
 
 @router.get(
     "/v1/locations/{location_id}",
-    include_in_schema=False,
     response_model=LocationsResponseV1,
     summary="Get location by ID",
     tags=["v1"],
 )
 @router.get(
     "/v1/locations",
-    include_in_schema=False,
     response_model=LocationsResponseV1,
     summary="Get locations",
     tags=["v1"],
