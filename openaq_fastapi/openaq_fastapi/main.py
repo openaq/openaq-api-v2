@@ -75,6 +75,12 @@ logging.getLogger("mangum").setLevel(logging.WARNING)
 
 logger = logging.getLogger("main")
 
+# Make sure that we are using UTC timezone
+# this is required because the datetime class will automatically
+# add the env timezone when passing the value to a sql query parameter
+environ['TZ'] = 'UTC'
+
+
 # this is instead of importing settings elsewhere
 if settings.DOMAIN_NAME is not None:
     environ["DOMAIN_NAME"] = settings.DOMAIN_NAME

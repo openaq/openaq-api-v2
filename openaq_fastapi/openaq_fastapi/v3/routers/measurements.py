@@ -116,6 +116,7 @@ async def fetch_measurements(q, db):
         JOIN timezones ts ON (sn.timezones_id = ts.gid)
         JOIN measurands m ON (m.measurands_id = h.measurands_id)
         {query.where()}
+        ORDER BY datetime
         {query.pagination()}
         """
     else:
