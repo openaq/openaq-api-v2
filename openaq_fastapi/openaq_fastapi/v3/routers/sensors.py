@@ -85,7 +85,7 @@ SELECT
  , PERCENTILE_CONT(0.75) WITHIN GROUP(ORDER BY value_avg) as value_p75
  , PERCENTILE_CONT(0.98) WITHIN GROUP(ORDER BY value_avg) as value_p98
  , current_timestamp as calculated_on
- FROM hourly_rollups m
+ FROM hourly_data m
   {query.where()}
  GROUP BY 1)
  SELECT c.sensors_id as id
