@@ -99,7 +99,7 @@ class DB:
                 raise ValueError(f"{e}") from e
             except TimeoutError:
                 raise HTTPException(
-                    status_code=500,
+                    status_code=408,
                     detail="Connection timed out",
                 )
             except Exception as e:
