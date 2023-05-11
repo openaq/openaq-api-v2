@@ -56,11 +56,13 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 with open(os.path.join(dir_path, "url_list.txt")) as file:
     urls = [line.rstrip() for line in file]
 
+
 @pytest.mark.parametrize("url", urls)
 class TestUrls:
     def test_urls(self, client, url):
         response = client.get(url)
         assert response.status_code == 200
+
 
 @pytest.mark.parametrize("endpoint,resource", subresources)
 class TestSubResourceHealth:
