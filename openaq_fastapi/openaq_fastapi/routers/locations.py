@@ -404,7 +404,7 @@ WITH nodes_latest_measurements AS (
     , 'averagingPeriod', jsonb_build_object(
      'value', s.data_averaging_period_seconds
      , 'unit', 'seconds'
-    ))) as measurements
+    ))) as parameters
   FROM sensor_nodes sn
   JOIN sensor_systems ss USING (sensor_nodes_id)
   JOIN sensors s USING (sensor_systems_id)
@@ -416,7 +416,7 @@ SELECT name as location
     , city
     , country->>'code' as country
     , coordinates
-    , s.measurements
+    , s.parameters as measurements
     , datetime_first->>'utc' as "firstUpdated"
     , datetime_last->>'utc' as "lastUpdated"
     , COUNT(1) OVER() as found
