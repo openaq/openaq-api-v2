@@ -154,11 +154,11 @@ class Measurements(
                 elif f == "isAnalysis":
                     wheres.append("is_analysis = :is_analysis ")
                 elif f == "entity":
-                    wheres.append("b.entity = :entity ")
+                    wheres.append("e.entity_type::text ~* :entity ")
                 elif f == "sensorType":
                     wheres.append('b."sensorType" = :sensor_type ')
                 elif f in ["country", "city"]:
-                    wheres.append(f"b.{f} = ANY(:{f})")
+                    wheres.append(f"{f} = ANY(:{f})")
                 elif f == "date_from":
                     wheres.append("h.datetime > :date_from")
                 elif f == "date_to":
@@ -189,9 +189,6 @@ async def measurements_get(
     params = m.params()
     includes = m.include_fields
 
-    logger.debug(params)
-    logger.debug(where)
-
     sql = f"""
         SELECT sn.sensor_nodes_id as "locationId"
         , COALESCE(site_name, 'N/A') as location
@@ -205,14 +202,19 @@ async def measurements_get(
         ) as coordinates
         , 'NA' as country
         , sn.ismobile as "isMobile"
-        , 'NA' as entity
-        , 'NA' as "sensorType"
-        , 'f'::bool as "isAnalysis"
+        , e.entity_type::text as entity
+        , CASE WHEN i.is_monitor
+               THEN 'reference grade'
+               ELSE 'low-cost sensor'
+               END as "sensorType"
+        , e.entity_type::text~*'research' as "isAnalysis"
         , COUNT(1) OVER() as found
-        FROM hourly_rollups h
+        FROM hourly_data h
         JOIN sensors s USING (sensors_id)
         JOIN sensor_systems sy USING (sensor_systems_id)
+        JOIN instruments i USING (instruments_id)
         JOIN sensor_nodes sn ON (sy.sensor_nodes_id = sn.sensor_nodes_id)
+        JOIN entities e ON (sn.owner_entities_id = e.entities_id)
         JOIN timezones ts ON (sn.timezones_id = ts.gid)
         JOIN measurands m ON (m.measurands_id = h.measurands_id)
         WHERE {where}
