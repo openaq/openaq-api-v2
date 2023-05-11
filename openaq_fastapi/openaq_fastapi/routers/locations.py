@@ -170,7 +170,7 @@ class Locations(
                 elif f == "entity":
                     wheres.append(
                         """
-                        entity = :entity
+                        owner->>'type' ~* :entity
                         """
                     )
                 elif f == "sensorType":
@@ -450,7 +450,11 @@ WITH nodes_latest_measurements AS (
     , 'unit', m.units
     , 'value', sl.value_latest
     , 'lastUpdated', sl.datetime_last
-    )) as measurements
+    , 'sourceName', sn.source_name
+    , 'averagingPeriod', jsonb_build_object(
+     'value', s.data_averaging_period_seconds
+     , 'unit', 'seconds'
+    ))) as measurements
   FROM sensor_nodes sn
   JOIN sensor_systems ss USING (sensor_nodes_id)
   JOIN sensors s USING (sensor_systems_id)
