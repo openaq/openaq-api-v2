@@ -263,7 +263,7 @@ WITH nodes_instruments AS (
 ), nodes_measurements_count AS (
 -------------------------------
   SELECT sn.sensor_nodes_id as id
-  , SUM(value_count) as measurements  
+  , SUM(value_count) as measurements
   , jsonb_agg(jsonb_build_object(
     'id', m.measurands_id
     , 'parameter', m.measurand
@@ -274,7 +274,7 @@ WITH nodes_instruments AS (
     , 'average', sl.value_avg
     , 'lastValue', sl.value_latest
     , 'firstUpdated', sl.datetime_first
-    , 'lastUpdated', sl.datetime_last    
+    , 'lastUpdated', sl.datetime_last
     )) as parameters
   FROM sensor_nodes sn
   JOIN sensor_systems ss USING (sensor_nodes_id)
@@ -286,11 +286,11 @@ WITH nodes_instruments AS (
 SELECT l.id
     , name
     , ismobile as "isMobile"
-    , ismonitor as "isMonitor"    
+    , ismonitor as "isMonitor"
     , city
     , country->>'code' as country
     , datetime_first->>'utc' as "firstUpdated"
-    , datetime_last->>'utc' as "lastUpdated"    
+    , datetime_last->>'utc' as "lastUpdated"
     , coordinates
     , sensors
     , timezone
@@ -301,7 +301,7 @@ SELECT l.id
     , COUNT(1) OVER() as found
     FROM locations_view_cached l
     JOIN nodes_instruments i ON (l.id = i.id)
-    LEFT JOIN nodes_measurements_count s ON (l.id = s.id)    
+    LEFT JOIN nodes_measurements_count s ON (l.id = s.id)
     WHERE {locations.where()}
     ORDER BY {locations.order()}
     LIMIT :limit
@@ -330,34 +330,43 @@ async def latest_get(
     locations: Locations = Depends(Locations.depends()),
 ):
 
-    data = await locations_get(db, locations)
-    meta = data.meta
-    res = data.results
+    qparams = locations.params()
 
-    # dprint(res)
-    latest_jq = jq.compile(
-        """
-        .[] |
-            {
-                location: .name,
-                city: .city,
-                country: .country,
-                coordinates: .coordinates,
-                measurements: [
-                    .parameters[] | {
-                        parameter: .parameter,
-                        value: .lastValue,
-                        lastUpdated: .lastUpdated,
-                        unit: .unit
-                    }
-                ]
-            }
-
-        """
-    )
-
-    ret = latest_jq.input(res).all()
-    return LatestResponse(meta=meta, results=ret)
+    q = f"""
+-------------------------------
+WITH nodes_latest_measurements AS (
+-------------------------------
+  SELECT sn.sensor_nodes_id as id
+  , jsonb_agg(jsonb_build_object(
+     'parameter', m.measurand
+    , 'unit', m.units
+    , 'value', sl.value_latest
+    , 'lastUpdated', sl.datetime_last
+    )) as measurements
+  FROM sensor_nodes sn
+  JOIN sensor_systems ss USING (sensor_nodes_id)
+  JOIN sensors s USING (sensor_systems_id)
+  JOIN sensors_rollup sl USING (sensors_id)
+  JOIN measurands m USING (measurands_id)
+  GROUP BY sensor_nodes_id)
+--------------------------
+SELECT name as location
+    , city
+    , country->>'code' as country
+    , coordinates
+    , s.measurements
+    , datetime_first->>'utc' as "firstUpdated"
+    , datetime_last->>'utc' as "lastUpdated"
+    , COUNT(1) OVER() as found
+    FROM locations_view_cached l
+    JOIN nodes_latest_measurements s ON (l.id = s.id)
+    WHERE {locations.where()}
+    ORDER BY {locations.order()}
+    LIMIT :limit
+    OFFSET :offset
+    """
+    output = await db.fetchPage(q, qparams)
+    return output
 
 
 async def v1_base(
@@ -428,68 +437,44 @@ async def latest_v1_get(
     locations: Locations = Depends(Locations.depends()),
 ):
 
-    found = 0
     locations.entity = "government"
-    order_by = locations.order()
     qparams = locations.params()
 
-    sql = f"""
-  -- start with getting locations with limit
-  WITH loc AS (
-    SELECT id
-    , name as location
+    q = f"""
+-------------------------------
+WITH nodes_latest_measurements AS (
+-------------------------------
+  SELECT sn.sensor_nodes_id as id
+  , jsonb_agg(jsonb_build_object(
+     'parameter', m.measurand
+    , 'unit', m.units
+    , 'value', sl.value_latest
+    , 'lastUpdated', sl.datetime_last
+    )) as measurements
+  FROM sensor_nodes sn
+  JOIN sensor_systems ss USING (sensor_nodes_id)
+  JOIN sensors s USING (sensor_systems_id)
+  JOIN sensors_rollup sl USING (sensors_id)
+  JOIN measurands m USING (measurands_id)
+  GROUP BY sensor_nodes_id)
+--------------------------
+SELECT name as location
     , city
-    , country
-    , json->>'source_name' as source_name
-    , json_build_object(
-    'value', (json->'sensor_systems'->0->'sensors'->0->>'data_averaging_period_seconds')::int
-    , 'unit', 'seconds'
-    ) as "averagingPeriod"
-    , parameters
-    , case WHEN "isMobile" then null else coordinates end as coordinates
-    FROM locations_base_v2
-    WHERE
-    {locations.where()}
+    , country->>'code' as country
+    , coordinates
+    , s.measurements
+    , datetime_first->>'utc' as "firstUpdated"
+    , datetime_last->>'utc' as "lastUpdated"
+    , COUNT(1) OVER() as found
+    FROM locations_view_cached l
+    JOIN nodes_latest_measurements s ON (l.id = s.id)
+    WHERE {locations.where()}
     ORDER BY {locations.order()}
     LIMIT :limit
     OFFSET :offset
-  -- but also count locations without the limit
-  ), nodes AS (
-    SELECT count(distinct id) as n
-    FROM locations_base_v2
-    WHERE
-    {locations.where()}
-  -- and then reshape the parameters data
-  ), meas AS (
-    SELECT loc.id
-    , json_agg(jsonb_build_object(
-    'parameter', m.parameter
-    , 'unit', m.unit
-    , 'value', m."lastValue"
-    , 'lastUpdated', m."lastUpdated"
-    , 'sourceName', loc.source_name
-    , 'averagingPeriod', loc."averagingPeriod"
-    )) as measurements
-    FROM loc, jsonb_to_recordset(loc.parameters) as m(parameter text, "lastValue" float, "lastUpdated" timestamptz, unit text)
-    GROUP BY loc.id)
-  -- and finally we return it all
-SELECT loc.location
-, loc.country
-, loc.city
-, loc.coordinates
-, COALESCE(meas.measurements, '[]') as measurements
-, (SELECT n FROM nodes) as n
-FROM loc
-JOIN meas ON (meas.id = loc.id)
     """
-    data = await db.fetch(sql, qparams)
-    if len(data):
-        found = data[0][5]
-
-    return LatestResponseV1(
-        meta={"found": found, "page": qparams["page"], "limit": qparams["limit"]},
-        results=data,
-    )
+    output = await db.fetchPage(q, qparams)
+    return output
 
 
 @router.get(
