@@ -369,56 +369,6 @@ SELECT name as location
     return output
 
 
-async def v1_base(
-    db: DB = Depends(),
-    locations: Locations = Depends(Locations.depends()),
-):
-    locations.entity = "government"
-    qparams = locations.params()
-
-    q = f"""
-        WITH t1 AS (
-            SELECT *,
-            parameters as measurements,
-            json->'pvals'->'site_names' as locations,
-            json->'pvals'->'cities' as cities,
-            'government' as "sourceType",
-            ARRAY['government'] as "sourceTypes",
-            json->'pvals'->'source_names' as "sourceNames",
-            json->'source_name' as "sourceName",
-            json->'sensor_systems' as systems,
-            row_number() over () as row
-            FROM locations_base_v2
-            WHERE
-            {locations.where()}
-            ORDER BY {locations.order()}
-            LIMIT :limit
-            OFFSET :offset
-        ),
-        nodes AS (
-            SELECT count(distinct id) as nodes
-            FROM locations_base_v2
-            WHERE
-            {locations.where()}
-        ),
-        t2 AS (
-        SELECT
-        row,
-        jsonb_strip_nulls(
-            to_jsonb(t1) - '{{json,geog, row}}'::text[]
-        ) as json
-        FROM t1 group by row, t1, json
-        )
-        SELECT nodes as count, json
-        FROM t2, nodes
-        ORDER BY row
-
-        ;
-        """
-
-    data = await db.fetchOpenAQResult(q, qparams)
-    return data
-
 
 @router.get(
     "/v1/latest/{location_id}",
@@ -497,39 +447,74 @@ async def locationsv1_get(
     db: DB = Depends(),
     locations: Locations = Depends(Locations.depends()),
 ):
-    data = await v1_base(db, locations)
-    meta = data.meta
-    res = data.results
-    if len(res) == 0:
-        return data
-    latest_jq = jq.compile(
-        """
-        .[] |
-            {
-                id: .id,
-                country: .country,
-                city: .city,
-                cities: .cities,
-                location: .name,
-                locations: .locations,
-                sourceName: .sourceName,
-                sourceNames: .sourceNames,
-                sourceType: .sourceType,
-                sourceTypes: .sourceTypes,
-                coordinates: .coordinates,
-                firstUpdated: .firstUpdated,
-                lastUpdated: .lastUpdated,
-                parameters : [ .parameters[].parameter ],
-                countsByMeasurement: [
-                    .parameters[] | {
-                        parameter: .parameter,
-                        count: .count
-                    }
-                ],
-                count: .parameters| map(.count) | add
-            }
 
-        """
-    )
+    locations.entity = "government"
+    qparams = locations.params()
 
-    return converter(meta, res, latest_jq)
+    q = f"""
+-----------------------------
+WITH nodes_instruments AS (
+-----------------------------
+  SELECT sn.sensor_nodes_id as id
+  , jsonb_agg(DISTINCT jsonb_build_object(
+     'modelName', i.label
+     , 'manufacturerName', mc.full_name
+  )) as manufacturers
+  FROM sensor_nodes sn
+  JOIN sensor_systems ss USING (sensor_nodes_id)
+  JOIN instruments i USING (instruments_id)
+  JOIN entities mc ON (mc.entities_id = i.manufacturer_entities_id)
+  GROUP BY sn.sensor_nodes_id
+-------------------------------
+), nodes_measurements_count AS (
+-------------------------------
+  SELECT sn.sensor_nodes_id as id
+  , array_agg(m.measurand) as parameters
+  , jsonb_agg(jsonb_build_object(
+    'id', m.measurands_id
+    , 'parameter', m.measurand||' '||m.units
+    , 'count', sl.value_count
+    )) as counts
+  FROM sensor_nodes sn
+  JOIN sensor_systems ss USING (sensor_nodes_id)
+  JOIN sensors s USING (sensor_systems_id)
+  JOIN sensors_rollup sl USING (sensors_id)
+  JOIN measurands m USING (measurands_id)
+  GROUP BY sensor_nodes_id)
+--------------------------
+SELECT l.id
+    , name as location
+    , ARRAY[name] as locations
+    , city
+    , ARRAY[city] as cities
+    , provider->>'name' as "sourceName"
+    , ARRAY[provider->>'name'] as "sourceNames"
+    , country->>'code' as country
+    , datetime_first->>'utc' as "firstUpdated"
+    , datetime_last->>'utc' as "lastUpdated"
+    , coordinates
+    , s.parameters
+    , s.counts as "countsByMeasurement"
+    , CASE owner->>'type'
+         WHEN 'Governmental Organization' THEN 'government'
+         WHEN 'Research Organization' THEN 'research'
+         WHEN 'Community Organization' THEN 'community'
+         ELSE 'n/a'
+        END as "sourceType"
+    , CASE owner->>'type'
+         WHEN 'Governmental Organization' THEN '{{government}}'::text[]
+         WHEN 'Research Organization' THEN '{{research}}'::text[]
+         WHEN 'Community Organization' THEN '{{community}}'::text[]
+         ELSE '{{na}}'::text[]
+        END as "sourceTypes"
+    , COUNT(1) OVER() as found
+    FROM locations_view_cached l
+    JOIN nodes_instruments i ON (l.id = i.id)
+    LEFT JOIN nodes_measurements_count s ON (l.id = s.id)
+    WHERE {locations.where()}
+    ORDER BY {locations.order()}
+    LIMIT :limit
+    OFFSET :offset
+    """
+    output = await db.fetchPage(q, qparams)
+    return output

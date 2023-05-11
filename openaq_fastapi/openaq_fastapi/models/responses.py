@@ -247,7 +247,7 @@ class LocationsRowV1(BaseModel):
     counts_by_measurement: List[CountsByMeasurementItem] = Field(
         ..., alias="countsByMeasurement"
     )
-    count: int
+    #count: int
 
 
 class LocationsResponseV1(OpenAQResult):
