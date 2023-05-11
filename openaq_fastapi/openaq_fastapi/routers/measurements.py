@@ -31,7 +31,9 @@ from openaq_fastapi.models.responses import OpenAQResult, converter
 
 logger = logging.getLogger("measurements")
 
-router = APIRouter()
+router = APIRouter(
+    include_in_schema=True,
+)
 
 
 def meas_csv(rows, includefields):
@@ -126,7 +128,7 @@ class Measurements(
         wheres = []
         if self.lon and self.lat:
             wheres.append(
-                " st_dwithin(st_makepoint(:lon, :lat)::geography," " b.geog, :radius) "
+                " st_dwithin(st_makepoint(:lon, :lat)::geography," " sn.geom::geography, :radius) "
             )
         for f, v in self:
             if v is not None:
@@ -164,7 +166,6 @@ class Measurements(
                 elif f == "date_to":
                     wheres.append("h.datetime <= :date_to")
 
-        wheres.append(self.where_geo())
         wheres = list(filter(None, wheres))
         # wheres.append(" sensor_nodes_id not in (61485,61505,61506) ")
         if len(wheres) > 0:
@@ -174,7 +175,6 @@ class Measurements(
 
 @router.get(
     "/v2/measurements",
-    include_in_schema=False,
     summary="Get measurements",
     description="",
     response_model=MeasurementsResponse,
@@ -233,7 +233,7 @@ async def measurements_get(
 
     if format == "csv":
         return Response(
-            content=meas_csv(response['results'], includes),
+            content=meas_csv(response.results, includes),
             media_type="text/csv",
             headers={"Content-Disposition": "attachment;filename=measurements.csv"},
         )
@@ -247,7 +247,6 @@ async def measurements_get(
 
 @router.get(
     "/v1/measurements",
-    include_in_schema=False,
     summary="Get a list of measurements",
     response_model=MeasurementsResponseV1,
     tags=["v1"],
@@ -258,45 +257,43 @@ async def measurements_get_v1(
     format: Union[str, None] = None,
 ):
     m.entity = "government"
-    data = await measurements_get(db, m, "json")
-    meta = data.meta
-    res = data.results
-    includes = m.include_fields
+    params = m.params()
+    where = m.where()
+
+    sql = f"""
+        SELECT sn.sensor_nodes_id as "locationId"
+        , COALESCE(site_name, 'N/A') as location
+        , get_datetime_object(h.datetime, tzid) as date
+        , m.measurand as parameter
+        , m.units as unit
+        , h.value_avg as value
+        , json_build_object(
+            'latitude', st_y(sn.geom),
+             'longitude', st_x(sn.geom)
+        ) as coordinates
+        , c.iso as country
+        , COUNT(1) OVER() as found
+        FROM hourly_data h
+        JOIN sensors s USING (sensors_id)
+        JOIN sensor_systems sy USING (sensor_systems_id)
+        JOIN instruments i USING (instruments_id)
+        JOIN sensor_nodes sn ON (sy.sensor_nodes_id = sn.sensor_nodes_id)
+        JOIN entities e ON (sn.owner_entities_id = e.entities_id)
+        JOIN timezones ts ON (sn.timezones_id = ts.gid)
+        JOIN measurands m ON (m.measurands_id = h.measurands_id)
+        JOIN countries c ON (c.countries_id = sn.countries_id)
+        WHERE {where}
+        OFFSET :offset
+        LIMIT :limit
+        """
+
+    response = await db.fetchPage(sql, params)
 
     if format == "csv":
         return Response(
-            content=meas_csv(res, includes),
+            content=meas_csv(response.results, m.include_fields),
             media_type="text/csv",
             headers={"Content-Disposition": "attachment;filename=measurements.csv"},
         )
 
-    if len(res) == 0:
-        return data
-
-    if includes is not None:
-        include_fields = includes.split(",")
-        available_fields = ["sourceName", "attribution", "averagingPeriod"]
-        include_fields = [
-            f", {f}: .{f}" for f in include_fields if f in available_fields
-        ]
-        fields = "".join(include_fields)
-    else:
-        fields = ""
-
-    v1_jq = jq.compile(
-        f"""
-        .[] | . as $m |
-            {{
-                location: .location,
-                parameter: .parameter,
-                value: .value,
-                date: .date,
-                unit: .unit,
-                coordinates: .coordinates,
-                country:.country,
-                city: .city {fields}
-            }}
-        """
-    )
-
-    return converter(meta, res, v1_jq)
+    return response
