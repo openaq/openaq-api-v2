@@ -131,7 +131,7 @@ class Locations(
                     else:
                         wheres.append(" name = ANY(:location) ")
                 elif f == "country":
-                    wheres.append(" country = ANY(:country) ")
+                    wheres.append(" country->>'code' = ANY(:country) ")
                 elif f == "city":
                     wheres.append(" city = ANY(:city) ")
                 elif f == "parameter_id":
