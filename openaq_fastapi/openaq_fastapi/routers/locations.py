@@ -104,7 +104,7 @@ class Locations(
         if stm == "location":
             stm = "name"
         elif stm == "distance":
-            stm = "st_distance(st_makepoint(:lon,:lat)::geography, geog)"
+            stm = "st_distance(st_makepoint(:lon,:lat)::geography, geom::geography)"
         elif stm == "count":
             stm = "measurements"
 
