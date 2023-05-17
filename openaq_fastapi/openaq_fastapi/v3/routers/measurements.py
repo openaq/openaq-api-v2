@@ -109,7 +109,7 @@ async def fetch_measurements(q, db):
         ) as coverage
         {query.fields()}
         {query.total()}
-        FROM hourly_rollups h
+        FROM hourly_data h
         JOIN sensors s USING (sensors_id)
         JOIN sensor_systems sy USING (sensor_systems_id)
         JOIN sensor_nodes sn ON (sy.sensor_nodes_id = sn.sensor_nodes_id)
@@ -151,7 +151,7 @@ SELECT
  , PERCENTILE_CONT(0.75) WITHIN GROUP(ORDER BY value_avg) as value_p75
  , PERCENTILE_CONT(0.98) WITHIN GROUP(ORDER BY value_avg) as value_p98
  , current_timestamp as calculated_on
- FROM hourly_rollups m
+ FROM hourly_data m
  JOIN sensors s ON (m.sensors_id = s.sensors_id)
  JOIN sensor_systems sy ON (s.sensor_systems_id = sy.sensor_systems_id)
  JOIN sensor_nodes sn ON (sy.sensor_nodes_id = sn.sensor_nodes_id)

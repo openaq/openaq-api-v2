@@ -225,7 +225,7 @@ class Geo(OBaseModel):
 
     def where_geo(self):
         if self.lat is not None and self.lon is not None:
-            return " st_dwithin(st_makepoint(:lon, :lat)::geography," " geog, :radius) "
+            return " st_dwithin(st_makepoint(:lon, :lat)::geography," " geom::geography, :radius) "
         return None
 
 

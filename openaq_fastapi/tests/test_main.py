@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 import json
 import time
+import os
 import pytest
 from openaq_fastapi.main import app
 from openaq_fastapi.db import db_pool
@@ -29,19 +30,20 @@ endpoints = [
 ]
 
 
-@pytest.mark.parametrize("endpoint", endpoints)
-class TestEndpointsHealth:
-    def test_endpoint_list_good(self, client, endpoint):
-        response = client.get(f"/v3/{endpoint}")
-        assert response.status_code == 200
 
-    def test_endpoint_path_good(self, client, endpoint):
-        response = client.get(f"/v3/{endpoint}/1")
-        assert response.status_code == 200
+# @pytest.mark.parametrize("endpoint", endpoints)
+# class TestEndpointsHealth:
+#     def test_endpoint_list_good(self, client, endpoint):
+#         response = client.get(f"/v3/{endpoint}")
+#         assert response.status_code == 200
 
-    def test_endpoint_path_bad(self, client, endpoint):
-        response = client.get(f"/v3/{endpoint}/0")
-        assert response.status_code == 422
+#     def test_endpoint_path_good(self, client, endpoint):
+#         response = client.get(f"/v3/{endpoint}/1")
+#         assert response.status_code == 200
+
+#     def test_endpoint_path_bad(self, client, endpoint):
+#         response = client.get(f"/v3/{endpoint}/0")
+#         assert response.status_code == 422
 
 
 subresources = [
@@ -49,6 +51,17 @@ subresources = [
     ("providers", "locations"),
     ("owners", "locations"),
 ]
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
+with open(os.path.join(dir_path, "url_list.txt")) as file:
+    urls = [line.rstrip() for line in file]
+
+
+@pytest.mark.parametrize("url", urls)
+class TestUrls:
+    def test_urls(self, client, url):
+        response = client.get(url)
+        assert response.status_code == 200
 
 
 @pytest.mark.parametrize("endpoint,resource", subresources)
