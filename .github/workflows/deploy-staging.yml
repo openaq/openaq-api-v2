@@ -35,6 +35,7 @@ env:
 
   #VPC_ID: ${{ secrets.STAGING_VPC_ID }}
 
+
   REDIS_HOST: ${{ secrets.REDIS_HOST_STAGING }}
   REDIS_PORT: ${{ secrets.REDIS_PORT }}
 
