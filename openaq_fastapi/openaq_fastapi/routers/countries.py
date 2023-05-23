@@ -69,7 +69,6 @@ class Countries(Country, APIBase):
         100,
         description="Limit the number of results returned. e.g. limit=100 will return up to 100 results",
         example="100",
-
     )
 
     def where(self):
@@ -175,18 +174,15 @@ async def countries_get(
 
 @router.get(
     "/v1/countries",
-    include_in_schema=False,
     response_model=CountriesResponse,
     summary="Get countries",
     description="Providecs a list of countries",
-
     tags=["v1"],
 )
 async def countries_getv1(
     db: DB = Depends(),
     countries: Countries = Depends(CountriesV1.depends()),
 ):
-
     order_by = countries.order_by
     if countries.order_by == "code":
         order_by = "code"

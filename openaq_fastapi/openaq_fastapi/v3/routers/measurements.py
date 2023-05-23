@@ -19,7 +19,11 @@ from openaq_fastapi.v3.models.queries import (
     PeriodNameQuery,
 )
 
-router = APIRouter(prefix="/v3", tags=["v3"])
+router = APIRouter(
+    prefix="/v3",
+    tags=["v3"],
+    include_in_schema=False,
+)
 
 
 class LocationPathQuery(QueryBaseModel):
@@ -32,7 +36,6 @@ class LocationPathQuery(QueryBaseModel):
 
 
 class MeasurementsParametersQuery(QueryBaseModel):
-
     parameters_id: Union[CommaSeparatedList[int], None] = Query(description="")
 
     def where(self) -> Union[str, None]:

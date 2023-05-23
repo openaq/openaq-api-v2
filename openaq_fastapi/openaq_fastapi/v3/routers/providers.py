@@ -26,6 +26,7 @@ logger = logging.getLogger("providers")
 router = APIRouter(
     prefix="/v3",
     tags=["v3"],
+    include_in_schema=False,
 )
 
 
@@ -44,7 +45,6 @@ class ProvidersQueries(QueryBaseModel, Paging):
 
 
 class ProviderLocationPathQuery(QueryBaseModel):
-
     providers_id: int = Path(
         description="Limit the results to a specific country",
     )

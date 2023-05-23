@@ -9,7 +9,11 @@ from openaq_fastapi.v3.models.queries import Paging, QueryBaseModel, QueryBuilde
 
 logger = logging.getLogger("owners")
 
-router = APIRouter(prefix="/v3", tags=["v3"])
+router = APIRouter(
+    prefix="/v3",
+    tags=["v3"],
+    include_in_schema=False,
+)
 
 
 class OwnerPathQuery(QueryBaseModel):
@@ -27,7 +31,6 @@ class OwnersQueries(QueryBaseModel, Paging):
 
 
 class OwnerLocationPathQuery(QueryBaseModel):
-
     owners_id: int = Path(
         description="Limit the results to a specific country",
     )

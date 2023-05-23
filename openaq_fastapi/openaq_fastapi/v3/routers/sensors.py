@@ -19,7 +19,8 @@ logger = logging.getLogger("sensors")
 
 router = APIRouter(
     prefix="/v3",
-    tags=["v3"]
+    tags=["v3"],
+    include_in_schema=False,
 )
 
 
@@ -65,7 +66,6 @@ async def sensor_get(
 
 
 async def fetch_sensors(q, db):
-
     query = QueryBuilder(q)
 
     sql = f"""

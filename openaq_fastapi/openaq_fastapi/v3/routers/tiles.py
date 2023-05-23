@@ -19,6 +19,7 @@ logger = logging.getLogger("tiles")
 router = APIRouter(
     prefix="/v3",
     tags=["v3"],
+    include_in_schema=False,
 )
 
 

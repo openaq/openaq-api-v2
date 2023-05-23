@@ -18,14 +18,13 @@ from openaq_fastapi.v3.models.queries import (
 
 router = APIRouter(
     prefix="/v3",
-    tags=["v3"]
+    tags=["v3"],
+    include_in_schema=False,
 )
 
 
 class ParameterPathQuery(QueryBaseModel):
-    measurands_id: int = Path(
-        description="The parameter to query"
-    )
+    measurands_id: int = Path(description="The parameter to query")
 
     def where(self) -> str:
         return "s.measurands_id = :measurands_id"
@@ -41,11 +40,11 @@ class LocationPathQuery(QueryBaseModel):
 
 
 class LocationTrendsQueries(
-        LocationPathQuery,
-        ParameterPathQuery,
-        DateFromQuery,
-        DateToQuery,
-        PeriodNameQuery,
+    LocationPathQuery,
+    ParameterPathQuery,
+    DateFromQuery,
+    DateToQuery,
+    PeriodNameQuery,
 ):
     ...
 
@@ -65,17 +64,16 @@ async def trends_get(
 
 
 async def fetch_trends(q, db):
-
-    fmt = ''
-    if q.period_name == 'hour':
-        fmt = 'HH24'
-        dur = '01:00:00'
-    elif q.period_name == 'day':
-        fmt = 'ID'
-        dur = '24:00:00'
-    elif q.period_name == 'month':
-        fmt = 'MM'
-        dur = '1 month'
+    fmt = ""
+    if q.period_name == "hour":
+        fmt = "HH24"
+        dur = "01:00:00"
+    elif q.period_name == "day":
+        fmt = "ID"
+        dur = "24:00:00"
+    elif q.period_name == "month":
+        fmt = "MM"
+        dur = "1 month"
 
     query = QueryBuilder(q)
     sql = f"""
@@ -142,7 +140,9 @@ SELECT
  JOIN measurands m ON (t.measurands_id = m.measurands_id)
     """
 
-    logger.debug(f"expected_hours(datetime_from, datetime_to, '{q.period_name}', factor) * 3600.0")
+    logger.debug(
+        f"expected_hours(datetime_from, datetime_to, '{q.period_name}', factor) * 3600.0"
+    )
 
     response = await db.fetchPage(sql, query.params())
     return response

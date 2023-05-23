@@ -128,7 +128,8 @@ class Measurements(
         wheres = []
         if self.lon and self.lat:
             wheres.append(
-                " st_dwithin(st_makepoint(:lon, :lat)::geography," " sn.geom::geography, :radius) "
+                " st_dwithin(st_makepoint(:lon, :lat)::geography,"
+                " sn.geom::geography, :radius) "
             )
         for f, v in self:
             if v is not None:
