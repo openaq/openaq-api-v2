@@ -187,7 +187,9 @@ class LambdaApiStack(Stack):
             )
 
             log_event_queue = aws_sqs.Queue(
-                self, f"openaq-api-cf-log-event-queue-{env_name}"
+                self,
+                f"openaq-api-cf-log-event-queue-{env_name}",
+                visibility_timeout=Duration.seconds(cf_logs_lambda_timeout),
             )
 
             log_bucket.add_event_notification(
