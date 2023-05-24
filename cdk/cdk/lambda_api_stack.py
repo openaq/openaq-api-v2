@@ -176,6 +176,7 @@ class LambdaApiStack(Stack):
                 auto_delete_objects=True,
                 public_read_access=False,
                 removal_policy=RemovalPolicy.DESTROY,
+                object_ownership=aws_s3.ObjectOwnership.OBJECT_WRITER,
                 lifecycle_rules=[
                     aws_s3.LifecycleRule(
                         id=f"openaq-api-dist-log-lifecycle-rule-{env_name}",
