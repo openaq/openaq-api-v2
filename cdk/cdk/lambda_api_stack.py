@@ -137,9 +137,6 @@ class LambdaApiStack(Stack):
         # TODO setup origin header to prevent traffic to API gateway directly
         CfnOutput(self, "Endpoint", value=api_url)
 
-
-        elasticache = 
-
         if (
             domain_name
             and cert_arn
@@ -147,7 +144,6 @@ class LambdaApiStack(Stack):
             and hosted_zone_id
             and hosted_zone_name
         ):
-
             hosted_zone = route53.HostedZone.from_hosted_zone_attributes(
                 self,
                 f"openaq-api-hosted-zone-{env_name}",
