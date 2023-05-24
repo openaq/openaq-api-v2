@@ -137,6 +137,9 @@ class LambdaApiStack(Stack):
         # TODO setup origin header to prevent traffic to API gateway directly
         CfnOutput(self, "Endpoint", value=api_url)
 
+
+        elasticache = 
+
         if (
             domain_name
             and cert_arn
@@ -198,7 +201,6 @@ class LambdaApiStack(Stack):
             cloudfront_access_log_group = aws_logs.LogGroup(
                 self,
                 f"openaq-api-{env_name}-cf-access-log",
-                log_group_name=f"openaq-api-{env_name}-cf-access-log",
                 retention=aws_logs.RetentionDays.ONE_YEAR,
             )
 
