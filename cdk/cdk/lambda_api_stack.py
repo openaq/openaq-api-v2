@@ -61,8 +61,18 @@ class LambdaApiStack(Stack):
 
         if vpc_id is None:
             vpc = None
+            elasticache = None
         else:
             vpc = aws_ec2.Vpc.from_lookup(self, f"{id}-vpc", vpc_id=vpc_id)
+            elasticache = aws_cdk.aws_elasticache.CfnCacheCluster(
+                self,
+                f"openaq-api-cache-cluster-{env_name}",
+                cache_node_type="cache.t4g.small",
+                engine="redis",
+                num_cache_nodes=2,
+                port=6379,
+                cache_subnet_group_name=vpc.public_subnets[0],
+            )
 
         openaq_api = aws_lambda.Function(
             self,
