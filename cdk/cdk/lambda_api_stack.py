@@ -95,7 +95,7 @@ class LambdaApiStack(Stack):
         api = HttpApi(
             self,
             f"{id}-endpoint",
-            create_default_stage=False,
+            create_default_stage=True,
             default_integration=HttpLambdaIntegration(
                 f"openaq-api-integration-{env_name}",
                 openaq_api,
@@ -117,18 +117,6 @@ class LambdaApiStack(Stack):
         log = aws_logs.LogGroup(
             self,
             f"{id}-http-gateway-log",
-        )
-
-        CfnStage(
-            self,
-            f"{id}-stage",
-            api_id=api.http_api_id,
-            stage_name="$default",
-            auto_deploy=True,
-            access_log_settings=CfnStage.AccessLogSettingsProperty(
-                destination_arn=log.log_group_arn,
-                format='{"requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","routeKey":"$context.routeKey", "status":"$context.status","protocol":"$context.protocol", "responseLength":"$context.responseLength", "responseLatency": $context.responseLatency, "path": "$context.path"}',
-            ),
         )
 
         # When you dont include a default stage the api object does not include the url
