@@ -114,11 +114,6 @@ class LambdaApiStack(Stack):
             },
         )
 
-        log = aws_logs.LogGroup(
-            self,
-            f"{id}-http-gateway-log",
-        )
-
         # When you dont include a default stage the api object does not include the url
         # However, the urls are all standard based on the api_id and the region
         api_url = f"https://{api.http_api_id}.execute-api.{self.region}.amazonaws.com"
@@ -140,7 +135,7 @@ class LambdaApiStack(Stack):
             )
 
             cert = acm.Certificate.from_certificate_arn(
-                self, "openaq-api-cert", cert_arn
+                self, f"openaq-api-cert-{env_name}", cert_arn
             )
 
             cache_policy = cloudfront.CachePolicy(

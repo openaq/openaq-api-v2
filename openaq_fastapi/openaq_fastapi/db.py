@@ -14,7 +14,7 @@ from openaq_fastapi.settings import settings
 
 from .models.responses import Meta, OpenAQResult
 
-logger = logging.getLogger('db')
+logger = logging.getLogger("db")
 
 
 def default(obj):
@@ -47,26 +47,22 @@ async def db_pool(pool):
     # properly convert json/jsonb fields
     async def init(con):
         await con.set_type_codec(
-            'jsonb',
-            encoder=orjson.dumps,
-            decoder=orjson.loads,
-            schema='pg_catalog'
+            "jsonb", encoder=orjson.dumps, decoder=orjson.loads, schema="pg_catalog"
         )
         await con.set_type_codec(
-            'json',
-            encoder=orjson.dumps,
-            decoder=orjson.loads,
-            schema='pg_catalog'
+            "json", encoder=orjson.dumps, decoder=orjson.loads, schema="pg_catalog"
         )
 
+    logger.debug(f"Checking for existing pool: {pool}")
     if pool is None:
+        logger.debug("Creating a new pool")
         pool = await asyncpg.create_pool(
             settings.DATABASE_READ_URL,
-            command_timeout=14,
+            command_timeout=20,
             max_inactive_connection_lifetime=15,
             min_size=1,
             max_size=10,
-            init=init
+            init=init,
         )
     return pool
 
@@ -74,6 +70,7 @@ async def db_pool(pool):
 class DB:
     def __init__(self, request: Request):
         self.request = request
+        logger.debug(f"New db: {request.app.state}")
 
     async def acquire(self):
         pool = await self.pool()
@@ -81,7 +78,7 @@ class DB:
 
     async def pool(self):
         self.request.app.state.pool = await db_pool(
-            self.request.app.state.pool
+            getattr(self.request.app.state, "pool", None)
         )
         return self.request.app.state.pool
 
@@ -102,11 +99,11 @@ class DB:
                 raise ValueError(f"{e}") from e
             except TimeoutError:
                 raise HTTPException(
-                    status_code=500,
+                    status_code=408,
                     detail="Connection timed out",
                 )
             except Exception as e:
-                logger.error(f"Database Error: {e}")
+                logger.error(f"Unknown database error: {e}")
                 if str(e).startswith("ST_TileEnvelope"):
                     raise HTTPException(status_code=422, detail=f"{e}")
                 raise HTTPException(status_code=500, detail=f"{e}")
@@ -130,26 +127,39 @@ class DB:
             return r[0]
         return None
 
+    async def fetchPage(self, query, kwargs):
+        if "limit" in kwargs.keys():
+            page = kwargs.get("page", 1)
+            kwargs["offset"] = abs((page - 1) * kwargs.get("limit"))
+
+        data = await self.fetch(query, kwargs)
+        if len(data) > 0:
+            if "found" in data[0].keys():
+                kwargs["found"] = data[0]["found"]
+            else:
+                kwargs["found"] = len(data)
+        else:
+            kwargs["found"] = 0
+
+        output = OpenAQResult(meta=Meta.parse_obj(kwargs), results=data)
+        return output
+
     async def fetchOpenAQResult(self, query, kwargs):
         rows = await self.fetch(query, kwargs)
         found = 0
         results = []
 
         if len(rows) > 0:
-            if 'count' in rows[0].keys():
+            if "count" in rows[0].keys():
                 found = rows[0]["count"]
             # OpenAQResult expects a list for results
             if rows[0][1] is not None:
                 if isinstance(rows[0][1], list):
                     results = rows[0][1]
                 elif isinstance(rows[0][1], dict):
-                    results = [
-                        r[1] for r in rows
-                    ]
+                    results = [r[1] for r in rows]
                 elif isinstance(rows[0][1], str):
-                    results = [
-                        r[1] for r in rows
-                    ]
+                    results = [r[1] for r in rows]
 
         meta = Meta(
             website=os.getenv("DOMAIN_NAME", os.getenv("BASE_URL", "/")),

@@ -1,0 +1,3 @@
+-r requirements.txt
+pytest
+httpx==0.22.0

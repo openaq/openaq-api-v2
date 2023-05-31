@@ -21,7 +21,7 @@ def converter(meta, data, jq):
 
 class Meta(BaseModel):
     name: str = "openaq-api"
-    license: str = "CC BY 4.0d"
+    license: str = ""
     website: str = "/"
     page: int = 1
     limit: int = 100
@@ -77,13 +77,13 @@ class OpenAQResult(BaseModel):
 
 class AveragesRow(BaseModel):
     id: Union[List[int], int]
+    name: Union[List[str], str]
     hour: Union[datetime, None]
     day: Union[date, None]
     month: Union[date, None]
     year: Union[date, None]
     hod: Union[int, None]
-    dom: Union[int, None]
-    name: Union[List[str], str]
+    dow: Union[int, None]
     average: float
     name: Union[List[str], str]
     measurement_count: int  # TODO make camelCase
@@ -91,10 +91,27 @@ class AveragesRow(BaseModel):
     parameter_id: int = Field(..., alias="parameterId")
     display_name: str = Field(..., alias="displayName")
     unit: Union[str, None]
+    first_datetime: datetime
+    last_datetime: datetime
 
 
 class AveragesResponse(OpenAQResult):
     results: List[AveragesRow]
+
+
+# /v1/countries
+
+
+class CountriesRowV1(BaseModel):
+    code: str
+    name: str
+    locations: int
+    count: int
+    cities: int
+
+
+class CountriesResponseV1(OpenAQResult):
+    results: List[CountriesRowV1]
 
 
 # /v2/countries
@@ -111,9 +128,27 @@ class CountriesRow(BaseModel):
     cities: int
     sources: int
 
+    class Config:
+        allow_population_by_field_name = True
+
+
 
 class CountriesResponse(OpenAQResult):
     results: List[CountriesRow]
+
+
+# /v1/cities
+
+
+class CityRowV1(BaseModel):
+    country: str
+    city: str
+    count: int
+    locations: int
+
+
+class CitiesResponseV1(OpenAQResult):
+    results: List[CityRowV1]
 
 
 # /v2/cities
@@ -127,6 +162,10 @@ class CityRow(BaseModel):
     first_updated: str = Field(..., alias="firstUpdated")
     last_updated: str = Field(..., alias="lastUpdated")
     parameters: List[str]
+
+
+    class Config:
+        allow_population_by_field_name = True
 
 
 class CitiesResponse(OpenAQResult):
@@ -301,11 +340,27 @@ class MeasurementsResponse(OpenAQResult):
     results: List[MeasurementsRow]
 
 
-# /v2/parameters
-
+# /v2/models
 
 class ModelsResponse(OpenAQResult):
     results: List[str]
+
+
+# /v1/parameters
+
+
+class ParametersRowV1(BaseModel):
+    id: int
+    name: str
+    description: str
+    preferred_unit: str = Field(..., alias="preferredUnit")
+
+    class Config:
+        allow_population_by_field_name = True
+
+
+class ParametersResponseV1(OpenAQResult):
+    results: List[ParametersRowV1]
 
 
 # /v2/parameters
@@ -317,9 +372,9 @@ class ParametersRow(BaseModel):
     display_name: Union[str, None] = Field(None, alias="displayName")
     description: str
     preferred_unit: str = Field(..., alias="preferredUnit")
-    is_core: Union[bool, None] = Field(None, alias="isCore")
-    max_color_value: Union[float, None] = Field(None, alias="maxColorValue")
 
+    class Config:
+        allow_population_by_field_name = True
 
 class ParametersResponse(OpenAQResult):
     results: List[ParametersRow]

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - develop
+      - v3
 
 env:
   ENV: "staging"
@@ -13,8 +14,8 @@ env:
   DATABASE_WRITE_USER: ${{ secrets.DATABASE_WRITE_USER }}
   DATABASE_WRITE_PASSWORD: ${{ secrets.DATABASE_WRITE_PASSWORD }}
   DATABASE_DB: ${{ secrets.DATABASE_DB }}
-  DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
-  DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
+  DATABASE_HOST: ${{ secrets.DATABASE_HOST_STAGING }}
+  DATABASE_PORT: ${{ secrets.STAGING_DATABASE_PORT }}
   API_LAMBDA_MEMORY_SIZE: ${{ secrets.API_LAMBDA_MEMORY_SIZE_STAGING }}
   FETCH_ASCENDING: ${{ secrets.FETCH_ASCENDING }}
   PIPELINE_LIMIT: ${{ secrets.PIPELINE_LIMIT }}
@@ -32,12 +33,13 @@ env:
   CDK_ACCOUNT: ${{ secrets.CDK_ACCOUNT }}
   CDK_REGION: ${{ secrets.CDK_REGION }}
 
-  #VPC_ID: ${{ secrets.VPC_ID }}
+  #VPC_ID: ${{ secrets.STAGING_VPC_ID }}
+
 
   REDIS_HOST: ${{ secrets.REDIS_HOST_STAGING }}
   REDIS_PORT: ${{ secrets.REDIS_PORT }}
 
-  RATE_LIMITING: True
+  RATE_LIMITING: False
   RATE_AMOUNT: 2000
   RATE_AMOUNT_KEY: 2000
   RATE_TIME: 5

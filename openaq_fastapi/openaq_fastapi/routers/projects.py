@@ -12,6 +12,7 @@ logger = logging.getLogger("projects")
 
 router = APIRouter()
 
+
 class ProjectsOrder(str, Enum):
     id = "id"
     name = "name"
@@ -103,17 +104,20 @@ class Projects(Project, Measurands, APIBase, Country):
 
 @router.get(
     "/v2/projects/{project_id}",
+    include_in_schema=False,
     response_model=ProjectsResponse,
     summary="Project by ID",
     description="Provides a project by project ID",
     tags=["v2"],
 )
 @router.get(
-    "/v2/projects", 
-    response_model=ProjectsResponse, 
+    "/v2/projects",
+    include_in_schema=False,
+    response_model=ProjectsResponse,
     summary="Projects",
     description="Provides a list of projects",
-    tags=["v2"])
+    tags=["v2"],
+)
 async def projects_get(
     db: DB = Depends(),
     projects: Projects = Depends(Projects.depends()),

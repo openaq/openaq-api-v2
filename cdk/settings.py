@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     API_CACHE_TIMEOUT: int = 900
     ROLLUP_LAMBDA_TIMEOUT: int = 900
     ROLLUP_LAMBDA_MEMORY_SIZE: int = 1536
-    LOG_LEVEL: str = 'INFO'
+    LOG_LEVEL: str = "INFO"
     HOSTED_ZONE_ID: str = None
     HOSTED_ZONE_NAME: str = None
     WEB_ACL_ID: str = None
@@ -28,8 +28,8 @@ class Settings(BaseSettings):
 
     class Config:
         parent = Path(__file__).resolve().parent.parent
-        if 'DOTENV' in environ:
-            env_file = Path.joinpath(parent, environ['DOTENV'])
+        if "DOTENV" in environ:
+            env_file = Path.joinpath(parent, environ["DOTENV"])
         else:
             env_file = Path.joinpath(parent, ".env")
 
