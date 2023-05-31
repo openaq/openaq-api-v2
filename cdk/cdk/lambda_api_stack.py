@@ -114,11 +114,6 @@ class LambdaApiStack(Stack):
             },
         )
 
-        log = aws_logs.LogGroup(
-            self,
-            f"{id}-http-gateway-log-{env_name}",
-        )
-
         # When you dont include a default stage the api object does not include the url
         # However, the urls are all standard based on the api_id and the region
         api_url = f"https://{api.http_api_id}.execute-api.{self.region}.amazonaws.com"
@@ -164,6 +159,7 @@ class LambdaApiStack(Stack):
                 auto_delete_objects=True,
                 public_read_access=False,
                 removal_policy=RemovalPolicy.DESTROY,
+                object_ownership=aws_s3.ObjectOwnership.OBJECT_WRITER,
                 lifecycle_rules=[
                     aws_s3.LifecycleRule(
                         id=f"openaq-api-dist-log-lifecycle-rule-{env_name}",
@@ -187,7 +183,6 @@ class LambdaApiStack(Stack):
             cloudfront_access_log_group = aws_logs.LogGroup(
                 self,
                 f"openaq-api-{env_name}-cf-access-log",
-                log_group_name=f"openaq-api-{env_name}-cf-access-log",
                 retention=aws_logs.RetentionDays.ONE_YEAR,
             )
 
