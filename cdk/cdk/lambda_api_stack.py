@@ -95,7 +95,7 @@ class LambdaApiStack(Stack):
         api = HttpApi(
             self,
             f"{id}-endpoint",
-            create_default_stage=False,
+            create_default_stage=True,
             default_integration=HttpLambdaIntegration(
                 f"openaq-api-integration-{env_name}",
                 openaq_api,
@@ -119,18 +119,6 @@ class LambdaApiStack(Stack):
             f"{id}-http-gateway-log-{env_name}",
         )
 
-        CfnStage(
-            self,
-            f"{id}-stage-{env_name}",
-            api_id=api.http_api_id,
-            stage_name="$default",
-            auto_deploy=True,
-            access_log_settings=CfnStage.AccessLogSettingsProperty(
-                destination_arn=log.log_group_arn,
-                format='{"requestId":"$context.requestId", "ip": "$context.identity.sourceIp", "requestTime":"$context.requestTime", "httpMethod":"$context.httpMethod","routeKey":"$context.routeKey", "status":"$context.status","protocol":"$context.protocol", "responseLength":"$context.responseLength", "responseLatency": $context.responseLatency, "path": "$context.path"}',
-            ),
-        )
-
         # When you dont include a default stage the api object does not include the url
         # However, the urls are all standard based on the api_id and the region
         api_url = f"https://{api.http_api_id}.execute-api.{self.region}.amazonaws.com"
@@ -144,7 +132,6 @@ class LambdaApiStack(Stack):
             and hosted_zone_id
             and hosted_zone_name
         ):
-
             hosted_zone = route53.HostedZone.from_hosted_zone_attributes(
                 self,
                 f"openaq-api-hosted-zone-{env_name}",
