@@ -333,37 +333,6 @@ async def latest_get(
     qparams = locations.params()
 
     q = f"""
--------------------------------
-WITH nodes_latest_measurements AS (
--------------------------------
-  SELECT sn.sensor_nodes_id as id
-  , jsonb_agg(jsonb_build_object(
-     'parameter', m.measurand
-    , 'unit', m.units
-    , 'value', sl.value_latest
-    , 'lastUpdated', sl.datetime_last
-    )) as measurements
-  FROM sensor_nodes sn
-  JOIN sensor_systems ss USING (sensor_nodes_id)
-  JOIN sensors s USING (sensor_systems_id)
-  JOIN sensors_rollup sl USING (sensors_id)
-  JOIN measurands m USING (measurands_id)
-  GROUP BY sensor_nodes_id)
---------------------------
-SELECT name as location
-    , city
-    , country->>'code' as country
-    , coordinates
-    , s.measurements
-    , datetime_first->>'utc' as "firstUpdated"
-    , datetime_last->>'utc' as "lastUpdated"
-    , COUNT(1) OVER() as found
-    FROM locations_view_cached l
-    JOIN nodes_latest_measurements s ON (l.id = s.id)
-    WHERE {locations.where()}
-    ORDER BY {locations.order()}
-    LIMIT :limit
-    OFFSET :offset
     """
     output = await db.fetchPage(q, qparams)
     return output
@@ -391,8 +360,28 @@ async def latest_v1_get(
     qparams = locations.params()
 
     q = f"""
+-----------------------------
+WITH locations AS (
+-----------------------------
+SELECT id
+    , name as location
+    , city
+    , country->>'code' as country
+    , coordinates
+    , datetime_first->>'utc' as "firstUpdated"
+    , datetime_last->>'utc' as "lastUpdated"
+    FROM locations_view_cached l
+    WHERE {locations.where()}
+    ORDER BY {locations.order()}
+    LIMIT :limit
+    OFFSET :offset
 -------------------------------
-WITH nodes_latest_measurements AS (
+), locations_count AS (
+   SELECT COUNT(1) as found
+   FROM locations_view_cached
+   WHERE {locations.where()}
+-------------------------------
+), nodes_latest_measurements AS (
 -------------------------------
   SELECT sn.sensor_nodes_id as id
   , jsonb_agg(jsonb_build_object(
@@ -400,32 +389,21 @@ WITH nodes_latest_measurements AS (
     , 'unit', m.units
     , 'value', sl.value_latest
     , 'lastUpdated', sl.datetime_last
-    , 'sourceName', sn.source_name
-    , 'averagingPeriod', jsonb_build_object(
-     'value', s.data_averaging_period_seconds
-     , 'unit', 'seconds'
-    ))) as parameters
-  FROM sensor_nodes sn
+    )) as measurements
+  FROM locations l
+  JOIN sensor_nodes sn ON (l.id = sn.sensor_nodes_id)
   JOIN sensor_systems ss USING (sensor_nodes_id)
   JOIN sensors s USING (sensor_systems_id)
   JOIN sensors_rollup sl USING (sensors_id)
   JOIN measurands m USING (measurands_id)
   GROUP BY sensor_nodes_id)
 --------------------------
-SELECT name as location
-    , city
-    , country->>'code' as country
-    , coordinates
-    , s.parameters as measurements
-    , datetime_first->>'utc' as "firstUpdated"
-    , datetime_last->>'utc' as "lastUpdated"
-    , COUNT(1) OVER() as found
-    FROM locations_view_cached l
-    JOIN nodes_latest_measurements s ON (l.id = s.id)
-    WHERE {locations.where()}
-    ORDER BY {locations.order()}
-    LIMIT :limit
-    OFFSET :offset
+  SELECT l.*
+  , s.measurements
+  , c.found
+  FROM locations_count c
+  , nodes_latest_measurements s
+  JOIN locations l USING (id);
     """
     output = await db.fetchPage(q, qparams)
     return output

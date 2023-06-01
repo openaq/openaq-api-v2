@@ -106,9 +106,18 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             counter = None
 
         if response.status_code == 200:
-            logging.info(HTTPLog(
+            logger.info(HTTPLog(
                 request=request,
                 type=LogType.SUCCESS,
+                http_code=response.status_code,
+                timing=timing,
+                rate_limiter=rate_limiter,
+                counter=counter,
+            ).json())
+        else:
+            logger.info(HTTPLog(
+                request=request,
+                type=LogType.WARNING,
                 http_code=response.status_code,
                 timing=timing,
                 rate_limiter=rate_limiter,
