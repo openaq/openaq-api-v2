@@ -333,6 +333,29 @@ async def latest_get(
     qparams = locations.params()
 
     q = f"""
+-----------------------------
+WITH locations AS (
+-----------------------------
+SELECT id
+    , name as location
+    , city
+    , country->>'code' as country
+    , coordinates
+    , datetime_first->>'utc' as "firstUpdated"
+    , datetime_last->>'utc' as "lastUpdated"
+    , COUNT(1) OVER() as found
+    FROM locations_view_cached l
+    WHERE {locations.where()}
+    ORDER BY {locations.order()}
+    LIMIT :limit
+    OFFSET :offset
+-------------------------------
+)
+-------------------------------
+  SELECT l.*
+  , sn.measurements
+  FROM locations l
+  JOIN locations_latest_measurements_cached sn ON (l.id = sn.id)
     """
     output = await db.fetchPage(q, qparams)
     return output
@@ -378,32 +401,17 @@ SELECT id
 -------------------------------
 ), locations_count AS (
    SELECT COUNT(1) as found
-   FROM locations_view_cached
+   FROM locations_view_cached l
    WHERE {locations.where()}
 -------------------------------
-), nodes_latest_measurements AS (
--------------------------------
-  SELECT sn.sensor_nodes_id as id
-  , jsonb_agg(jsonb_build_object(
-     'parameter', m.measurand
-    , 'unit', m.units
-    , 'value', sl.value_latest
-    , 'lastUpdated', sl.datetime_last
-    )) as measurements
-  FROM locations l
-  JOIN sensor_nodes sn ON (l.id = sn.sensor_nodes_id)
-  JOIN sensor_systems ss USING (sensor_nodes_id)
-  JOIN sensors s USING (sensor_systems_id)
-  JOIN sensors_rollup sl USING (sensors_id)
-  JOIN measurands m USING (measurands_id)
-  GROUP BY sensor_nodes_id)
+)
 --------------------------
   SELECT l.*
-  , s.measurements
+  , m.measurements
   , c.found
   FROM locations_count c
-  , nodes_latest_measurements s
-  JOIN locations l USING (id);
+  , locations l
+  JOIN locations_latest_measurements_cached m USING (id);
     """
     output = await db.fetchPage(q, qparams)
     return output
@@ -430,27 +438,7 @@ async def locationsv1_get(
     qparams = locations.params()
 
     q = f"""
------------------------------
-WITH nodes_instruments AS (
------------------------------
-  SELECT sn.sensor_nodes_id as id
-  , jsonb_agg(DISTINCT jsonb_build_object(
-     'modelName', i.label
-     , 'manufacturerName', mc.full_name
-  )) as manufacturers
-  FROM sensor_nodes sn
-  JOIN sensor_systems ss USING (sensor_nodes_id)
-  JOIN instruments i USING (instruments_id)
-  JOIN entities mc ON (mc.entities_id = i.manufacturer_entities_id)
-  GROUP BY sn.sensor_nodes_id
--------------------------------
-), nodes_measurements_count AS (
--------------------------------
-  SELECT sn.id
-  , measurements
-  FROM locations l
-  JOIN locations_latest_measurements_cached sn ON (l.id = sn.id))
---------------------------
+WITH locations AS (
 SELECT l.id
     , name as location
     , ARRAY[name] as locations
@@ -462,8 +450,6 @@ SELECT l.id
     , datetime_first->>'utc' as "firstUpdated"
     , datetime_last->>'utc' as "lastUpdated"
     , coordinates
-    , s.parameters
-    , s.counts as "countsByMeasurement"
     , CASE owner->>'type'
          WHEN 'Governmental Organization' THEN 'government'
          WHEN 'Research Organization' THEN 'research'
@@ -478,12 +464,33 @@ SELECT l.id
         END as "sourceTypes"
     , COUNT(1) OVER() as found
     FROM locations_view_cached l
-    JOIN nodes_instruments i ON (l.id = i.id)
-    LEFT JOIN nodes_measurements_count s ON (l.id = s.id)
     WHERE {locations.where()}
     ORDER BY {locations.order()}
     LIMIT :limit
     OFFSET :offset
+-----------------------------
+), nodes_instruments AS (
+-----------------------------
+  SELECT sn.sensor_nodes_id as id
+  , jsonb_agg(DISTINCT jsonb_build_object(
+     'modelName', i.label
+     , 'manufacturerName', mc.full_name
+  )) as manufacturers
+  FROM sensor_nodes sn
+  JOIN sensor_systems ss USING (sensor_nodes_id)
+  JOIN instruments i USING (instruments_id)
+  JOIN entities mc ON (mc.entities_id = i.manufacturer_entities_id)
+  GROUP BY sn.sensor_nodes_id
+-------------------------------
+)
+--------------------------
+SELECT l.*
+    , s.parameters
+    , s.counts as "countsByMeasurement"
+    , s.total_count as count
+    FROM locations l
+    JOIN nodes_instruments i ON (l.id = i.id)
+    LEFT JOIN locations_latest_measurements_cached s ON (l.id = s.id)
     """
     output = await db.fetchPage(q, qparams)
     return output
