@@ -246,44 +246,7 @@ async def locations_get(
     # the order by inside row_number ensures that the right sort
     # method is used to determine the row number
     q = f"""
------------------------------
-WITH nodes_instruments AS (
------------------------------
-  SELECT sn.sensor_nodes_id as id
-  , jsonb_agg(DISTINCT jsonb_build_object(
-     'modelName', i.label
-     , 'manufacturerName', mc.full_name
-  )) as manufacturers
-  FROM sensor_nodes sn
-  JOIN sensor_systems ss USING (sensor_nodes_id)
-  JOIN instruments i USING (instruments_id)
-  JOIN entities mc ON (mc.entities_id = i.manufacturer_entities_id)
-  GROUP BY sn.sensor_nodes_id
--------------------------------
-), nodes_measurements_count AS (
--------------------------------
-  SELECT sn.sensor_nodes_id as id
-  , SUM(value_count) as measurements
-  , jsonb_agg(jsonb_build_object(
-    'id', m.measurands_id
-    , 'parameter', m.measurand
-    , 'parameterId', m.measurands_id
-    , 'unit', m.units
-    , 'displayName', m.measurand||' '||m.units
-    , 'count', sl.value_count
-    , 'average', sl.value_avg
-    , 'lastValue', sl.value_latest
-    , 'firstUpdated', sl.datetime_first
-    , 'lastUpdated', sl.datetime_last
-    )) as parameters
-  FROM sensor_nodes sn
-  JOIN sensor_systems ss USING (sensor_nodes_id)
-  JOIN sensors s USING (sensor_systems_id)
-  JOIN sensors_rollup sl USING (sensors_id)
-  JOIN measurands m USING (measurands_id)
-  GROUP BY sensor_nodes_id)
---------------------------
-SELECT l.id
+      SELECT l.id
     , name
     , ismobile as "isMobile"
     , ismonitor as "isMonitor"
@@ -295,17 +258,17 @@ SELECT l.id
     , sensors
     , timezone
     , bbox(geom) as bounds
-    , i.manufacturers
-    , COALESCE(s.measurements, 0) as measurements
-    , s.parameters
+    , m.manufacturers
+    , COALESCE(s.total_count, 0) as measurements
+    , s.measurements as parameters
     , COUNT(1) OVER() as found
     FROM locations_view_cached l
-    JOIN nodes_instruments i ON (l.id = i.id)
-    LEFT JOIN nodes_measurements_count s ON (l.id = s.id)
+    LEFT JOIN locations_manufacturers m ON (m.id = l.id)
+    LEFT JOIN locations_latest_measurements_cached s ON (l.id = s.id)
     WHERE {locations.where()}
     ORDER BY {locations.order()}
     LIMIT :limit
-    OFFSET :offset
+    OFFSET :offset;
     """
     output = await db.fetchPage(q, qparams)
     return output
