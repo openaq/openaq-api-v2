@@ -446,19 +446,10 @@ WITH nodes_instruments AS (
 -------------------------------
 ), nodes_measurements_count AS (
 -------------------------------
-  SELECT sn.sensor_nodes_id as id
-  , array_agg(m.measurand) as parameters
-  , jsonb_agg(jsonb_build_object(
-    'id', m.measurands_id
-    , 'parameter', m.measurand||' '||m.units
-    , 'count', sl.value_count
-    )) as counts
-  FROM sensor_nodes sn
-  JOIN sensor_systems ss USING (sensor_nodes_id)
-  JOIN sensors s USING (sensor_systems_id)
-  JOIN sensors_rollup sl USING (sensors_id)
-  JOIN measurands m USING (measurands_id)
-  GROUP BY sensor_nodes_id)
+  SELECT sn.id
+  , measurements
+  FROM locations l
+  JOIN locations_latest_measurements_cached sn ON (l.id = sn.id))
 --------------------------
 SELECT l.id
     , name as location

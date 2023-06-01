@@ -58,7 +58,7 @@ async def db_pool(pool):
         logger.debug("Creating a new pool")
         pool = await asyncpg.create_pool(
             settings.DATABASE_READ_URL,
-            command_timeout=20,
+            command_timeout=14,
             max_inactive_connection_lifetime=15,
             min_size=1,
             max_size=10,
