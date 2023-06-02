@@ -137,24 +137,20 @@ class Locations(
                 elif f == "parameter_id":
                     wheres.append(
                         """
-                        parameters @> jsonb_build_array(jsonb_build_object('id', :parameter_id::int))
+                        :parameter_id::int = ANY(parameter_ids)
                         """
                     )
                 elif f == "parameter":
                     if all(isinstance(x, int) for x in v):
                         wheres.append(
                             """
-                            parameters @> ANY(
-                                jsonb_array_query('parameterId',:parameter::int[])
-                                )
+                            parameter_ids @> :parameter::int[]
                             """
                         )
                     else:
                         wheres.append(
                             """
-                            parameters @> ANY(
-                                jsonb_array_query('parameter',:parameter::text[])
-                                )
+                            parameters @> :parameter::text[]
                             """
                         )
                 elif f == "sourceName":
