@@ -191,9 +191,9 @@ async def startup_event():
     register the database
     """
     if not hasattr(app.state, "pool"):
-        logger.info("initializing connection pool")
+        logger.debug("initializing connection pool")
         app.state.pool = await db_pool(None)
-        logger.info("Connection pool established")
+        logger.debug("Connection pool established")
 
     if hasattr(app.state, "counter"):
         app.state.counter += 1
@@ -205,10 +205,10 @@ async def startup_event():
 async def shutdown_event():
     """Application shutdown: de-register the database connection."""
     if hasattr(app.state, "pool") and not settings.USE_SHARED_POOL:
-        logger.info("Closing connection")
+        logger.debug("Closing connection")
         await app.state.pool.close()
         delattr(app.state, "pool")
-        logger.info("Connection closed")
+        logger.debug("Connection closed")
 
 
 @app.get("/ping", include_in_schema=False)
