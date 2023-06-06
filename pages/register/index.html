@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <title>OpenAQ API Registration</title>
+</head>
+<body>
+    <header class="header">
+        <div class="header-contents">
+            <a href="/" class="header-logo" aria-label="openaq logo">
+                <img src="../logo.svg" alt="openaq logo">
+            </a>
+        </div>
+    </header>
+    <main class="main">
+        <div class="content">
+            <div class="form-header">
+                <h1 class="type-display-1 gradient-title">API Key Registration</h1>
+
+                <p class="type-body-1">Registering for an API key provided authenticated access to the OpenAQ API. Authenticated users are allowed an increased rate limit when accessing the API. To learn more visit <a class="type-link-1" href="https://docs.openaq.org">docs.openaq.org</a></p>
+            </div>
+            <form method="POST" class="registration-form">
+                
+                <div class="entity-select">
+                    <div>
+                        <input type="radio" id="individual-radio" name="entitytype" value="Person" checked>
+                        <label for="individual-radio" class="type-subtitle-3 text-sky-120">Individual</label>
+                    </div>
+                    <div>
+                        <input type="radio" id="organization-radio" name="entitytype" value="Organization">
+                        <label for="organization-radio" class="type-subtitle-3 text-sky-120">Organization</label>
+                    </div>
+                </div>
+                <div class="form-element">
+                    <label for="name-input" class="type-subtitle-3 text-sky-120">Full name</label>
+                    <input type="text" id="name-input" name="fullname" class="text-input js-name-input" placeholder=" " autocomplete="on" required>
+                </div>
+                <div class="form-element">
+                    <label for="email-input" class="type-subtitle-3 text-sky-120">Email</label>
+                    <input type="email" name="emailaddress" id="email-input" class="text-input js-email-input"  placeholder=" " autocomplete="on" required>
+                    </div>
+                    <div class="form-element">
+                    <label for="password-input" class="type-subtitle-3 text-sky-120">Password <span class="type-body-2 text-sky-120">(mininum 8 characters)</span></label>
+                    <input type="password" name="password" id="password-input" class="text-input js-password-input" minlength="8" placeholder=" " required>
+                </div>
+                <div class="form-element">
+                    <label for="password-confirm-input" class="type-subtitle-3 text-sky-120">Confirm Password</label>
+                    <input type="password" name="passwordconfirm" id="password-confirm-input" class="text-input js-password-confirm-input" minlength="8" placeholder=" " required>
+                </div>
+                    <div>
+                        <span class="password-match-warning js-password-match-warning"></span>
+                    </div>
+                    <div class="password-strength">
+                        <div class="strenth-meter">
+                            <span class="type-body-1">Password strength</span>
+                            <div class="strength-meter-bars">
+                                <div class="strength-meter__bar"></div>
+                                <div class="strength-meter__bar"></div>
+                                <div class="strength-meter__bar"></div>
+                                <div class="strength-meter__bar"></div>
+                                <div class="strength-meter__bar"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="type-body-1 strenth-message js-strength-message"></span>
+                        </div>
+                    </div>
+                    <div class="form-submit">
+                        <button type="submit" class="btn btn-primary submit-btn js-submit-btn" disabled>Sign up</button>
+                    </div>
+            </form>
+            <div>
+                <p class="type-body-1">Already signed up? <a href="" class="type-link-1">Login</a></p>
+            </div>
+            <section class="privacy-section">
+                <p class="type-body-1">See our <a class="type-link-1" href="https://openaq.org/privacy">privacy policy</a> for more information on the personal data we store.</p>
+            </section>
+        </div>
+    </main>
+    <script type="module" src="index.js"></script>
+</body>
+</html>

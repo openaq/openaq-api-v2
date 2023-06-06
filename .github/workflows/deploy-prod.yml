@@ -41,6 +41,9 @@ env:
   RATE_AMOUNT_KEY: 2000
   RATE_TIME: 5
 
+  EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -59,6 +62,12 @@ jobs:
         with:
           node-version: "16"
 
+      - name: build pages
+        working-directory: ./pages
+        run: |
+          yarn run install
+          yarn run deploy
+          
       - name: Install CDK
         run: |
           npm install -g aws-cdk@2.25.0

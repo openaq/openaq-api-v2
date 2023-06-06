@@ -6,3 +6,5 @@ cdk.out/
 .DS_Store
 *.egg-info
 .build
+openaq_fastapi/openaq_fastapi/templates/*
+openaq_fastapi/openaq_fastapi/static/assets/*

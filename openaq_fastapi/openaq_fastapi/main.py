@@ -42,6 +42,7 @@ from openaq_fastapi.routers.parameters import router as parameters_router
 from openaq_fastapi.routers.projects import router as projects_router
 from openaq_fastapi.routers.sources import router as sources_router
 from openaq_fastapi.routers.summary import router as summary_router
+from openaq_fastapi.routers.auth import router as auth_router
 
 # V3 routers
 from openaq_fastapi.v3.routers import (
@@ -78,7 +79,7 @@ logger = logging.getLogger("main")
 # Make sure that we are using UTC timezone
 # this is required because the datetime class will automatically
 # add the env timezone when passing the value to a sql query parameter
-environ['TZ'] = 'UTC'
+environ["TZ"] = "UTC"
 
 
 # this is instead of importing settings elsewhere
@@ -122,6 +123,7 @@ if settings.RATE_LIMITING:
             skip_full_coverage_check=True,
             socket_timeout=5,
         )
+        app.state.redis_client = redis_client
     except Exception as e:
         logging.error(InfrastructureErrorLog(detail=f"failed to connect to redis: {e}"))
     logger.debug("Redis connected")
@@ -134,7 +136,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(StripParametersMiddleware)
+
+app.include_router(auth_router)
+
+# app.add_middleware(StripParametersMiddleware)
 app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
 app.add_middleware(TotalTimeMiddleware)
 app.add_middleware(LoggingMiddleware)
