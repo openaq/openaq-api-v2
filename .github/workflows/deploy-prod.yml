@@ -65,7 +65,7 @@ jobs:
       - name: build pages
         working-directory: ./pages
         run: |
-          yarn run install
+          yarn install
           yarn run deploy
           
       - name: Install CDK
