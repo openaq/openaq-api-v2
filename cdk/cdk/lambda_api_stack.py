@@ -96,9 +96,11 @@ class LambdaApiStack(Stack):
             redis_cluster = aws_elasticache.CfnCacheCluster(
                 scope=self,
                 id=f"openaq-api-redis-cluster-{env_name}",
+                cluster_name=f"openaq-api-redis-cluster-{env_name}",
                 engine="redis",
-                cache_node_type="cache.t3.medium",
-                num_cache_nodes=1,
+                cache_node_type="cache.t3.small",
+                cache_parameter_group_name="default.redis7.x.cluster.on",
+                num_cache_nodes=2,
                 cache_subnet_group_name=redis_subnet_group.ref,
                 vpc_security_group_ids=[redis_sec_group.security_group_id],
             )
