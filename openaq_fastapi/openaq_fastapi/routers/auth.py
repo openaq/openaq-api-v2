@@ -154,30 +154,11 @@ async def verify(request: Request, verification_code: str, db: DB = Depends()):
             "verify_error.html", {"request": request, "message": message}
         )
     else:
-        message = "Email address verified. You will recieve a email containing your OpenAQ API key shortly."
         token = await db.get_user_token(row[0])
         # redis_client = request.app.state.redis_client
         # await redis_client.sadd("keys", token)
         send_api_key_email(token, row[3], row[4])
-        return templates.TemplateResponse(
-            "verify_sent.html", {"request": request, "message": message}
-        )
-
-
-@router.get("/login")
-async def get_login(request: Request):
-    return templates.TemplateResponse("login/index.html", {"request": request})
-
-
-@router.post("/login")
-async def post_login(
-    emailaddress: Annotated[str, Form()],
-    password: Annotated[str, Form()],
-    request: Request,
-    db: DB = Depends(),
-):
-    password_hash = pbkdf2_sha256.hash(password)
-    return templates.TemplateResponse("login/index.html", {"request": request})
+        return templates.TemplateResponse("verify/index.html", {"request": request})
 
 
 @router.get("/register")
@@ -206,4 +187,4 @@ async def post_register(
     )
     verification_code = await db.create_user(user)
     send_verification_email(verification_code, form.full_name, form.email_address)
-    return RedirectResponse("/check-email")
+    return RedirectResponse("/check-email", status_code=status.HTTP_302_FOUND)
