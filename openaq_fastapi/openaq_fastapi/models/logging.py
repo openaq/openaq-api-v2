@@ -88,7 +88,10 @@ class HTTPLog(BaseLog):
     @validator('params_keys', always=True)
     def set_params_keys(cls, v, values) -> dict:
         params = values.get('params_obj', {})
-        return list(params.keys())
+        if params is None:
+            return []
+        else:
+            return list(params.keys())
 
 
 class ErrorLog(HTTPLog):
