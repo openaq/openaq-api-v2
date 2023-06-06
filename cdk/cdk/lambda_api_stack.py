@@ -103,6 +103,7 @@ class LambdaApiStack(Stack):
                 vpc_security_group_ids=[redis_sec_group.security_group_id],
             )
 
+        lambda_env = stringify_settings(lambda_env)
         lambda_env["REDIS_HOST"] = redis_cluster.attr_configuration_endpoint_address
 
         openaq_api = aws_lambda.Function(
@@ -121,7 +122,7 @@ class LambdaApiStack(Stack):
             vpc=vpc,
             allow_public_subnet=True,
             memory_size=api_lambda_memory_size,
-            environment=stringify_settings(lambda_env),
+            environment=lambda_env,
             security_group=lambda_sec_group,
             timeout=Duration.seconds(api_lambda_timeout),
             layers=[
