@@ -24,6 +24,7 @@ export default defineConfig({
         register: resolve(__dirname, 'register/index.html'),
         login: resolve(__dirname, 'login/index.html'),
         check_email: resolve(__dirname, 'check_email/index.html'),
+        verify: resolve(__dirname, 'verify/index.html'),
       },
     },
   },
