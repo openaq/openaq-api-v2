@@ -99,7 +99,7 @@ class LambdaApiStack(Stack):
                 cluster_name=f"openaq-api-redis-cluster-{env_name}",
                 engine="redis",
                 cache_node_type="cache.t3.small",
-                cache_parameter_group_name="default.redis7.x.cluster.on",
+                cache_parameter_group_name="default.redis7.cluster.on",
                 num_cache_nodes=1,
                 cache_subnet_group_name=redis_subnet_group.ref,
                 vpc_security_group_ids=[redis_sec_group.security_group_id],
