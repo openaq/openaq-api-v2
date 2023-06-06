@@ -208,7 +208,7 @@ class LambdaApiStack(Stack):
                 self,
                 f"openaq-api-dist-log-{env_name}",
                 bucket_name=f"openaq-api-dist-log-{env_name}",
-                auto_delete_objects=True,
+                auto_delete_objects=False,
                 public_read_access=False,
                 removal_policy=RemovalPolicy.DESTROY,
                 object_ownership=aws_s3.ObjectOwnership.OBJECT_WRITER,
