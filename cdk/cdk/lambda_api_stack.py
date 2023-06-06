@@ -10,6 +10,7 @@ from aws_cdk import (
     aws_sqs,
     aws_lambda,
     aws_logs,
+    aws_iam,
     Stack,
     Duration,
     CfnOutput,
@@ -90,6 +91,14 @@ class LambdaApiStack(Stack):
                     Path("../openaq_fastapi/requirements.txt"),
                 ),
             ],
+        )
+
+        openaq_api.add_to_role_policy(
+            aws_iam.PolicyStatement(
+                actions=["ses:SendEmail", "SES:SendRawEmail"],
+                resources=["*"],
+                effect=aws_iam.Effect.DENY,
+            )
         )
 
         api = HttpApi(

@@ -23,6 +23,7 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         register: resolve(__dirname, 'register/index.html'),
         login: resolve(__dirname, 'login/index.html'),
+        check_email: resolve(__dirname, 'check_email/index.html'),
       },
     },
   },

@@ -5,10 +5,10 @@ from datetime import datetime, timezone
 from email.message import EmailMessage
 
 import boto3
-from fastapi import APIRouter, Depends, HTTPException, Request, status, Form
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.templating import Jinja2Templates
 from passlib.context import CryptContext
-from typing import Annotated
+from fastapi.responses import RedirectResponse
 
 
 from ..db import DB
@@ -81,8 +81,8 @@ def send_verification_email(verifiation_code: str, full_name: str, email: str):
 def send_api_key_email(token: str, full_name: str, email: str):
     ses_client = boto3.client("ses")
     TEXT_EMAIL_CONTENT = f"""
-    Thank you for signing up for an OpenAQ API Key
-    You API Key: {token}
+    Thank you for registering an OpenAQ API Key
+    Your API Key: {token}
     """
     HTML_EMAIL_CONTENT = f"""
         <html>
@@ -111,6 +111,11 @@ def send_api_key_email(token: str, full_name: str, email: str):
         RawMessage={"Data": msg.as_string()},
     )
     return response
+
+
+@router.get("/check-email")
+async def check_email(request: Request):
+    return templates.TemplateResponse("check_email/index.html", {"request": request})
 
 
 @router.get("/verify/{verification_code}")
@@ -189,3 +194,4 @@ async def post_register(
     )
     verification_code = await db.create_user(user)
     send_verification_email(verification_code, form.full_name, form.email_address)
+    return RedirectResponse("/check-email")
