@@ -3,9 +3,11 @@ import os
 import pathlib
 from datetime import datetime, timezone
 from email.message import EmailMessage
+from typing import Annotated
+
 
 import boto3
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Form
 from fastapi.templating import Jinja2Templates
 from passlib.context import CryptContext
 from fastapi.responses import RedirectResponse
@@ -165,6 +167,17 @@ async def verify(request: Request, verification_code: str, db: DB = Depends()):
 
 @router.get("/login")
 async def get_login(request: Request):
+    return templates.TemplateResponse("login/index.html", {"request": request})
+
+
+@router.post("/login")
+async def post_login(
+    emailaddress: Annotated[str, Form()],
+    password: Annotated[str, Form()],
+    request: Request,
+    db: DB = Depends(),
+):
+    password_hash = pwd_context.hash(password)
     return templates.TemplateResponse("login/index.html", {"request": request})
 
 

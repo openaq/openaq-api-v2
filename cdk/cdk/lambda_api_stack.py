@@ -114,6 +114,7 @@ class LambdaApiStack(Stack):
                     "*",
                 ],
                 "allow_methods": [
+                    HttpMethod.POST,
                     HttpMethod.GET,
                     HttpMethod.HEAD,
                     HttpMethod.OPTIONS,
