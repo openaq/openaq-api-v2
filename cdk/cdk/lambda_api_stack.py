@@ -104,7 +104,7 @@ class LambdaApiStack(Stack):
             )
 
         lambda_env = stringify_settings(lambda_env)
-        lambda_env["REDIS_HOST"] = redis_cluster.attr_configuration_endpoint_address
+        lambda_env["REDIS_HOST"] = redis_cluster.attr_redis_endpoint_address
 
         openaq_api = aws_lambda.Function(
             self,
