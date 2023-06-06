@@ -3,6 +3,7 @@ import time
 import os
 
 import asyncpg
+from .models.auth import User
 import orjson
 from aiocache import SimpleMemoryCache, cached
 from aiocache.plugins import HitMissRatioPlugin, TimingPlugin
@@ -143,6 +144,32 @@ class DB:
 
         output = OpenAQResult(meta=Meta.parse_obj(kwargs), results=data)
         return output
+
+    async def create_user(self, user: User) -> str:
+        """
+        calls the create_user plpgsql function to create a new user and entity records
+        """
+        query = """
+        SELECT * FROM create_user(:full_name, :email_address, :password_hash, :ip_address, :entity_type)
+        """
+        conn = await asyncpg.connect(settings.DATABASE_WRITE_URL)
+        rquery, args = render(query, **user.dict())
+        verification_token = await conn.fetch(rquery, *args)
+        await conn.close()
+        return verification_token[0][0]
+
+    async def get_user_token(self, users_id: int) -> str:
+        """
+        calls the get_user_token plpgsql function to vefiry user email and generate API token
+        """
+        query = """
+        SELECT * FROM get_user_token(:users_id)
+        """
+        conn = await asyncpg.connect(settings.DATABASE_WRITE_URL)
+        rquery, args = render(query, **{"users_id": users_id})
+        api_token = await conn.fetch(rquery, *args)
+        await conn.close()
+        return api_token[0][0]
 
     async def fetchOpenAQResult(self, query, kwargs):
         rows = await self.fetch(query, kwargs)

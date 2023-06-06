@@ -1,0 +1,54 @@
+@use 'openaq-design-system/scss/utilities';
+@use 'openaq-design-system/scss/header';
+@use 'openaq-design-system/scss/variables' as variables;
+
+body,
+html {
+  margin: 0;
+  padding: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.container {
+  margin-top: 50px;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+}
+
+.openaq-logo {
+  padding: 15px;
+  width: 20%;
+  height: auto;
+}
+
+.links-list {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  list-style: none;
+}
+
+.links-list > li {
+  padding: 5px 0 5px 0;
+}
+
+.gradient-title {
+  background-color: variables.$lavender100;
+  background-image: linear-gradient(
+    92deg,
+    variables.$sky120 0%,
+    variables.$lavender100 10%
+  );
+  background-size: 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -moz-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -moz-text-fill-color: transparent;
+}

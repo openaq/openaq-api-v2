@@ -1,0 +1,28 @@
+{
+  "name": "pages",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "NODE_ENV=production vite build",
+    "clean": "",
+    "mkdir": "mkdir -p ../openaq_fastapi/openaq_fastapi/templates/register && mkdir -p ../openaq_fastapi/openaq_fastapi/templates/login",
+    "move": "cp ./dist/index.html ../openaq_fastapi/openaq_fastapi/templates/index.html && cp ./dist/register/index.html ../openaq_fastapi/openaq_fastapi/templates/register/index.html && cp -r ./dist/assets ../openaq_fastapi/openaq_fastapi/static",
+    "deploy": "yarn run build && yarn run mkdir && yarn run move",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "lightningcss": "^1.18.0",
+    "sass": "^1.59.3",
+    "vite": "^4.2.0",
+    "vite-plugin-lightningcss": "^0.0.3",
+    "vite-plugin-purgecss": "^0.2.12"
+  },
+  "dependencies": {
+    "@zxcvbn-ts/core": "^2.2.1",
+    "@zxcvbn-ts/language-common": "^2.0.1",
+    "@zxcvbn-ts/language-en": "^2.1.0",
+    "openaq-design-system": "github:openaq/openaq-design-system#v-4.0.0"
+  }
+}
