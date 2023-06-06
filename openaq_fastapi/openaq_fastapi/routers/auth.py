@@ -9,7 +9,7 @@ from typing import Annotated
 import boto3
 from fastapi import APIRouter, Depends, HTTPException, Request, status, Form
 from fastapi.templating import Jinja2Templates
-from passlib.context import CryptContext
+from passlib.hash import pbkdf2_sha256
 from fastapi.responses import RedirectResponse
 
 
@@ -20,7 +20,6 @@ from ..settings import settings
 
 logger = logging.getLogger("auth")
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 templates = Jinja2Templates(
     directory=os.path.join(str(pathlib.Path(__file__).parent.parent), "templates")
@@ -177,7 +176,7 @@ async def post_login(
     request: Request,
     db: DB = Depends(),
 ):
-    password_hash = pwd_context.hash(password)
+    password_hash = pbkdf2_sha256.hash(password)
     return templates.TemplateResponse("login/index.html", {"request": request})
 
 
@@ -197,7 +196,7 @@ async def post_register(
         await form.validate()
     except Exception as e:
         return e
-    password_hash = pwd_context.hash(form.password)
+    password_hash = pbkdf2_sha256.hash(form.password)
     user = User(
         email_address=form.email_address,
         password_hash=password_hash,
