@@ -238,7 +238,7 @@ class LambdaApiStack(Stack):
                 f"openaq-api-dist-{env_name}",
                 default_behavior=cloudfront.BehaviorOptions(
                     origin=origins.HttpOrigin(origin_url),
-                    allowed_methods=cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+                    allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
                     compress=True,
                     cache_policy=cache_policy,
                     viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
