@@ -47,6 +47,7 @@ class HTTPLog(BaseLog):
     path: Union[str, None]
     params: Union[str, None]
     params_obj: Union[dict, None]
+    params_keys: Union[list, None]
     ip: Union[str, None]
     api_key: Union[str, None]
     timing: Union[float, None]
@@ -83,6 +84,11 @@ class HTTPLog(BaseLog):
             return v or dict(x.split("=") for x in values["params"].split("&"))
         else:
             return None
+
+    @validator('params_keys', always=True)
+    def set_params_keys(cls, v, values) -> dict:
+        params = values.get('params_obj', {})
+        return list(params.keys())
 
 
 class ErrorLog(HTTPLog):
