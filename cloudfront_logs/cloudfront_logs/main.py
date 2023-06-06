@@ -5,7 +5,7 @@ adapted from https://aws.amazon.com/blogs/mt/sending-cloudfront-standard-logs-to
 from io import BytesIO
 from typing import List
 from gzip import GzipFile
-from datetime import datetime 
+from datetime import datetime
 import logging
 from operator import itemgetter
 import json
@@ -34,6 +34,7 @@ logging.getLogger('urllib3').setLevel(logging.WARNING)
 log_group_name = f"openaq-api-{settings.ENV}-cf-access-log"
 log_stream_name = f"openaq-api-{settings.ENV}-cf-access-log-stream"
 
+
 def put_log(records: List[CloudwatchLog], *sequence_token):
     records = sorted(records, key=itemgetter('timestamp'))
     put_log_events_kwargs = {
@@ -46,7 +47,7 @@ def put_log(records: List[CloudwatchLog], *sequence_token):
             logger.debug("no sequence token provided in args")
         else:
             put_log_events_kwargs['sequenceToken'] = sequence_token[0]
-            
+
         put_log_events_response = logs_client.put_log_events(**put_log_events_kwargs)
         sequence_token = put_log_events_response['nextSequenceToken']
         return put_log_events_response['nextSequenceToken']
@@ -106,7 +107,7 @@ def parse_line(line: str) -> CloudfrontLog:
             http_version = args[23],
             fle_status = args[24],
             fle_encrypted_fields= args[25],
-            c_port = args[26], 
+            c_port = args[26],
             time_to_first_byte= args[27],
             x_edge_detailed_result_type = args[28],
             sc_content_type = args[29],
@@ -157,17 +158,17 @@ def parse_log_file(key: str, bucket: str):
             except Exception as e:
                 logger.error(f"Exception during utf8 conversion: {e}")
 
-            if  records_size >= 900000 or line_count >= 9000 :
+            if records_size >= 900000 or line_count >= 9000 :
                 try:
                     logger.info(f'payload OR records at limit, sending batch to CW Events payload: {records_size} line count: {line_count}')
-                    if sequence_token is not  None:
+                    if sequence_token is not None:
                         sequence_token = put_log(records, sequence_token)
                     else:
                         sequence_token = put_log(records)
                     records = []
                 except Exception as e:
                     logger.error(f"Error sorting or sending records to CW Logs: {e}")
-                
+
             try:
                 message = parse_line(line)
                 cloudwatch_log = CloudwatchLog(
