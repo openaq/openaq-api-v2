@@ -97,7 +97,7 @@ class LambdaApiStack(Stack):
             aws_iam.PolicyStatement(
                 actions=["ses:SendEmail", "SES:SendRawEmail"],
                 resources=["*"],
-                effect=aws_iam.Effect.DENY,
+                effect=aws_iam.Effect.ALLOW,
             )
         )
 
