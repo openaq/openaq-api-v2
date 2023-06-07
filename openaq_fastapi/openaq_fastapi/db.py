@@ -104,7 +104,7 @@ class DB:
                     detail="Connection timed out",
                 )
             except Exception as e:
-                logger.error(f"Unknown database error: {e}")
+                logger.error(f"Unknown database error: {e}\n{rquery}\n{kwargs}")
                 if str(e).startswith("ST_TileEnvelope"):
                     raise HTTPException(status_code=422, detail=f"{e}")
                 raise HTTPException(status_code=500, detail=f"{e}")
@@ -112,7 +112,7 @@ class DB:
             "query took: %s and returned:%s\n -- results_firstrow: %s",
             time.time() - start,
             len(r),
-            str(r and r[0])[0:500],
+            str(r and r[0])[0:1000],
         )
         return r
 
