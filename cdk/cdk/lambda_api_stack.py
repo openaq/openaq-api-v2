@@ -92,21 +92,24 @@ class LambdaApiStack(Stack):
                 description="Allow Redis connection",
                 connection=aws_ec2.Port.tcp(6379),
             )
-
-            redis_cluster = aws_elasticache.CfnCacheCluster(
-                scope=self,
-                id=f"openaq-api-redis-cluster-{env_name}",
-                cluster_name=f"openaq-api-redis-cluster-{env_name}",
+            redis_cluster = aws_elasticache.CfnReplicationGroup(
+                self,
+                replication_group_description=f"openaq-api-redis-cluster-{env_name}",
                 engine="redis",
-                cache_node_type="cache.t3.small",
-                cache_parameter_group_name="default.redis7.cluster.on",
-                num_cache_nodes=1,
-                cache_subnet_group_name=redis_subnet_group.ref,
-                vpc_security_group_ids=[redis_sec_group.security_group_id],
+                cache_node_type="cache.t4g.small",
+                replicas_per_node_group=1,
+                num_node_groups=2,
+                automatic_failover_enabled=True,
+                auto_minor_version_upgrade=True,
+                cache_subnet_group_name=redis_subnet_group.subnet_group_name,
+                security_group_ids=[redis_sec_group],
             )
+            redis_cluster.add_depends_on(redis_subnet_group)
+            redis_cluster.add_depends_on(redis_sec_group)
 
         lambda_env = stringify_settings(lambda_env)
-        lambda_env["REDIS_HOST"] = redis_cluster.attr_redis_endpoint_address
+        lambda_env["REDIS_HOST"] = redis_cluster.attr_primary_end_point_address
+        lambda_env["REDIS_PORT"] = redis_cluster.attr_primary_end_point_port
 
         openaq_api = aws_lambda.Function(
             self,
