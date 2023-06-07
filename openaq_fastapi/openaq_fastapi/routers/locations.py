@@ -166,11 +166,10 @@ class Locations(
                         """
                     )
                 elif f == "sensorType":
-                    wheres.append(
-                        """
-                        "sensorType" = :sensor_type
-                        """
-                    )
+                    if v == 'reference grade':
+                        wheres.append('ismonitor')
+                    elif v == 'low-cost sensor':
+                        wheres.append('NOT ismonitor')
                 elif f == "modelName":
                     wheres.append(
                         """
