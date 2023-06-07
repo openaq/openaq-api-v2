@@ -116,7 +116,7 @@ async def averages_v3_get(
         , h.last_datetime
         {query.fields()}
         {query.total()}
-        FROM hourly_rollups h
+        FROM hourly_data h
         JOIN sensors s USING (sensors_id)
         JOIN sensor_systems sy USING (sensor_systems_id)
         JOIN sensor_nodes sn ON (sy.sensor_nodes_id = sn.sensor_nodes_id)
@@ -153,7 +153,7 @@ async def averages_v3_get(
         , MIN(datetime) as first_datetime
         , MAX(datetime) as last_datetime
         {query.total()}
-        FROM hourly_rollups h
+        FROM hourly_data h
         JOIN sensors s ON (h.sensors_id = s.sensors_id)
         JOIN sensor_systems sy ON (s.sensor_systems_id = sy.sensor_systems_id)
         JOIN sensor_nodes sn ON (sy.sensor_nodes_id = sn.sensor_nodes_id)
