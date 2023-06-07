@@ -1,3 +1,0 @@
-[submodule "openaq-db"]
-	path = openaq-db
-	url = git@github.com:openaq/openaq-db.git
