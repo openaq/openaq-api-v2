@@ -136,7 +136,7 @@ class Measurements(
                 if f == "location" and all(isinstance(x, int) for x in v):
                     wheres.append(" sn.sensor_nodes_id = ANY(:location) ")
                 elif f == "location":
-                    wheres.append(" site_name = ANY(:location) ")
+                    wheres.append(" name = ANY(:location) ")
                 elif f == "parameter":
                     if all(isinstance(x, int) for x in v):
                         wheres.append(
@@ -157,7 +157,7 @@ class Measurements(
                 elif f == "isAnalysis":
                     wheres.append("is_analysis = :is_analysis ")
                 elif f == "entity":
-                    wheres.append("e.entity_type::text ~* :entity ")
+                    wheres.append("sn.owner->>'type' ~* :entity ")
                 elif f == "sensorType":
                     if v == 'reference grade':
                         wheres.append('i.is_monitor')
@@ -263,9 +263,9 @@ async def measurements_get_v1(
     where = m.where()
 
     sql = f"""
-        SELECT sn.sensor_nodes_id as "locationId"
-        , COALESCE(site_name, 'N/A') as location
-        , get_datetime_object(h.datetime, tzid) as date
+        SELECT sn.id as "locationId"
+        , COALESCE(sn.name, 'N/A') as location
+        , get_datetime_object(h.datetime, sn.timezone) as date
         , m.measurand as parameter
         , m.units as unit
         , h.value_avg as value
@@ -279,9 +279,7 @@ async def measurements_get_v1(
         JOIN sensors s USING (sensors_id)
         JOIN sensor_systems sy USING (sensor_systems_id)
         JOIN instruments i USING (instruments_id)
-        JOIN sensor_nodes sn ON (sy.sensor_nodes_id = sn.sensor_nodes_id)
-        JOIN entities e ON (sn.owner_entities_id = e.entities_id)
-        JOIN timezones ts ON (sn.timezones_id = ts.gid)
+        JOIN locations_view_cached sn ON (sy.sensor_nodes_id = sn.id)
         JOIN measurands m ON (m.measurands_id = h.measurands_id)
         JOIN countries c ON (c.countries_id = sn.countries_id)
         WHERE {where}
