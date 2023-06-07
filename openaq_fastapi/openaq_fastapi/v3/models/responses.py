@@ -214,8 +214,8 @@ class Measurement(JsonBase):
     value: float
     parameter: ParameterBase
     coordinates: Union[Coordinates, None]
-    summary: Summary
-    coverage: Coverage
+    summary: Union[Summary, None]
+    coverage: Union[Coverage, None]
 
 
 # Similar to measurement but without timestamps
