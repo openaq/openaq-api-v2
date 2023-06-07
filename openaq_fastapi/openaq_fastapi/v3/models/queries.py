@@ -469,7 +469,7 @@ class RadiusQuery(QueryBaseModel):
 class BboxQuery(QueryBaseModel):
     bbox: Union[str, None] = Query(
         None,
-        regex=r"^-?\d{1,3}\.?\d{0,4},-?\d{1,2}\.?\d{0,4},-?\d{1,3}\.?\d{0,4},-?\d{1,2}\.?\d{0,4}$",
+        regex=r"^-?((1?[0-7]?[0-9])|(180))\.?\d{0,4},-?(((([0-8]?[0-9])|(90))\.?\d{0,4})),-?((1?[0-7]?[0-9])|(180))\.?\d{0,4},-?(((([0-8]?[0-9])|(90))\.?\d{0,4}))$",
         description="Min X, min Y, max X, max Y, up to 4 decimal points of precision e.g. -77.037,38.907,-77.0,39.910",
         example="-77.037,38.907,-77.035,38.910",
     )
