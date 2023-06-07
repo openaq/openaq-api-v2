@@ -289,29 +289,21 @@ async def latest_get(
     qparams = locations.params()
 
     q = f"""
------------------------------
-WITH locations AS (
------------------------------
-SELECT id
+     SELECT l.id
     , name as location
     , city
     , country->>'code' as country
     , coordinates
     , datetime_first->>'utc' as "firstUpdated"
     , datetime_last->>'utc' as "lastUpdated"
+    , s.measurements
     , COUNT(1) OVER() as found
     FROM locations_view_cached l
+    JOIN locations_latest_measurements_cached s ON (l.id = s.id)
     WHERE {locations.where()}
     ORDER BY {locations.order()}
     LIMIT :limit
     OFFSET :offset
--------------------------------
-)
--------------------------------
-  SELECT l.*
-  , s.measurements
-  FROM locations l
-  JOIN locations_latest_measurements_cached s ON (l.id = s.id)
     """
     output = await db.fetchPage(q, qparams)
     return output
