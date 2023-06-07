@@ -102,8 +102,6 @@ class ORJSONResponse(JSONResponse):
         return orjson.dumps(content, default=default)
 
 
-x
-
 app = FastAPI(
     title="OpenAQ",
     description="API for OpenAQ LCS",
