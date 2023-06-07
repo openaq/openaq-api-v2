@@ -131,7 +131,7 @@ async def countries_get(
         order_by = "name"
 
     q = f"""
-        SELECT 	
+        SELECT
         c.iso AS code
         , c.name
         , COUNT(DISTINCT sn.sensor_nodes_id) AS locations
@@ -141,24 +141,22 @@ async def countries_get(
         , SUM(sr.value_count) AS "count"
         , count (DISTINCT sn.city) AS cities
         , count (DISTINCT p.source_name) AS sources
-        
-
-        FROM 
+        FROM
             sensors_rollup sr
-        JOIN 
+        JOIN
             sensors s USING (sensors_id)
         JOIN
             sensor_systems ss USING (sensor_systems_id)
         JOIN
             sensor_nodes sn USING (sensor_nodes_id)
-        JOIN 
+        JOIN
             countries c USING (countries_id)
         JOIN
             measurands m USING (measurands_id)
-        JOIN 
+        JOIN
             providers p USING (providers_id)
         WHERE
-        {countries.where()} 
+        {countries.where()}
         AND c.iso IS NOT NULL
         GROUP BY code, c.name
         ORDER BY {order_by} {countries.sort}
@@ -174,7 +172,7 @@ async def countries_get(
 
 @router.get(
     "/v1/countries",
-    response_model=CountriesResponse,
+    response_model=CountriesResponseV1,
     summary="Get countries",
     description="Providecs a list of countries",
     tags=["v1"],
@@ -196,22 +194,21 @@ async def countries_getv1(
         order_by = "name"
 
     q = f"""
-        SELECT 
-	    c.iso AS code
+        SELECT
+	  c.iso AS code
         , c.name
         , count (DISTINCT sn.city) AS cities
         , SUM(sr.value_count) AS "count"
         , COUNT(DISTINCT sn.sensor_nodes_id) AS locations
-       
-        FROM 
+        FROM
             sensors_rollup sr
-        JOIN 
+        JOIN
             sensors s USING (sensors_id)
         JOIN
             sensor_systems ss USING (sensor_systems_id)
         JOIN
             sensor_nodes sn USING (sensor_nodes_id)
-        JOIN 
+        JOIN
             countries c USING (countries_id)
         WHERE
         {countries.where()}
