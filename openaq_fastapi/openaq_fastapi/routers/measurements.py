@@ -159,7 +159,10 @@ class Measurements(
                 elif f == "entity":
                     wheres.append("e.entity_type::text ~* :entity ")
                 elif f == "sensorType":
-                    wheres.append('b."sensorType" = :sensor_type ')
+                    if v == 'reference grade':
+                        wheres.append('i.is_monitor')
+                    elif v == 'low-cost sensor':
+                        wheres.append('NOT i.is_monitor')
                 elif f in ["country", "city"]:
                     wheres.append(f"{f} = ANY(:{f})")
                 elif f == "date_from":
