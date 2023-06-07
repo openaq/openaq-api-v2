@@ -31,8 +31,6 @@ ignore_in_docs = [
 ]
 
 
-
-
 def parameter_dependency_from_model(name: str, model_cls):
     """
     Takes a pydantic model class as input and creates
@@ -94,7 +92,6 @@ class TypeParametersMemoizer(type):
     _generics_cache = weakref.WeakValueDictionary()
 
     def __getitem__(cls, typeparams):
-
         # prevent duplication of generic types
         if typeparams in cls._generics_cache:
             return cls._generics_cache[typeparams]
@@ -296,7 +293,6 @@ class Paging(BaseModel):
 
 
 class ParametersQuery(QueryBaseModel):
-
     parameters_id: Union[CommaSeparatedList[int], None] = Query(description="")
 
     def where(self) -> Union[str, None]:
@@ -305,7 +301,6 @@ class ParametersQuery(QueryBaseModel):
 
 
 class MobileQuery(QueryBaseModel):
-
     mobile: Union[bool, None] = Query(
         description="Is the location considered a mobile location?"
     )
@@ -316,7 +311,6 @@ class MobileQuery(QueryBaseModel):
 
 
 class MonitorQuery(QueryBaseModel):
-
     monitor: Union[bool, None] = Query(
         description="Is the location considered a reference monitor?"
     )
@@ -327,7 +321,6 @@ class MonitorQuery(QueryBaseModel):
 
 
 class ProviderQuery(QueryBaseModel):
-
     providers_id: Union[CommaSeparatedList[int], None] = Query(
         description="Limit the results to a specific provider"
     )
@@ -374,12 +367,11 @@ class CountryQuery(QueryBaseModel):
             return "(country->'id')::int = ANY (:countries_id)"
         elif self.iso is not None:
             return "country->>'code' = :iso"
-        
+
 
 class DateFromQuery(QueryBaseModel):
     date_from: Optional[Union[datetime, date]] = Query(
-        "2022-10-01",
-        description="From when?"
+        "2022-10-01", description="From when?"
     )
 
     def where(self) -> str:
@@ -389,15 +381,14 @@ class DateFromQuery(QueryBaseModel):
             if self.date_from.tzinfo is None:
                 return "datetime > (:date_from::timestamp AT TIME ZONE tzid)"
             else:
-                return "datetime > :date_from"                
+                return "datetime > :date_from"
         elif isinstance(self.date_from, date):
-            return "datetime > (:date_from::timestamp AT TIME ZONE tzid)"        
+            return "datetime > (:date_from::timestamp AT TIME ZONE tzid)"
 
 
 class DateToQuery(QueryBaseModel):
     date_to: Optional[Union[datetime, date]] = Query(
-        datetime.utcnow(),
-        description="To when?"
+        datetime.utcnow(), description="To when?"
     )
 
     def where(self) -> str:
@@ -407,9 +398,9 @@ class DateToQuery(QueryBaseModel):
             if self.date_to.tzinfo is None:
                 return "datetime <= (:date_to::timestamp AT TIME ZONE tzid)"
             else:
-                return "datetime <= :date_to"                
+                return "datetime <= :date_to"
         elif isinstance(self.date_to, date):
-            return "datetime <= (:date_to::timestamp AT TIME ZONE tzid)"        
+            return "datetime <= (:date_to::timestamp AT TIME ZONE tzid)"
 
 
 class PeriodNames(str, Enum):
@@ -424,10 +415,8 @@ class PeriodNames(str, Enum):
 
 class PeriodNameQuery(QueryBaseModel):
     period_name: Union[PeriodNames, None] = Query(
-        "hour",
-        description="Period to aggregate. Month, day, hour"
+        "hour", description="Period to aggregate. Month, day, hour"
     )
-
 
 
 # Some spatial helper queries
@@ -480,7 +469,7 @@ class RadiusQuery(QueryBaseModel):
 class BboxQuery(QueryBaseModel):
     bbox: Union[str, None] = Query(
         None,
-        regex=r"^-?\d{1,2}\.?\d{0,4},-?1?\d{1,2}\.?\d{0,4},-?\d{1,2}\.?\d{0,4},-?\d{1,2}\.?\d{0,4}$",
+        regex=r"^-?\d{1,3}\.?\d{0,4},-?\d{1,2}\.?\d{0,4},-?\d{1,3}\.?\d{0,4},-?\d{1,2}\.?\d{0,4}$",
         description="Min X, min Y, max X, max Y, up to 4 decimal points of precision e.g. -77.037,38.907,-77.0,39.910",
         example="-77.037,38.907,-77.035,38.910",
     )
