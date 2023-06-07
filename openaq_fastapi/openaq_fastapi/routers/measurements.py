@@ -134,7 +134,7 @@ class Measurements(
         for f, v in self:
             if v is not None:
                 if f == "location" and all(isinstance(x, int) for x in v):
-                    wheres.append(" sn.sensor_nodes_id = ANY(:location) ")
+                    wheres.append(" sn.id = ANY(:location) ")
                 elif f == "location":
                     wheres.append(" l.name = ANY(:location) ")
                 elif f == "parameter":
@@ -214,7 +214,7 @@ async def measurements_get(
                ELSE 'low-cost sensor'
                END as "sensorType"
         , sn.is_analysis
-        , COUNT(1) OVER() as found
+        --, COUNT(1) OVER() as found
         FROM hourly_data h
         JOIN sensors s USING (sensors_id)
         JOIN sensor_systems sy USING (sensor_systems_id)

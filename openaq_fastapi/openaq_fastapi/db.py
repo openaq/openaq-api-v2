@@ -93,8 +93,10 @@ class DB:
             try:
                 r = await con.fetch(rquery, *args)
             except asyncpg.exceptions.UndefinedColumnError as e:
+                logger.error(f"Undefined Column Error: {e}\n{rquery}\n{kwargs}")
                 raise ValueError(f"{e}") from e
             except asyncpg.exceptions.DataError as e:
+                logger.error(f"Data Error: {e}\n{rquery}\n{kwargs}")
                 raise ValueError(f"{e}") from e
             except asyncpg.exceptions.CharacterNotInRepertoireError as e:
                 raise ValueError(f"{e}") from e
