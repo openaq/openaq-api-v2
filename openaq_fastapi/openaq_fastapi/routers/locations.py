@@ -156,11 +156,7 @@ class Locations(
                 elif f == "sourceName":
                     wheres.append(
                         """
-                        sources @> ANY(
-                            jsonb_array_query('name',:source_name::text[])
-                            ||
-                            jsonb_array_query('id',:source_name::text[])
-                            )
+                        provider->>'name' = ANY(:source_name::text[])
                         """
                     )
                 elif f == "entity":
@@ -257,6 +253,7 @@ async def locations_get(
     , m.manufacturers
     , COALESCE(s.total_count, 0) as measurements
     , s.measurements as parameters
+    , provider->>'name' as "sourceName"
     , COUNT(1) OVER() as found
     FROM locations_view_cached l
     LEFT JOIN locations_manufacturers m ON (m.id = l.id)
