@@ -36,7 +36,7 @@ There are a few ways to run the API locally
 Settings can be loaded using `.env` files and multiple files can be kept and used. The easiest way to manage multiple environment files is to add an extension describing your environment. For example, if I wanted to keep a production, staging and local environment I would save them as `.env.production`, `.env.staging` and `.env.local` each with their own settings.
 
 ### uvicorn
-The easiest way to run the API locally is to use uvicorn and a python virutal environment. Make sure that you have your settings (`.env`) file setup. Once that is done you can run the following from the `openaq_fastapi/openaq_fastapi` directory. Variables from the `.env` files can be overrode by setting them inline.
+The easiest way to run the API locally is to use uvicorn. Make sure that you have your settings (`.env`) file setup. Once that is done you can run the following from the `openaq_fastapi/openaq_fastapi` directory. Variables from the `.env` files can be overrode by setting them inline.
 ```
 # Run using the default .env file
 uvicorn main:app --reload

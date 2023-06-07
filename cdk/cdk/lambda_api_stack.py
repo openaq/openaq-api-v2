@@ -6,6 +6,7 @@ from aws_cdk import (
     Environment,
     RemovalPolicy,
     aws_ec2,
+    aws_elasticache,
     aws_s3,
     aws_sqs,
     aws_lambda,
@@ -62,8 +63,54 @@ class LambdaApiStack(Stack):
 
         if vpc_id is None:
             vpc = None
+            lambda_sec_group = None
         else:
             vpc = aws_ec2.Vpc.from_lookup(self, f"{id}-vpc", vpc_id=vpc_id)
+            lambda_sec_group = aws_ec2.SecurityGroup(
+                self,
+                f"openaq-api-lambda-sec-group_{env_name}",
+                security_group_name=f"openaq-api-lambda-sec-group_{env_name}",
+                vpc=vpc,
+                allow_all_outbound=True,
+            )
+            redis_sec_group = aws_ec2.SecurityGroup(
+                self,
+                f"redis-sec-group_{env_name}",
+                security_group_name=f"redis-sec-group_{env_name}",
+                vpc=vpc,
+                allow_all_outbound=True,
+            )
+            private_subnets_ids = [ps.subnet_id for ps in vpc.private_subnets]
+            redis_subnet_group = aws_elasticache.CfnSubnetGroup(
+                scope=self,
+                id=f"redis_subnet_group_{env_name}",
+                subnet_ids=private_subnets_ids,
+                description="subnet group for redis",
+                cache_subnet_group_name=f"redis-subnetgroup-{env_name}",
+            )
+            redis_sec_group.add_ingress_rule(
+                peer=lambda_sec_group,
+                description="Allow Redis connection",
+                connection=aws_ec2.Port.tcp(6379),
+            )
+            redis_cluster = aws_elasticache.CfnReplicationGroup(
+                self,
+                id=f"openaq-api-redis-cluster-{env_name}",
+                replication_group_description=f"openaq-api-redis-cluster-{env_name}",
+                engine="redis",
+                cache_node_type="cache.t4g.small",
+                replicas_per_node_group=1,
+                num_node_groups=2,
+                automatic_failover_enabled=True,
+                auto_minor_version_upgrade=True,
+                cache_subnet_group_name=redis_subnet_group.cache_subnet_group_name,
+                security_group_ids=[redis_sec_group.security_group_id],
+            )
+            redis_cluster.add_depends_on(redis_subnet_group)
+
+        lambda_env = stringify_settings(lambda_env)
+        lambda_env["REDIS_HOST"] = redis_cluster.attr_configuration_end_point_address
+        lambda_env["REDIS_PORT"] = redis_cluster.attr_configuration_end_point_port
 
         openaq_api = aws_lambda.Function(
             self,
@@ -81,7 +128,8 @@ class LambdaApiStack(Stack):
             vpc=vpc,
             allow_public_subnet=True,
             memory_size=api_lambda_memory_size,
-            environment=stringify_settings(lambda_env),
+            environment=lambda_env,
+            security_groups=[lambda_sec_group],
             timeout=Duration.seconds(api_lambda_timeout),
             layers=[
                 create_dependencies_layer(
@@ -166,7 +214,7 @@ class LambdaApiStack(Stack):
                 self,
                 f"openaq-api-dist-log-{env_name}",
                 bucket_name=f"openaq-api-dist-log-{env_name}",
-                auto_delete_objects=True,
+                auto_delete_objects=False,
                 public_read_access=False,
                 removal_policy=RemovalPolicy.DESTROY,
                 object_ownership=aws_s3.ObjectOwnership.OBJECT_WRITER,

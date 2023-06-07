@@ -223,6 +223,17 @@ async def measurements_get(
         OFFSET :offset
         LIMIT :limit;
         """
+    rows = await db.fetch(q, params)
+
+    if rows is None:
+        return OpenAQResult()
+    try:
+        total_count = int(rows[0][0])
+        range_start = rows[0][1].replace(tzinfo=UTC)
+        range_end = rows[0][2].replace(tzinfo=UTC)
+        # sensor_nodes = rows[0][3]
+    except Exception:
+        return OpenAQResult()
 
     response = await db.fetchPage(sql, params)
 
