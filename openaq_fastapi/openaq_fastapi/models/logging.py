@@ -6,6 +6,7 @@ from fastapi import status, Request
 
 from humps import camelize
 
+
 class LogType(Enum):
     SUCCESS = "SUCCESS"
     VALIDATION_ERROR = "VALIDATION_ERROR"
@@ -20,11 +21,12 @@ class BaseLog(BaseModel):
     """
     abstract base class for logging
     """
+
     type: LogType
     detail: Union[str, None]
 
     def json(self, **kwargs):
-        kwargs['by_alias'] = True
+        kwargs["by_alias"] = True
         return super().json(**kwargs)
 
     class Config:
@@ -54,44 +56,41 @@ class HTTPLog(BaseLog):
     rate_limiter: Union[str, None]
     counter: Union[str, None]
 
-    @validator('api_key', always=True)
+    @validator("api_key", always=True)
     def set_api_key(cls, v, values) -> dict:
-        request = values['request']
+        request = values["request"]
         api_key = request.headers.get("X-API-Key", None)
         return v or api_key
 
-    @validator('ip', always=True)
+    @validator("ip", always=True)
     def set_ip(cls, v, values) -> dict:
-        request = values['request']
+        request = values["request"]
         ip = request.client.host
         return v or ip
 
-    @validator('path', always=True)
+    @validator("path", always=True)
     def set_path(cls, v, values) -> dict:
-        request = values['request']
+        request = values["request"]
         path = request.url.path
         return v or path
 
-    @validator('params', always=True)
+    @validator("params", always=True)
     def set_params(cls, v, values) -> dict:
-        request = values['request']
+        request = values["request"]
         params = request.url.query
         return v or params
 
-    @validator('params_obj', always=True)
+    @validator("params_obj", always=True)
     def set_params_obj(cls, v, values) -> dict:
         if "=" in values.get("params", ""):
             return v or dict(x.split("=") for x in values["params"].split("&"))
         else:
             return None
 
-    @validator('params_keys', always=True)
+    @validator("params_keys", always=True)
     def set_params_keys(cls, v, values) -> dict:
-        params = values.get('params_obj', {})
-        if params is None:
-            return []
-        else:
-            return list(params.keys())
+        params = values.get("params_obj", {})
+        return [] if params is None else list(params.keys())
 
 
 class ErrorLog(HTTPLog):
