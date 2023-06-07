@@ -102,7 +102,7 @@ class LambdaApiStack(Stack):
                 num_node_groups=2,
                 automatic_failover_enabled=True,
                 auto_minor_version_upgrade=True,
-                cache_subnet_group_name=redis_subnet_group.subnet_group_name,
+                cache_subnet_group_name=redis_subnet_group.cache_subnet_group_name,
                 security_group_ids=[redis_sec_group],
             )
             redis_cluster.add_depends_on(redis_subnet_group)
