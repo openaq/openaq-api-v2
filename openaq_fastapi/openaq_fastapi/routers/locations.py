@@ -412,8 +412,12 @@ SELECT l.id
          WHEN 'Community Organization' THEN '{{community}}'::text[]
          ELSE '{{na}}'::text[]
         END as "sourceTypes"
+    , s.parameters
+    , s.counts as "countsByMeasurement"
+    , s.total_count as count
     , COUNT(1) OVER() as found
     FROM locations_view_cached l
+    LEFT JOIN locations_latest_measurements_cached s ON (l.id = s.id)
     WHERE {locations.where()}
     ORDER BY {locations.order()}
     LIMIT :limit
@@ -435,12 +439,8 @@ SELECT l.id
 )
 --------------------------
 SELECT l.*
-    , s.parameters
-    , s.counts as "countsByMeasurement"
-    , s.total_count as count
     FROM locations l
     JOIN nodes_instruments i ON (l.id = i.id)
-    LEFT JOIN locations_latest_measurements_cached s ON (l.id = s.id)
     """
     output = await db.fetchPage(q, qparams)
     return output
