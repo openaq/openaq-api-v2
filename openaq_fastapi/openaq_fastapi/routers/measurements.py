@@ -136,7 +136,7 @@ class Measurements(
                 if f == "location" and all(isinstance(x, int) for x in v):
                     wheres.append(" sn.id = ANY(:location) ")
                 elif f == "location":
-                    wheres.append(" l.name = ANY(:location) ")
+                    wheres.append(" sn.name = ANY(:location) ")
                 elif f == "parameter":
                     if all(isinstance(x, int) for x in v):
                         wheres.append(
