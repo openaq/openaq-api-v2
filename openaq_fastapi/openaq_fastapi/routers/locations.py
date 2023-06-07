@@ -188,7 +188,7 @@ class Locations(
                         """
                     )
                 elif f == "isMobile":
-                    wheres.append(f' "isMobile" = {bool(v)} ')
+                    wheres.append(f' ismobile = {bool(v)} ')
                 elif f == "isAnalysis":
                     wheres.append(f' "isAnalysis" = {bool(v)} ')
                 elif f == "unit":
