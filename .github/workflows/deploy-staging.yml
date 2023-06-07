@@ -33,17 +33,15 @@ env:
   CDK_ACCOUNT: ${{ secrets.CDK_ACCOUNT }}
   CDK_REGION: ${{ secrets.CDK_REGION }}
 
-  #VPC_ID: ${{ secrets.STAGING_VPC_ID }}
+  VPC_ID: ${{ secrets.VPC_ID }}
 
-
-  REDIS_HOST: ${{ secrets.REDIS_HOST_STAGING }}
-  REDIS_PORT: ${{ secrets.REDIS_PORT }}
-
-  RATE_LIMITING: False
+  RATE_LIMITING: True
   RATE_AMOUNT: 2000
   RATE_AMOUNT_KEY: 2000
   RATE_TIME: 5
 
+  EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+  
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -60,7 +58,7 @@ jobs:
 
       - uses: actions/setup-node@v2
         with:
-          node-version: "16"
+          node-version: "18"
 
       - name: Install CDK
         run: |
