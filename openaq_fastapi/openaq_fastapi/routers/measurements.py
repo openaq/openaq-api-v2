@@ -191,9 +191,9 @@ async def measurements_get(
     includes = m.include_fields
 
     sql = f"""
-        SELECT sn.sensor_nodes_id as "locationId"
-        , COALESCE(site_name, 'N/A') as location
-        , get_datetime_object(h.datetime, tzid) as date
+        SELECT sn.id as "locationId"
+        , COALESCE(sn.name, 'N/A') as location
+        , get_datetime_object(h.datetime, sn.timezone) as date
         , m.measurand as parameter
         , m.units as unit
         , h.value_avg as value
@@ -203,24 +203,22 @@ async def measurements_get(
         ) as coordinates
         , 'NA' as country
         , sn.ismobile as "isMobile"
-        , e.entity_type::text as entity
+        , sn.owner->>'type' as entity
         , CASE WHEN i.is_monitor
                THEN 'reference grade'
                ELSE 'low-cost sensor'
                END as "sensorType"
-        , e.entity_type::text~*'research' as "isAnalysis"
+        , sn.is_analysis
         , COUNT(1) OVER() as found
         FROM hourly_data h
         JOIN sensors s USING (sensors_id)
         JOIN sensor_systems sy USING (sensor_systems_id)
         JOIN instruments i USING (instruments_id)
-        JOIN sensor_nodes sn ON (sy.sensor_nodes_id = sn.sensor_nodes_id)
-        JOIN entities e ON (sn.owner_entities_id = e.entities_id)
-        JOIN timezones ts ON (sn.timezones_id = ts.gid)
+        JOIN locations_view_cached sn ON (sy.sensor_nodes_id = sn.id)
         JOIN measurands m ON (m.measurands_id = h.measurands_id)
         WHERE {where}
         OFFSET :offset
-        LIMIT :limit
+        LIMIT :limit;
         """
 
     response = await db.fetchPage(sql, params)
