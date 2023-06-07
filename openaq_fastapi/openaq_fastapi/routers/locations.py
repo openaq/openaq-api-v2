@@ -150,7 +150,7 @@ class Locations(
                     else:
                         wheres.append(
                             """
-                            parameters @> :parameter::text[]
+                            s.parameters @> :parameter::text[]
                             """
                         )
                 elif f == "sourceName":
@@ -309,9 +309,9 @@ SELECT id
 )
 -------------------------------
   SELECT l.*
-  , sn.measurements
+  , s.measurements
   FROM locations l
-  JOIN locations_latest_measurements_cached sn ON (l.id = sn.id)
+  JOIN locations_latest_measurements_cached s ON (l.id = s.id)
     """
     output = await db.fetchPage(q, qparams)
     return output
