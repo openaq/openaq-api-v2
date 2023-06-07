@@ -163,7 +163,9 @@ class Measurements(
                         wheres.append('i.is_monitor')
                     elif v == 'low-cost sensor':
                         wheres.append('NOT i.is_monitor')
-                elif f in ["country", "city"]:
+                elif f == "country":
+                    wheres.append(f"c.iso = ANY(:{f})")
+                elif f == "city":
                     wheres.append(f"{f} = ANY(:{f})")
                 elif f == "date_from":
                     wheres.append("h.datetime > :date_from")
@@ -201,8 +203,8 @@ async def measurements_get(
         , m.units as unit
         , h.value_avg as value
         , json_build_object(
-            'latitude', st_y(geom),
-             'longitude', st_x(geom)
+            'latitude', st_y(sn.geom),
+             'longitude', st_x(sn.geom)
         ) as coordinates
         , 'NA' as country
         , sn.ismobile as "isMobile"
@@ -218,6 +220,7 @@ async def measurements_get(
         JOIN sensor_systems sy USING (sensor_systems_id)
         JOIN instruments i USING (instruments_id)
         JOIN locations_view_cached sn ON (sy.sensor_nodes_id = sn.id)
+        JOIN countries c ON (c.countries_id = sn.countries_id)
         JOIN measurands m ON (m.measurands_id = h.measurands_id)
         WHERE {where}
         OFFSET :offset
