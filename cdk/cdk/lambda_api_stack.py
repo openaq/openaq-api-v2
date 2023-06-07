@@ -107,7 +107,6 @@ class LambdaApiStack(Stack):
                 security_group_ids=[redis_sec_group.security_group_id],
             )
             redis_cluster.add_depends_on(redis_subnet_group)
-            redis_cluster.add_depends_on(redis_sec_group)
 
         lambda_env = stringify_settings(lambda_env)
         lambda_env["REDIS_HOST"] = redis_cluster.attr_primary_end_point_address
