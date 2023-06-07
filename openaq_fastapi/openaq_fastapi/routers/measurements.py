@@ -136,7 +136,7 @@ class Measurements(
                 if f == "location" and all(isinstance(x, int) for x in v):
                     wheres.append(" sn.sensor_nodes_id = ANY(:location) ")
                 elif f == "location":
-                    wheres.append(" name = ANY(:location) ")
+                    wheres.append(" l.name = ANY(:location) ")
                 elif f == "parameter":
                     if all(isinstance(x, int) for x in v):
                         wheres.append(
@@ -223,26 +223,8 @@ async def measurements_get(
         OFFSET :offset
         LIMIT :limit;
         """
-    rows = await db.fetch(q, params)
-
-    if rows is None:
-        return OpenAQResult()
-    try:
-        total_count = int(rows[0][0])
-        range_start = rows[0][1].replace(tzinfo=UTC)
-        range_end = rows[0][2].replace(tzinfo=UTC)
-        # sensor_nodes = rows[0][3]
-    except Exception:
-        return OpenAQResult()
 
     response = await db.fetchPage(sql, params)
-
-    # meta = Meta(
-    #     website=os.getenv("DOMAIN_NAME", os.getenv("BASE_URL", "/")),
-    #     page=m.page,
-    #     limit=m.limit,
-    #     found=count,
-    # )
 
     if format == "csv":
         return Response(
@@ -250,10 +232,6 @@ async def measurements_get(
             media_type="text/csv",
             headers={"Content-Disposition": "attachment;filename=measurements.csv"},
         )
-
-    ##output = OpenAQResult(meta=meta, results=results)
-
-    # output = await db.fetchOpenAQResult(q, m.dict())
 
     return response
 
