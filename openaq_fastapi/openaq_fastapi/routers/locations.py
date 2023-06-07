@@ -129,7 +129,7 @@ class Locations(
                     if all(isinstance(x, int) for x in v):
                         wheres.append(" l.id = ANY(:location) ")
                     else:
-                        wheres.append(" name = ANY(:location) ")
+                        wheres.append(" l.name = ANY(:location) ")
                 elif f == "country":
                     wheres.append(" country->>'code' = ANY(:country) ")
                 elif f == "city":
@@ -342,14 +342,16 @@ async def latest_v1_get(
 -----------------------------
 WITH locations AS (
 -----------------------------
-SELECT id
+SELECT l.id
     , name as location
     , city
     , country->>'code' as country
     , coordinates
     , datetime_first->>'utc' as "firstUpdated"
     , datetime_last->>'utc' as "lastUpdated"
+    , s.measurements
     FROM locations_view_cached l
+    JOIN locations_latest_measurements_cached s ON (l.id = s.id)
     WHERE {locations.where()}
     ORDER BY {locations.order()}
     LIMIT :limit
@@ -358,6 +360,7 @@ SELECT id
 ), locations_count AS (
    SELECT COUNT(1) as found
    FROM locations_view_cached l
+   JOIN locations_latest_measurements_cached s ON (l.id = s.id)
    WHERE {locations.where()}
 -------------------------------
 )
