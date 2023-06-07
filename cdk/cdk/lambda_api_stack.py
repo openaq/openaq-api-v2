@@ -86,6 +86,7 @@ class LambdaApiStack(Stack):
                 id=f"redis_subnet_group_{env_name}",
                 subnet_ids=private_subnets_ids,
                 description="subnet group for redis",
+                subnet_group_name=f"redis_subnet_group_{env_name}",
             )
             redis_sec_group.add_ingress_rule(
                 peer=lambda_sec_group,
