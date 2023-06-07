@@ -95,6 +95,7 @@ class LambdaApiStack(Stack):
             )
             redis_cluster = aws_elasticache.CfnReplicationGroup(
                 self,
+                id=f"openaq-api-redis-cluster-{env_name}"
                 replication_group_description=f"openaq-api-redis-cluster-{env_name}",
                 engine="redis",
                 cache_node_type="cache.t4g.small",
