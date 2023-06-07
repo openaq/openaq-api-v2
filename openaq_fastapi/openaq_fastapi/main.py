@@ -12,6 +12,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+
 # from fastapi.openapi.utils import get_openapi
 from mangum import Mangum
 from pydantic import BaseModel, ValidationError
@@ -20,14 +21,17 @@ from starlette.responses import JSONResponse, RedirectResponse
 from openaq_fastapi.db import db_pool
 
 from openaq_fastapi.models.logging import (
+    InfrastructureErrorLog,
     ModelValidationError,
     UnprocessableEntityLog,
+    WarnLog,
 )
 
 from openaq_fastapi.middleware import (
     CacheControlMiddleware,
     TotalTimeMiddleware,
     LoggingMiddleware,
+    RateLimiterMiddleWare,
 )
 from openaq_fastapi.routers.averages import router as averages_router
 from openaq_fastapi.routers.cities import router as cities_router
@@ -109,24 +113,24 @@ app = FastAPI(
 
 redis_client = None  # initialize for generalize_schema.py
 
-# def custom_openapi():
-#     logger.debug(f"servers -- {app.state.servers}")
-#     if app.state.servers is not None and app.openapi_schema:
-#         return app.openapi_schema
-#     logger.debug(f"Creating OpenApi Docs with server {app.state.servers}")
-#     openapi_schema = get_openapi(
-#         title=app.title,
-#         description=app.description,
-#         servers=app.state.servers,
-#         version="2.0.0",
-#         routes=app.routes,
-#     )
-#     # openapi_schema['info']['servers']=app.state.servers
-#     app.openapi_schema = openapi_schema
-#     return app.openapi_schema
 
+if settings.RATE_LIMITING:
+    logger.debug("Connecting to redis")
+    import redis
 
-# app.openapi = custom_openapi
+    try:
+        redis_client = redis.RedisCluster(
+            host=settings.REDIS_HOST,
+            port=settings.REDIS_PORT,
+            decode_responses=True,
+            skip_full_coverage_check=True,
+            socket_timeout=5,
+        )
+        app.state.redis_client = redis_client
+    except Exception as e:
+        logging.error(InfrastructureErrorLog(detail=f"failed to connect to redis: {e}"))
+    logger.debug("Redis connected")
+
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
@@ -142,6 +146,23 @@ app.include_router(auth_router)
 app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
 app.add_middleware(TotalTimeMiddleware)
 app.add_middleware(LoggingMiddleware)
+
+
+if settings.RATE_LIMITING is True:
+    if redis_client:
+        app.add_middleware(
+            RateLimiterMiddleWare,
+            redis_client=redis_client,
+            rate_amount=settings.RATE_AMOUNT,
+            rate_amount_key=settings.RATE_AMOUNT_KEY,
+            rate_time=datetime.timedelta(minutes=settings.RATE_TIME),
+        )
+    else:
+        logger.warning(
+            WarnLog(
+                detail="valid redis client not provided but RATE_LIMITING set to TRUE"
+            )
+        )
 
 
 class OpenAQValidationResponseDetail(BaseModel):

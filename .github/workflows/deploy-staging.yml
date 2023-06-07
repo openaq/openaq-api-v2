@@ -60,6 +60,12 @@ jobs:
         with:
           node-version: "18"
 
+      - name: build pages
+        working-directory: ./pages
+        run: |
+          yarn install
+          yarn run deploy
+
       - name: Install CDK
         run: |
           npm install -g aws-cdk@2.25.0
