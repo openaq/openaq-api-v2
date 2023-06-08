@@ -75,7 +75,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             counter = request.app.state.counter
         else:
             counter = None
-
+        logger.info(request.headers)
         api_key = request.headers.get("x-api-key", None)
 
         if response.status_code == 200:
