@@ -423,13 +423,13 @@ class PeriodNameQuery(QueryBaseModel):
 class RadiusQuery(QueryBaseModel):
     coordinates: Union[str, None] = Query(
         None,
-        regex=r"^-?\d{1,2}\.?\d{0,8},-?1?\d{1,2}\.?\d{0,8}$",
-        description="Coordinate pair in form lat,lng. Up to 8 decimal points of precision e.g. 38.907,-77.037",
+        regex=r"^^(-)?(?:180(?:\.0{1,4})?|((?:|[1-9]|1[0-7])[0-9])(?:\.[0-9]{1,4})?)\,(-)?(?:90(?:\.0{1,4})?|((?:|[1-8])[0-9])(?:\.[0-9]{1,4})?)$",
+        description="Coordinate pair in form latitude,longitude. Up to 4 decimal points of precision e.g. 38.907,-77.037",
         example="38.907,-77.037",
     )
-    radius: conint(gt=0, le=100000) = Query(
-        1000,  # default value in meters
-        description="Search radius from coordinates as center in meters. Maximum of 100,000 (100km) defaults to 1000 (1km) e.g. radius=1000",
+    radius: conint(gt=0, le=25000) = Query(
+        None,
+        description="Search radius from coordinates as center in meters. Maximum of 25,000 (25km) defaults to 1000 (1km) e.g. radius=1000",
         example="1000",
     )
     lat: Union[confloat(ge=-90, le=90), None] = None
@@ -454,6 +454,10 @@ class RadiusQuery(QueryBaseModel):
             raise ValueError(
                 "Cannot pass both bounding box and coordinate/radius query in the same URL"
             )
+        if coordinates is not None and radius is None:
+            raise ValueError("Coordinates must be passed with a radius")
+        if coordinates is None and radius is not None:
+            raise ValueError("Radius must be passed with a coordinate pair")
         return values
 
     def fields(self, geometry_field: str = "geog"):
