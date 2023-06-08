@@ -29,7 +29,6 @@ from openaq_fastapi.models.logging import (
 
 from openaq_fastapi.middleware import (
     CacheControlMiddleware,
-    TotalTimeMiddleware,
     LoggingMiddleware,
     RateLimiterMiddleWare,
 )
