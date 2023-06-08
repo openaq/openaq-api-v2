@@ -295,8 +295,8 @@ class LambdaApiStack(Stack):
 
             dist_origin_request_policy = cloudfront.OriginRequestPolicy(
                 self,
-                "OpenAQAPIOriginRequestPolicy-{envname}",
-                origin_request_policy_name="OpenAQAPIOriginRequestPolicy{envname}",
+                f"OpenAQAPIOriginRequestPolicy-{env_name}",
+                origin_request_policy_name=f"OpenAQAPIOriginRequestPolicy_{env_name}",
                 header_behavior=cloudfront.OriginRequestHeaderBehavior.allow_list(
                     "x-api-key"
                 ),
