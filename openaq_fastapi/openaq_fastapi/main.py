@@ -101,11 +101,10 @@ class ORJSONResponse(JSONResponse):
 
 app = FastAPI(
     title="OpenAQ",
-    description="API for OpenAQ LCS",
+    description="OpenAQ API",
     version="2.0.0",
     default_response_class=ORJSONResponse,
     docs_url="/",
-    # servers=[{"url": "/"}],
 )
 
 redis_client = None  # initialize for generalize_schema.py
