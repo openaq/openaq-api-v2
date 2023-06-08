@@ -423,7 +423,7 @@ class PeriodNameQuery(QueryBaseModel):
 class RadiusQuery(QueryBaseModel):
     coordinates: Union[str, None] = Query(
         None,
-        regex=r"^^(-)?(?:180(?:\.0{1,4})?|((?:|[1-9]|1[0-7])[0-9])(?:\.[0-9]{1,4})?)\,(-)?(?:90(?:\.0{1,4})?|((?:|[1-8])[0-9])(?:\.[0-9]{1,4})?)$",
+        regex=r"^(-)?(?:90(?:\.0{1,4})?|((?:|[1-8])[0-9])(?:\.[0-9]{1,4})?)\,(-)?(?:180(?:\.0{1,4})?|((?:|[1-9]|1[0-7])[0-9])(?:\.[0-9]{1,4})?)$",
         description="Coordinate pair in form latitude,longitude. Up to 4 decimal points of precision e.g. 38.907,-77.037",
         example="38.907,-77.037",
     )
