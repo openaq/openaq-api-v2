@@ -132,7 +132,6 @@ if settings.RATE_LIMITING:
     logger.debug("Redis connected")
 
 
-app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -140,13 +139,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-app.include_router(auth_router)
-
-app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
-app.add_middleware(TotalTimeMiddleware)
-app.add_middleware(LoggingMiddleware)
-
 
 if settings.RATE_LIMITING is True:
     if redis_client:
@@ -163,6 +155,12 @@ if settings.RATE_LIMITING is True:
                 detail="valid redis client not provided but RATE_LIMITING set to TRUE"
             )
         )
+
+app.include_router(auth_router)
+
+app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.add_middleware(LoggingMiddleware)
 
 
 class OpenAQValidationResponseDetail(BaseModel):
