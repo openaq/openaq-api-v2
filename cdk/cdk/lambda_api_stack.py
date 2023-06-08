@@ -204,7 +204,9 @@ class LambdaApiStack(Stack):
                 min_ttl=Duration.minutes(0),
                 max_ttl=Duration.days(7),
                 cookie_behavior=cloudfront.CacheCookieBehavior.none(),
-                header_behavior=cloudfront.CacheHeaderBehavior.allow_list("Origin"),
+                header_behavior=cloudfront.CacheHeaderBehavior.allow_list(
+                    "Origin", "x-api-key"
+                ),
                 query_string_behavior=cloudfront.CacheQueryStringBehavior.all(),
                 enable_accept_encoding_gzip=True,
                 enable_accept_encoding_brotli=True,
@@ -294,7 +296,7 @@ class LambdaApiStack(Stack):
             dist_origin_request_policy = cloudfront.OriginRequestPolicy(
                 self,
                 "OpenAQAPIOriginRequestPolicy-{envname}",
-                origin_request_policy_name="OpenAQAPIOriginRequestPolicy-{envname}",
+                origin_request_policy_name="OpenAQAPIOriginRequestPolicy{envname}",
                 header_behavior=cloudfront.OriginRequestHeaderBehavior.allow_list(
                     "x-api-key"
                 ),
