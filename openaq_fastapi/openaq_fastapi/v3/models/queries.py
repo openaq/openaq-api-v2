@@ -428,7 +428,7 @@ class RadiusQuery(QueryBaseModel):
         example="38.907,-77.037",
     )
     radius: conint(gt=0, le=100000) = Query(
-        None,
+        1000,  # default value in meters
         description="Search radius from coordinates as center in meters. Maximum of 100,000 (100km) defaults to 1000 (1km) e.g. radius=1000",
         example="1000",
     )
@@ -456,13 +456,13 @@ class RadiusQuery(QueryBaseModel):
             )
         return values
 
-    def fields(self, geometry_field: str = "geom"):
+    def fields(self, geometry_field: str = "geog"):
         if self.lat is not None and self.lon is not None and self.radius is not None:
-            return f"st_distance({geometry_field}, st_setsrid(st_makepoint(:lon, :lat), 4326)) as distance"
+            return f"ST_Distance({geometry_field}, ST_MakePoint(:lon, :lat)::geography) as distance"
 
-    def where(self, geometry_field: str = "geom"):
+    def where(self, geometry_field: str = "geog"):
         if self.lat is not None and self.lon is not None and self.radius is not None:
-            return f"st_dwithin(st_setsrid(st_makepoint(:lon, :lat), 4326), {geometry_field}, :radius)"
+            return f"ST_DWithin(ST_MakePoint(:lon, :lat)::geography, {geometry_field}, :radius)"
         return None
 
 
