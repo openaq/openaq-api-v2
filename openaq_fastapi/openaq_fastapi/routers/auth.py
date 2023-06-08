@@ -156,7 +156,7 @@ async def verify(request: Request, verification_code: str, db: DB = Depends()):
     else:
         token = await db.get_user_token(row[0])
         redis_client = request.app.state.redis_client
-        await redis_client.sadd("keys", token)
+        redis_client.sadd("keys", token)
         send_api_key_email(token, row[3], row[4])
         return templates.TemplateResponse("verify/index.html", {"request": request})
 
