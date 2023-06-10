@@ -152,10 +152,9 @@ if settings.RATE_LIMITING is True:
             )
         )
 
-app.include_router(auth_router)
 
-app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
-app.add_middleware(LoggingMiddleware)
+# app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
+# app.add_middleware(LoggingMiddleware)
 
 
 class OpenAQValidationResponseDetail(BaseModel):
@@ -238,6 +237,7 @@ app.include_router(trends.router)
 app.include_router(providers.router)
 app.include_router(sensors.router)
 
+app.include_router(auth_router)
 app.include_router(averages_router)
 app.include_router(cities_router)
 app.include_router(countries_router)

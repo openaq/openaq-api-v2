@@ -3,8 +3,8 @@ import os
 import pathlib
 from datetime import datetime, timezone
 from email.message import EmailMessage
+import json
 from typing import Annotated
-
 
 import boto3
 from fastapi import APIRouter, Depends, HTTPException, Request, status, Form
@@ -16,7 +16,7 @@ from ..models.logging import InfoLog
 
 
 from ..db import DB
-from ..forms.register import RegisterForm
+from ..forms.register import RegisterForm, UserExistsException
 from ..models.auth import User
 from ..settings import settings
 
@@ -141,26 +141,28 @@ async def verify(request: Request, verification_code: str, db: DB = Depends()):
         # verification code not found
         message = "Not a valid verification code"
         return templates.TemplateResponse(
-            "verify_error.html", {"request": request, "message": message}
+            "verify/index.html",
+            {"request": request, "error": True, "error_message": message},
         )
     if row[1]:
         # user has already verified their email
-        message = "Verification token has expired, request a new one."
-        return templates.TemplateResponse(
-            "verify_error.html", {"request": request, "message": message}
-        )
+        return RedirectResponse("/check-email", status_code=status.HTTP_303_SEE_OTHER)
     if row[2] < datetime.now().replace(tzinfo=timezone.utc):
         # verification code has expired
         message = "Verification token has expired, request a new one."
         return templates.TemplateResponse(
-            "verify_error.html", {"request": request, "message": message}
+            "verify/index.html",
+            {"request": request, "error": True, "error_message": message},
         )
     else:
         token = await db.get_user_token(row[0])
-        redis_client = request.app.state.redis_client
-        redis_client.sadd("keys", token)
+        if request.app.state.redis_client:
+            redis_client = request.app.state.redis_client
+            redis_client.sadd("keys", token)
         send_api_key_email(token, row[3], row[4])
-        return templates.TemplateResponse("verify/index.html", {"request": request})
+        return templates.TemplateResponse(
+            "verify/index.html", {"request": request, "error": False, "verify": True}
+        )
 
 
 @router.get("/register")
@@ -171,12 +173,21 @@ async def get_register(request: Request):
 @router.post("/register")
 async def post_register(
     request: Request,
+    fullname: str = Form(),
+    emailaddress: str = Form(),
+    entitytype: str = Form(),
+    password: str = Form(),
+    passwordconfirm: str = Form(),
     db: DB = Depends(),
 ):
-    form = RegisterForm(request, db)
+    form = RegisterForm(
+        fullname, emailaddress, entitytype, password, passwordconfirm, db
+    )
     try:
-        await form.load_data()
         await form.validate()
+    except UserExistsException as e:
+        logger.info(InfoLog(detail=f"user already exists - {form.email_address}"))
+        return RedirectResponse("/check-email", status_code=status.HTTP_303_SEE_OTHER)
     except Exception as e:
         return e
     password_hash = pbkdf2_sha256.hash(form.password)
@@ -191,5 +202,49 @@ async def post_register(
     response = send_verification_email(
         verification_code, form.full_name, form.email_address
     )
-    logger.info(InfoLog(detail=response).json())
-    return RedirectResponse("/check-email", status_code=status.HTTP_302_FOUND)
+    logger.info(InfoLog(detail=json.dumps(response)).json())
+    return RedirectResponse("/check-email", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.get("/email-key")
+async def request_key(request: Request):
+    return templates.TemplateResponse("email_key/index.html", {"request": request})
+
+
+@router.post("/email-key")
+async def request_key(
+    request: Request,
+    emailaddress: str = Form(),
+    password: str = Form(),
+    db: DB = Depends(),
+):
+    query = """
+    SELECT
+        users.password_hash, users.email_address, user_keys.token
+    FROM
+        users
+    JOIN 
+        user_keys USING (users_id)
+    WHERE
+        users.email_address = :email_address
+    """
+    row = await db.fetchrow(query, {"email_address": emailaddress})
+    if len(row) == 0:
+        return templates.TemplateResponse(
+            "email_key/index.html",
+            {"request": request, "error": "Invalid credentials, please try again"},
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
+    if pbkdf2_sha256.verify(password, row[0]):
+        send_api_key_email(row[2], "", row[1])
+        return templates.TemplateResponse(
+            "verify/index.html",
+            {"request": request},
+            status_code=status.HTTP_303_SEE_OTHER,
+        )
+    else:
+        return templates.TemplateResponse(
+            "email_key/index.html",
+            {"request": request, "error": "Invalid credentials, please try again"},
+            status_code=status.HTTP_401_UNAUTHORIZED,
+        )
