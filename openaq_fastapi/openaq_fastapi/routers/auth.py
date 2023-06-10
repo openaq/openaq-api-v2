@@ -12,6 +12,8 @@ from fastapi.templating import Jinja2Templates
 from passlib.hash import pbkdf2_sha256
 from fastapi.responses import RedirectResponse
 
+from ..models.logging import InfoLog
+
 
 from ..db import DB
 from ..forms.register import RegisterForm
@@ -186,5 +188,8 @@ async def post_register(
         ip_address=request.client.host,
     )
     verification_code = await db.create_user(user)
-    send_verification_email(verification_code, form.full_name, form.email_address)
+    response = send_verification_email(
+        verification_code, form.full_name, form.email_address
+    )
+    logger.info(InfoLog(detail=response).json())
     return RedirectResponse("/check-email", status_code=status.HTTP_302_FOUND)

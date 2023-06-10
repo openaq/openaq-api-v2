@@ -15,6 +15,7 @@ class LogType(Enum):
     UNAUTHORIZED = "UNAUTHORIZED"
     TOO_MANY_REQUESTS = "TOO_MANY_REQUESTS"
     WARNING = "WARNING"
+    INFO = "INFO"
 
 
 class BaseLog(BaseModel):
@@ -33,6 +34,10 @@ class BaseLog(BaseModel):
         alias_generator = camelize
         arbitrary_types_allowed = True
         allow_population_by_field_name = True
+
+
+class InfoLog(BaseLog):
+    type = LogType.INFO
 
 
 class WarnLog(BaseLog):
