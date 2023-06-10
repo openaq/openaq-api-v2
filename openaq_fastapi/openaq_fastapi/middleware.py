@@ -142,6 +142,12 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
             return False
         if "/v2/locations/tiles" in route:
             return False
+        if "/assets" in route:
+            return False
+        if ".css" in route:
+            return False
+        if ".js" in route:
+            return False
         return True
 
     async def dispatch(
