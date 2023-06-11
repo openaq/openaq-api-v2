@@ -4,7 +4,7 @@ import json
 import re
 import time
 from os import environ
-from typing import Union
+from typing import Tuple, Union
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
@@ -104,6 +104,26 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class Rate(object):
+    def __init__(
+        self,
+        limited: bool,
+        route: Union[str, None],
+        rate: Union[int, None],
+        rate_time: Union[int, None],
+    ):
+        self.limited: bool = limited
+        self.route: str = route
+        self.rate: Union[int, None] = rate
+        self.rate_time: Union[int, None] = rate_time
+
+    @property
+    def custom_rate(self) -> bool:
+        if self.rate != None and self.rate_time != None:
+            return True
+        return False
+
+
 class RateLimiterMiddleWare(BaseHTTPMiddleware):
     def __init__(
         self,
@@ -121,9 +141,9 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         self.rate_time = rate_time
         self.counter = 0
 
-    def request_is_limited(self, key: str, limit: int):
+    def request_is_limited(self, key: str, limit: int, rate_time: int):
         if self.redis_client.setnx(key, limit):
-            self.redis_client.expire(key, int(self.rate_time.total_seconds()))
+            self.redis_client.expire(key, int(rate_time.total_seconds()))
         count = self.redis_client.get(key)
         if count and int(count) > 0:
             self.counter = self.redis_client.decrby(key, 1)
@@ -136,19 +156,21 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         return False
 
     @staticmethod
-    def limited_path(route: str) -> bool:
-        allow_list = ["/", "/openapi.json", "/docs", "/register", "/assets"]
+    def limited_path(route: str) -> Rate:
+        allow_list = ["/", "/openapi.json", "/docs", "/assets"]
+        if route == "/register":
+            Rate(True, "register", 10, 1)
         if route in allow_list:
-            return False
+            Rate(False)
         if "/v2/locations/tiles" in route:
-            return False
+            Rate(False)
         if "/assets" in route:
-            return False
+            Rate(False)
         if ".css" in route:
-            return False
+            Rate(False)
         if ".js" in route:
-            return False
-        return True
+            Rate(False)
+        return Rate(True)
 
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
@@ -167,8 +189,13 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
                 )
             key = auth
             limit = self.rate_amount_key
-
-        if self.limited_path(route) and self.request_is_limited(key, limit):
+        rate = self.limited_path(route)
+        rate_time = self.rate_time
+        if rate.custom_rate:
+            key = f"{key}-{rate.route}"
+            limit = rate.rate
+            rate_time = rate.rate_time
+        if rate.limited and self.request_is_limited(key, limit, rate_time):
             logging.info(
                 TooManyRequestsLog(
                     request=request,
