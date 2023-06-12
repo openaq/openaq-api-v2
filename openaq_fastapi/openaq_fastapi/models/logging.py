@@ -87,8 +87,9 @@ class HTTPLog(BaseLog):
 
     @validator("params_obj", always=True)
     def set_params_obj(cls, v, values) -> dict:
-        if "=" in values.get("params", ""):
-            return v or dict(x.split("=") for x in values["params"].split("&"))
+        params = values.get("params", "")
+        if "=" in params:
+            return v or dict(x.split("=", 1) for x in params.split("&") if "=" in x)
         else:
             return None
 
