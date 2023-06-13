@@ -255,7 +255,7 @@ async def locations_get(
     , provider->>'name' as "sourceName"
     , COUNT(1) OVER() as found
     FROM locations_view_cached l
-    LEFT JOIN locations_manufacturers m ON (m.id = l.id)
+    LEFT JOIN locations_manufacturers_cached m ON (m.id = l.id)
     LEFT JOIN locations_latest_measurements_cached s ON (l.id = s.id)
     WHERE {locations.where()}
     ORDER BY {locations.order()}

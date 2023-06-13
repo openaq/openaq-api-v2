@@ -152,12 +152,10 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
             return False
         return True
 
-
     def check_valid_key(self, key: str):
         if self.redis_client.sismember('keys', key):
             return True
         return False
-
 
     @staticmethod
     def limited_path(route: str) -> bool:
@@ -167,7 +165,6 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         if "/v2/locations/tiles" in route:
             return False
         return True
-
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         route = request.url.path
