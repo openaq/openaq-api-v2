@@ -104,7 +104,7 @@ app = FastAPI(
     description="OpenAQ API",
     version="2.0.0",
     default_response_class=ORJSONResponse,
-    docs_url="/",
+    docs_url="/docs",
 )
 
 redis_client = None  # initialize for generalize_schema.py
