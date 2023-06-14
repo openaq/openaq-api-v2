@@ -152,6 +152,12 @@ if settings.RATE_LIMITING is True:
             )
         )
 
+app.include_router(auth_router)
+
+app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.add_middleware(LoggingMiddleware)
+
 
 # app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
 # app.add_middleware(LoggingMiddleware)
