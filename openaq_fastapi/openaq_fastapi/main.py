@@ -255,7 +255,7 @@ app.include_router(summary_router)
 
 static_dir = Path.joinpath(Path(__file__).resolve().parent, "static")
 
-app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+app.mount("/", StaticFiles(directory=str(static_dir), html=True))
 
 
 def handler(event, context):

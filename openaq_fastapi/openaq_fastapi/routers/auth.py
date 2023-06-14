@@ -28,7 +28,7 @@ templates = Jinja2Templates(
 )
 
 
-router = APIRouter()
+router = APIRouter(include_in_schema=False)
 
 
 credentials_exception = HTTPException(
