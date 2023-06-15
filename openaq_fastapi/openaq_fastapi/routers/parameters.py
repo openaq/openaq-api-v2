@@ -10,12 +10,15 @@ from ..models.queries import (
 )
 
 from openaq_fastapi.models.responses import (
-    ParametersResponse, ParametersResponseV1, converter
+    ParametersResponse,
+    ParametersResponseV1,
+    converter,
 )
 
 logger = logging.getLogger("parameters")
 
 router = APIRouter()
+
 
 class ParametersV1(APIBase):
     order_by: Literal["id", "name", "preferredUnit"] = Query("id")
@@ -27,7 +30,6 @@ class Parameters(APIBase):
 
 @router.get(
     "/v2/parameters",
-    include_in_schema=False,
     response_model=ParametersResponse,
     summary="Get parameters",
     description="Provides a list of parameters supported by the platform",
@@ -37,7 +39,6 @@ async def parameters_get(
     db: DB = Depends(),
     parameters: Parameters = Depends(Parameters.depends()),
 ):
-
     q = f"""
     SELECT
         measurands_id as id
@@ -60,9 +61,7 @@ async def parameters_get(
 
 @router.get(
     "/v1/parameters",
-    include_in_schema=False,
     response_model=ParametersResponse,
-
     summary="Get parameters",
     description="Provides a list of parameters supported by the platform",
     tags=["v1"],

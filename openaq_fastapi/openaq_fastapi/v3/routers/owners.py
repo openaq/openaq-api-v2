@@ -2,8 +2,7 @@ import logging
 from typing import Union
 from fastapi import APIRouter, Depends, Path
 from openaq_fastapi.db import DB
-from openaq_fastapi.v3.routers.locations import fetch_locations
-from openaq_fastapi.v3.models.responses import OwnersResponse, LocationsResponse
+from openaq_fastapi.v3.models.responses import OwnersResponse
 
 from openaq_fastapi.v3.models.queries import Paging, QueryBaseModel, QueryBuilder
 
@@ -27,22 +26,6 @@ class OwnerPathQuery(QueryBaseModel):
 
 
 class OwnersQueries(QueryBaseModel, Paging):
-    ...
-
-
-class OwnerLocationPathQuery(QueryBaseModel):
-    owners_id: int = Path(
-        description="Limit the results to a specific country",
-    )
-
-    def where(self) -> str:
-        return "(owner->'id')::int = :owners_id"
-
-
-class OwnerLocationsQueries(
-    Paging,
-    OwnerLocationPathQuery,
-):
     ...
 
 
@@ -71,20 +54,6 @@ async def owners_get(
     db: DB = Depends(),
 ):
     response = await fetch_owners(owner, db)
-    return response
-
-
-@router.get(
-    "/owners/{owners_id}/locations",
-    response_model=LocationsResponse,
-    summary="Get locations by owner ID",
-    description="Provides a list of locations by owner ID",
-)
-async def owner_locations_get(
-    owner_locations: OwnerLocationsQueries = Depends(OwnerLocationsQueries.depends()),
-    db: DB = Depends(),
-):
-    response = await fetch_locations(owner_locations, db)
     return response
 
 

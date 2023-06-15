@@ -1,0 +1,108 @@
+@use 'openaq-design-system/scss/variables' as variables;
+@use 'openaq-design-system/scss/badges';
+@use 'openaq-design-system/scss/buttons';
+@use 'openaq-design-system/scss/inputs';
+@use 'openaq-design-system/scss/resets';
+@use 'openaq-design-system/scss/bubbles';
+@use 'openaq-design-system/scss/utilities';
+@use 'openaq-design-system/scss/header';
+
+html body {
+  margin: 0;
+  padding: 0;
+}
+
+* {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.gradient-title {
+  background-color: variables.$lavender100;
+  background-image: linear-gradient(
+    92deg,
+    variables.$sky120 0%,
+    variables.$lavender100 10%
+  );
+  background-size: 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -moz-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -moz-text-fill-color: transparent;
+}
+
+.main {
+  background-color: white;
+  display: flex;
+  min-height: calc(100vh - 80px);
+  justify-content: center;
+}
+
+.content {
+  width: 800px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  @media (max-width: 450px) {
+    & {
+      margin: 30px;
+    }
+  }
+}
+
+.error-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.email-key-form {
+  width: 360px;
+  margin: 0 0 20px 0;
+
+  @media (max-width: 450px) {
+    & {
+      width: 100%;
+    }
+  }
+}
+
+.privacy-section {
+  margin: 20px 0;
+}
+
+.form-element {
+  display: flex;
+  flex-direction: column;
+  margin: 9px 0;
+  gap: 8px;
+}
+
+.form-header {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 450px;
+  margin: 20px 0;
+
+  @media (max-width: 450px) {
+    & {
+      width: 300px;
+    }
+  }
+}
+
+.form-submit {
+  grid-column: 1/-1;
+  display: flex;
+  justify-content: center;
+}
+
+.submit-btn {
+  flex: 1;
+}
+
+input[type='radio'] {
+  accent-color: variables.$ocean120;
+}

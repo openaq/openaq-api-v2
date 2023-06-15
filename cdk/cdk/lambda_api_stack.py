@@ -204,7 +204,9 @@ class LambdaApiStack(Stack):
                 min_ttl=Duration.minutes(0),
                 max_ttl=Duration.days(7),
                 cookie_behavior=cloudfront.CacheCookieBehavior.none(),
-                header_behavior=cloudfront.CacheHeaderBehavior.allow_list("Origin"),
+                header_behavior=cloudfront.CacheHeaderBehavior.allow_list(
+                    "Origin", "x-api-key"
+                ),
                 query_string_behavior=cloudfront.CacheQueryStringBehavior.all(),
                 enable_accept_encoding_gzip=True,
                 enable_accept_encoding_brotli=True,
@@ -291,6 +293,16 @@ class LambdaApiStack(Stack):
                 2, Fn.split("/", api_url)
             )  # required to split url into compatible format for dist
 
+            dist_origin_request_policy = cloudfront.OriginRequestPolicy(
+                self,
+                f"OpenAQAPIOriginRequestPolicy-{env_name}",
+                origin_request_policy_name=f"OpenAQAPIOriginRequestPolicy_{env_name}",
+                header_behavior=cloudfront.OriginRequestHeaderBehavior.allow_list(
+                    "x-api-key"
+                ),
+                query_string_behavior=cloudfront.OriginRequestQueryStringBehavior.all(),
+            )
+
             dist = cloudfront.Distribution(
                 self,
                 f"openaq-api-dist-{env_name}",
@@ -300,6 +312,7 @@ class LambdaApiStack(Stack):
                     compress=True,
                     cache_policy=cache_policy,
                     viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+                    origin_request_policy=dist_origin_request_policy,
                 ),
                 domain_names=[domain_name],
                 certificate=cert,

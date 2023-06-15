@@ -1,32 +1,31 @@
 from zxcvbn import zxcvbn
-from fastapi import HTTPException, Request, status
+from fastapi import HTTPException, status
+from email_validator import validate_email, EmailNotValidError
 
 
 from ..db import DB
 
 
-class RegisterForm:
-    def __init__(self, request: Request, db: DB):
-        self.request: Request = request
-        self.full_name: str
-        self.email_address: str
-        self.entity_type: str
-        self.password: str
-        self.password_confirm: str
-        self.db: DB = db
+class UserExistsException(Exception):
+    ...
 
-    async def load_data(self):
-        form_data = await self.request.form()
-        self.full_name = form_data.get("fullname")
-        self.email_address = form_data.get("emailaddress")
-        self.entity_type = form_data.get("entitytype")
-        self.password = form_data.get("password")
-        self.password_confirm = form_data.get("passwordconfirm")
-        if self.password == None:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"password required",
-            )
+
+class RegisterForm:
+    def __init__(
+        self,
+        full_name: str,
+        email_address: str,
+        entity_type: str,
+        password: str,
+        password_confirm: str,
+        db: DB,
+    ):
+        self.full_name = full_name
+        self.email_address = email_address
+        self.entity_type = entity_type
+        self.password = password
+        self.password_confirm = password_confirm
+        self._db: DB = db
 
     async def _check_user_exists(self) -> bool:
         query = """
@@ -36,13 +35,36 @@ class RegisterForm:
             users
         WHERE email_address = :email_address
         """
-        user = await self.db.fetch(query, {"email_address": self.email_address})
+        user = await self._db.fetch(query, {"email_address": self.email_address})
         if user:
             return True
         else:
             return False
 
     async def validate(self):
+        try:
+            emailinfo = validate_email(self.email_address, check_deliverability=False)
+            self.email_address = emailinfo.normalized.lower()
+        except EmailNotValidError as e:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"valid email required",
+            )
+        if self.entity_type not in ("Person", "Organization"):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"entity type required (Person or Organization)",
+            )
+        if self.password == None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"password required",
+            )
+        if self.password != self.password_confirm:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="passwords do not match",
+            )
         password_strength = zxcvbn(self.password)
         if password_strength.get("score", 0) < 3:
             warning = password_strength["feedback"]["warning"]
@@ -52,14 +74,6 @@ class RegisterForm:
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"password not strong enough. {warning} {suggestions}",
             )
-        if self.password != self.password_confirm:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="passwords do not match",
-            )
         existing_user = await self._check_user_exists()
         if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="user already exists with that email",
-            )
+            raise UserExistsException

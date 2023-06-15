@@ -4,23 +4,16 @@ from fastapi import APIRouter, Depends, Path, Query
 from pydantic import root_validator
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.models.responses import (
-    LocationsResponse,
     CountriesResponse,
 )
 
 from openaq_fastapi.v3.models.queries import (
     QueryBaseModel,
     Paging,
-    RadiusQuery,
-    BboxQuery,
     QueryBuilder,
     ProviderQuery,
     OwnerQuery,
-    MobileQuery,
 )
-
-from openaq_fastapi.v3.routers.locations import fetch_locations
-
 
 logger = logging.getLogger("countries")
 
@@ -44,28 +37,6 @@ class CountriesQueries(QueryBaseModel, Paging):
     ...
 
 
-class LocationCountryPathQuery(QueryBaseModel):
-
-    countries_id: int = Path(
-        description="Limit the results to a specific country",
-    )
-
-    def where(self) -> str:
-        return "(country->'id')::int = :countries_id"
-
-
-class CountryLocationsQueries(
-    Paging,
-    LocationCountryPathQuery,
-    RadiusQuery,
-    BboxQuery,
-    ProviderQuery,
-    OwnerQuery,
-    MobileQuery,
-):
-    ...
-
-
 @router.get(
     "/countries/{countries_id}",
     response_model=CountriesResponse,
@@ -77,20 +48,6 @@ async def country_get(
     db: DB = Depends(),
 ):
     response = await fetch_countries(country, db)
-    return response
-
-
-@router.get(
-    "/countries/{countries_id}/locations",
-    response_model=LocationsResponse,
-    summary="Get locations within a country",
-    description="Provides a country by country ID",
-)
-async def country_locations_get(
-    locations: CountryLocationsQueries = Depends(CountryLocationsQueries.depends()),
-    db: DB = Depends(),
-):
-    response = await fetch_locations(locations, db)
     return response
 
 

@@ -115,7 +115,6 @@ class MobileTile(TileBase):
 
 @router.get(
     "/locations/tiles/{z}/{x}/{y}.pbf",
-    include_in_schema=False,
     responses={200: {"content": {"application/x-protobuf": {}}}},
     response_class=Response,
 )
@@ -132,7 +131,6 @@ async def get_tile(
 
 @router.get(
     "/thresholds/tiles/{z}/{x}/{y}.pbf",
-    include_in_schema=False,
     responses={200: {"content": {"application/x-protobuf": {}}}},
     response_class=Response,
 )
@@ -281,7 +279,6 @@ async def fetch_threshold_tiles(query, db):
     "/locations/tiles/mobile-generalized/{z}/{x}/{y}.pbf",
     responses={200: {"content": {"application/x-protobuf": {}}}},
     response_class=Response,
-    include_in_schema=False,
 )
 async def get_mobile_gen_tiles(
     db: DB = Depends(),
@@ -301,7 +298,6 @@ async def fetch_mobile_gen_tiles(where, db):
     "/locations/tiles/mobile-paths/{z}/{x}/{y}.pbf",
     responses={200: {"content": {"application/x-protobuf": {}}}},
     response_class=Response,
-    include_in_schema=False,
 )
 async def get_mobile_path_tiles(
     db: DB = Depends(),
@@ -321,7 +317,6 @@ async def fetch_mobile_path_tiles(where, db):
     "/locations/tiles/mobile/{z}/{x}/{y}.pbf",
     responses={200: {"content": {"application/x-protobuf": {}}}},
     response_class=Response,
-    include_in_schema=False,
 )
 async def get_mobiletiles(
     db: DB = Depends(),
@@ -388,7 +383,6 @@ class TileJSON(BaseModel):
     response_model=TileJSON,
     responses={200: {"description": "Return a tilejson"}},
     response_model_exclude_none=True,
-    include_in_schema=False,
 )
 async def tilejson(
     request: Request,

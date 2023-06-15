@@ -11,9 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.gzip import GZipMiddleware
 
-# from fastapi.openapi.utils import get_openapi
 from mangum import Mangum
 from pydantic import BaseModel, ValidationError
 from starlette.responses import JSONResponse, RedirectResponse
@@ -29,7 +27,6 @@ from openaq_fastapi.models.logging import (
 
 from openaq_fastapi.middleware import (
     CacheControlMiddleware,
-    TotalTimeMiddleware,
     LoggingMiddleware,
     RateLimiterMiddleWare,
 )
@@ -104,11 +101,10 @@ class ORJSONResponse(JSONResponse):
 
 app = FastAPI(
     title="OpenAQ",
-    description="API for OpenAQ LCS",
+    description="OpenAQ API",
     version="2.0.0",
     default_response_class=ORJSONResponse,
-    docs_url="/",
-    # servers=[{"url": "/"}],
+    docs_url="/docs",
 )
 
 redis_client = None  # initialize for generalize_schema.py
@@ -132,7 +128,6 @@ if settings.RATE_LIMITING:
     logger.debug("Redis connected")
 
 
-app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -140,13 +135,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-app.include_router(auth_router)
-
-app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
-app.add_middleware(TotalTimeMiddleware)
-app.add_middleware(LoggingMiddleware)
-
 
 if settings.RATE_LIMITING is True:
     if redis_client:
@@ -163,6 +151,12 @@ if settings.RATE_LIMITING is True:
                 detail="valid redis client not provided but RATE_LIMITING set to TRUE"
             )
         )
+
+app.include_router(auth_router)
+
+
+app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
+app.add_middleware(LoggingMiddleware)
 
 
 class OpenAQValidationResponseDetail(BaseModel):
@@ -245,6 +239,7 @@ app.include_router(trends.router)
 app.include_router(providers.router)
 app.include_router(sensors.router)
 
+app.include_router(auth_router)
 app.include_router(averages_router)
 app.include_router(cities_router)
 app.include_router(countries_router)
@@ -260,7 +255,7 @@ app.include_router(summary_router)
 
 static_dir = Path.joinpath(Path(__file__).resolve().parent, "static")
 
-app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+app.mount("/", StaticFiles(directory=str(static_dir), html=True))
 
 
 def handler(event, context):

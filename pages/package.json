@@ -7,8 +7,8 @@
     "dev": "vite",
     "build": "NODE_ENV=production vite build",
     "clean": "",
-    "mkdir": "mkdir -p ../openaq_fastapi/openaq_fastapi/templates/register && mkdir -p ../openaq_fastapi/openaq_fastapi/templates/verify && mkdir -p ../openaq_fastapi/openaq_fastapi/templates/check_email",
-    "move": "cp ./dist/index.html ../openaq_fastapi/openaq_fastapi/templates/index.html && cp ./dist/register/index.html ../openaq_fastapi/openaq_fastapi/templates/register/index.html && cp ./dist/verify/index.html ../openaq_fastapi/openaq_fastapi/templates/verify/index.html && cp ./dist/check_email/index.html ../openaq_fastapi/openaq_fastapi/templates/check_email/index.html && cp -r ./dist/assets ../openaq_fastapi/openaq_fastapi/static",
+    "mkdir": "mkdir -p ../openaq_fastapi/openaq_fastapi/templates/register && mkdir -p ../openaq_fastapi/openaq_fastapi/templates/verify && mkdir -p ../openaq_fastapi/openaq_fastapi/templates/check_email && mkdir -p ../openaq_fastapi/openaq_fastapi/templates/email_key",
+    "move": "cp ./dist/index.html ../openaq_fastapi/openaq_fastapi/templates/index.html && cp ./dist/register/index.html ../openaq_fastapi/openaq_fastapi/templates/register/index.html && cp ./dist/verify/index.html ../openaq_fastapi/openaq_fastapi/templates/verify/index.html && cp ./dist/check_email/index.html ../openaq_fastapi/openaq_fastapi/templates/check_email/index.html  && cp ./dist/email_key/index.html ../openaq_fastapi/openaq_fastapi/templates/email_key/index.html && cp -r ./dist/assets ../openaq_fastapi/openaq_fastapi/static",
     "deploy": "yarn run build && yarn run mkdir && yarn run move",
     "preview": "vite preview"
   },

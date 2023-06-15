@@ -5,21 +5,11 @@ from openaq_fastapi.v3.models.queries import (
     QueryBuilder,
     QueryBaseModel,
     Paging,
-    BboxQuery,
-    CountryQuery,
-    OwnerQuery,
-    RadiusQuery,
-    MobileQuery,
-    MonitorQuery,
 )
 
 from openaq_fastapi.v3.models.responses import (
     ProvidersResponse,
-    LocationsResponse,
 )
-
-from openaq_fastapi.v3.routers.locations import fetch_locations
-
 
 logger = logging.getLogger("providers")
 
@@ -53,19 +43,6 @@ class ProviderLocationPathQuery(QueryBaseModel):
         return "(provider->'id')::int = :providers_id"
 
 
-class ProviderLocationsQueries(
-    ProviderLocationPathQuery,
-    Paging,
-    RadiusQuery,
-    BboxQuery,
-    OwnerQuery,
-    CountryQuery,
-    MobileQuery,
-    MonitorQuery,
-):
-    ...
-
-
 @router.get(
     "/providers/{providers_id}",
     response_model=ProvidersResponse,
@@ -91,20 +68,6 @@ async def providers_get(
     db: DB = Depends(),
 ):
     response = await fetch_providers(provider, db)
-    return response
-
-
-@router.get(
-    "/providers/{providers_id}/locations",
-    response_model=LocationsResponse,
-    summary="Get lociations by provider ID",
-    description="Provides a list of locations by provider ID",
-)
-async def provider_locations_get(
-    locations: ProviderLocationsQueries = Depends(ProviderLocationsQueries.depends()),
-    db: DB = Depends(),
-):
-    response = await fetch_locations(locations, db)
     return response
 
 

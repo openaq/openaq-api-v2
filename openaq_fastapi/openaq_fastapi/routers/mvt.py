@@ -292,7 +292,6 @@ async def get_mobilegentile(
     db: DB = Depends(),
     t: MobileTile = Depends(MobileTile.depends()),
 ):
-
     query = f"""
         WITH
         tile AS (

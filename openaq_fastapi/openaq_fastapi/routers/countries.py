@@ -88,7 +88,6 @@ class Countries(Country, APIBase):
 
 @router.get(
     "/v1/countries/{country_id}",
-    include_in_schema=False,
     response_model=CountriesResponse,
     summary="Get country by ID",
     description="Provides a single country by country ID",
@@ -96,7 +95,6 @@ class Countries(Country, APIBase):
 )
 @router.get(
     "/v2/countries/{country_id}",
-    include_in_schema=False,
     response_model=CountriesResponse,
     summary="Get country by ID",
     description="Provides a single country by country ID",
@@ -104,7 +102,6 @@ class Countries(Country, APIBase):
 )
 @router.get(
     "/v2/countries",
-    include_in_schema=False,
     response_model=CountriesResponse,
     summary="Get countries",
     description="Provides a list of countries",

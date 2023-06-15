@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <title>OpenAQ API</title>
+</head>
+<body>
+    <header class="header">
+        <div class="header-contents">
+            <a href="/" class="header-logo" aria-label="openaq logo">
+                <img src="../logo.svg" alt="openaq logo">
+            </a>
+        </div>
+    </header>
+    <main class="main">
+        <div class="content">
+            <div class="form-header">
+                <h1 class="type-display-1 gradient-title">API Key Form</h1>
+                <p class="type-body-1">Request your OpenAQ API Key to be sent to your registered email. Don't have an account? Register at <a class="type-link-1" href="https://api.openaq.org/register">https://api.openaq.org/register</a></p>
+            </div>
+            <form method="POST" class="email-key-form">
+                <div class="form-element">
+                    <label for="email-input" class="type-subtitle-3 text-sky-120">Email</label>
+                    <input type="email" name="emailaddress" id="email-input" class="text-input js-email-input"  placeholder=" " autocomplete="on" required>
+                </div>
+                <div class="form-element">
+                    <label for="password-input" class="type-subtitle-3 text-sky-120">Password</label>
+                    <input type="password" name="password" id="password-input" class="text-input js-password-input" placeholder=" " required>
+                </div>
+                {% if error %}
+                <div class="error-message">
+                    <span class="type-subtitle-2 text-fire-100">{{ error }}</span>
+                </div>
+                {% endif %}
+                <div class="form-submit">
+                    <button type="submit" class="btn btn-primary submit-btn js-submit-btn" disabled>Submit</button>
+                </div>
+            </form>
+
+            <section class="privacy-section">
+                <p class="type-body-1">See our <a class="type-link-1" href="https://openaq.org/privacy">privacy policy</a> for more information on the personal data we store.</p>
+            </section>
+        </div>
+    </main>
+    <script type="module" src="index.js"></script>
+</body>
+</html>
