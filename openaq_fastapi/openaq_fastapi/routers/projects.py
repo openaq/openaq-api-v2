@@ -104,7 +104,6 @@ class Projects(Project, Measurands, APIBase, Country):
 
 @router.get(
     "/v2/projects/{project_id}",
-    include_in_schema=False,
     response_model=ProjectsResponse,
     summary="Project by ID",
     description="Provides a project by project ID",
@@ -112,7 +111,6 @@ class Projects(Project, Measurands, APIBase, Country):
 )
 @router.get(
     "/v2/projects",
-    include_in_schema=False,
     response_model=ProjectsResponse,
     summary="Projects",
     description="Provides a list of projects",
@@ -122,7 +120,6 @@ async def projects_get(
     db: DB = Depends(),
     projects: Projects = Depends(Projects.depends()),
 ):
-
     q = f"""
         WITH bysensor AS (
             SELECT
