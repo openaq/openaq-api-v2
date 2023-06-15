@@ -1,3 +1,4 @@
+from enum import Enum
 import logging
 from typing import Union
 from fastapi import APIRouter, Depends, Query, Path
@@ -31,7 +32,25 @@ class ParameterPathQuery(QueryBaseModel):
         return "id = :parameters_id"
 
 
-class ParametersQueries(Paging, CountryQuery, BboxQuery, RadiusQuery):
+class ParameterType(str, Enum):
+    pollutant = "pollutant"
+    meteorological = "meteorological"
+
+
+class ParameterTypeQuery(QueryBaseModel):
+    parameter_type: Union[ParameterType, None] = Query(
+        description="Limit the results to a specific parameters id"
+    )
+
+    def where(self) -> str:
+        if self.parameter_type == None:
+            return None
+        return "m.parameter_type = :parameter_type"
+
+
+class ParametersQueries(
+    Paging, CountryQuery, BboxQuery, RadiusQuery, ParameterTypeQuery
+):
     ...
 
 
@@ -67,14 +86,17 @@ async def fetch_parameters(query, db):
     query_builder = QueryBuilder(query)
     sql = f"""
     SELECT id
-    , name
-    , display_name
-    , units
-    , description
-    , locations_count
-    , measurements_count
-    {query_builder.total()}
-    FROM parameters_view_cached
+        , p.name
+        , p.display_name
+        , p.units
+        , p.description
+        , p.locations_count
+        , p.measurements_count
+        {query_builder.total()}
+    FROM 
+        parameters_view_cached p 
+    JOIN
+        measurands m ON p.id = m.measurands_id
     {query_builder.where()}
     {query_builder.pagination()}
     """
