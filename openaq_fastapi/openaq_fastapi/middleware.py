@@ -8,7 +8,8 @@ from typing import Union
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
-from starlette.types import ASGIApp
+from starlette.types import ASGIApp, Receive, Send, Message, Scope
+
 
 from fastapi.responses import JSONResponse
 from fastapi import Response, status
@@ -59,8 +60,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
     """MiddleWare to set servers url on App with current url."""
 
     async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
-
         start_time = time.time()
         response = await call_next(request)
         process_time = time.time() - start_time
@@ -76,9 +75,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         else:
             counter = None
         api_key = request.headers.get("x-api-key", None)
-
-        api_key = request.headers.get("x-api-key", None)
-
         if response.status_code == 200:
             logger.info(
                 HTTPLog(
