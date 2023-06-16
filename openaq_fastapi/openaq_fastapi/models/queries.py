@@ -207,9 +207,9 @@ class Geo(OBaseModel):
     )
     lat: Union[confloat(ge=-90, le=90), None] = None
     lon: Union[confloat(ge=-180, le=180), None] = None
-    radius: conint(gt=0, le=100000) = Query(
+    radius: conint(gt=0, le=25000) = Query(
         1000,
-        description="Search radius from coordinates as center in meters. Maximum of 100,000 (100km) defaults to 1000 (1km) e.g. radius=10000",
+        description="Search radius from coordinates as center in meters. Maximum of 25,000 (25km) defaults to 1000 (1km) e.g. radius=10000",
         example="10000",
     )
 
