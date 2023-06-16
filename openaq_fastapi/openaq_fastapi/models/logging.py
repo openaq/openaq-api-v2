@@ -15,6 +15,7 @@ class LogType(Enum):
     UNAUTHORIZED = "UNAUTHORIZED"
     TOO_MANY_REQUESTS = "TOO_MANY_REQUESTS"
     WARNING = "WARNING"
+    INFO = "INFO"
 
 
 class BaseLog(BaseModel):
@@ -33,6 +34,10 @@ class BaseLog(BaseModel):
         alias_generator = camelize
         arbitrary_types_allowed = True
         allow_population_by_field_name = True
+
+
+class InfoLog(BaseLog):
+    type = LogType.INFO
 
 
 class WarnLog(BaseLog):
@@ -82,8 +87,9 @@ class HTTPLog(BaseLog):
 
     @validator("params_obj", always=True)
     def set_params_obj(cls, v, values) -> dict:
-        if "=" in values.get("params", ""):
-            return v or dict(x.split("=") for x in values["params"].split("&"))
+        params = values.get("params", "")
+        if "=" in params:
+            return v or dict(x.split("=", 1) for x in params.split("&") if "=" in x)
         else:
             return None
 

@@ -34,8 +34,11 @@
     <main class="main">
       <div class="content">
         <h1 class="type-display-1 gradient-title">API Key Registration</h1>
-
-        <h2 class="type-heading-2">Email address verified. You will recieve a email containing your OpenAQ API key shortly.</h2>
+        {% if not error %}
+        <h2 class="type-heading-2"> {% if verify %} Email address verified. {% endif %}You will recieve a email containing your OpenAQ API key shortly.</h2>
+        {% else %}
+        <h2 class="type-heading-2">{{ error_message }}</h2>
+        {% endif %}
       </div>
     </main>
     <script type="module" src="index.js"></script>

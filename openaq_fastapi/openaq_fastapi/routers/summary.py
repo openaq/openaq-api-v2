@@ -14,7 +14,6 @@ router = APIRouter()
 
 @router.get(
     "/v2/summary",
-    include_in_schema=False,
     response_model=SummaryResponse,
     summary="Platform Summary",
     description="Provides a summary of platform data",

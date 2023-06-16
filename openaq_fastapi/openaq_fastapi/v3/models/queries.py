@@ -31,8 +31,6 @@ ignore_in_docs = [
 ]
 
 
-
-
 def parameter_dependency_from_model(name: str, model_cls):
     """
     Takes a pydantic model class as input and creates
@@ -94,7 +92,6 @@ class TypeParametersMemoizer(type):
     _generics_cache = weakref.WeakValueDictionary()
 
     def __getitem__(cls, typeparams):
-
         # prevent duplication of generic types
         if typeparams in cls._generics_cache:
             return cls._generics_cache[typeparams]
@@ -296,7 +293,6 @@ class Paging(BaseModel):
 
 
 class ParametersQuery(QueryBaseModel):
-
     parameters_id: Union[CommaSeparatedList[int], None] = Query(description="")
 
     def where(self) -> Union[str, None]:
@@ -305,7 +301,6 @@ class ParametersQuery(QueryBaseModel):
 
 
 class MobileQuery(QueryBaseModel):
-
     mobile: Union[bool, None] = Query(
         description="Is the location considered a mobile location?"
     )
@@ -316,7 +311,6 @@ class MobileQuery(QueryBaseModel):
 
 
 class MonitorQuery(QueryBaseModel):
-
     monitor: Union[bool, None] = Query(
         description="Is the location considered a reference monitor?"
     )
@@ -327,7 +321,6 @@ class MonitorQuery(QueryBaseModel):
 
 
 class ProviderQuery(QueryBaseModel):
-
     providers_id: Union[CommaSeparatedList[int], None] = Query(
         description="Limit the results to a specific provider"
     )
@@ -374,12 +367,11 @@ class CountryQuery(QueryBaseModel):
             return "(country->'id')::int = ANY (:countries_id)"
         elif self.iso is not None:
             return "country->>'code' = :iso"
-        
+
 
 class DateFromQuery(QueryBaseModel):
     date_from: Optional[Union[datetime, date]] = Query(
-        "2022-10-01",
-        description="From when?"
+        "2022-10-01", description="From when?"
     )
 
     def where(self) -> str:
@@ -389,15 +381,14 @@ class DateFromQuery(QueryBaseModel):
             if self.date_from.tzinfo is None:
                 return "datetime > (:date_from::timestamp AT TIME ZONE tzid)"
             else:
-                return "datetime > :date_from"                
+                return "datetime > :date_from"
         elif isinstance(self.date_from, date):
-            return "datetime > (:date_from::timestamp AT TIME ZONE tzid)"        
+            return "datetime > (:date_from::timestamp AT TIME ZONE tzid)"
 
 
 class DateToQuery(QueryBaseModel):
     date_to: Optional[Union[datetime, date]] = Query(
-        datetime.utcnow(),
-        description="To when?"
+        datetime.utcnow(), description="To when?"
     )
 
     def where(self) -> str:
@@ -407,9 +398,9 @@ class DateToQuery(QueryBaseModel):
             if self.date_to.tzinfo is None:
                 return "datetime <= (:date_to::timestamp AT TIME ZONE tzid)"
             else:
-                return "datetime <= :date_to"                
+                return "datetime <= :date_to"
         elif isinstance(self.date_to, date):
-            return "datetime <= (:date_to::timestamp AT TIME ZONE tzid)"        
+            return "datetime <= (:date_to::timestamp AT TIME ZONE tzid)"
 
 
 class PeriodNames(str, Enum):
@@ -424,23 +415,21 @@ class PeriodNames(str, Enum):
 
 class PeriodNameQuery(QueryBaseModel):
     period_name: Union[PeriodNames, None] = Query(
-        "hour",
-        description="Period to aggregate. Month, day, hour"
+        "hour", description="Period to aggregate. Month, day, hour"
     )
-
 
 
 # Some spatial helper queries
 class RadiusQuery(QueryBaseModel):
     coordinates: Union[str, None] = Query(
         None,
-        regex=r"^-?\d{1,2}\.?\d{0,8},-?1?\d{1,2}\.?\d{0,8}$",
-        description="Coordinate pair in form lat,lng. Up to 8 decimal points of precision e.g. 38.907,-77.037",
+        regex=r"^(-)?(?:90(?:\.0{1,4})?|((?:|[1-8])[0-9])(?:\.[0-9]{1,4})?)\,(-)?(?:180(?:\.0{1,4})?|((?:|[1-9]|1[0-7])[0-9])(?:\.[0-9]{1,4})?)$",
+        description="Coordinate pair in form latitude,longitude. Up to 4 decimal points of precision e.g. 38.907,-77.037",
         example="38.907,-77.037",
     )
-    radius: conint(gt=0, le=100000) = Query(
+    radius: conint(gt=0, le=25000) = Query(
         None,
-        description="Search radius from coordinates as center in meters. Maximum of 100,000 (100km) defaults to 1000 (1km) e.g. radius=1000",
+        description="Search radius from coordinates as center in meters. Maximum of 25,000 (25km) defaults to 1000 (1km) e.g. radius=1000",
         example="1000",
     )
     lat: Union[confloat(ge=-90, le=90), None] = None
@@ -465,24 +454,28 @@ class RadiusQuery(QueryBaseModel):
             raise ValueError(
                 "Cannot pass both bounding box and coordinate/radius query in the same URL"
             )
+        if coordinates is not None and radius is None:
+            raise ValueError("Coordinates must be passed with a radius")
+        if coordinates is None and radius is not None:
+            raise ValueError("Radius must be passed with a coordinate pair")
         return values
 
-    def fields(self, geometry_field: str = "geom"):
+    def fields(self, geometry_field: str = "geog"):
         if self.lat is not None and self.lon is not None and self.radius is not None:
-            return f"st_distance({geometry_field}, st_setsrid(st_makepoint(:lon, :lat), 4326)) as distance"
+            return f"ST_Distance({geometry_field}, ST_MakePoint(:lon, :lat)::geography) as distance"
 
-    def where(self, geometry_field: str = "geom"):
+    def where(self, geometry_field: str = "geog"):
         if self.lat is not None and self.lon is not None and self.radius is not None:
-            return f"st_dwithin(st_setsrid(st_makepoint(:lon, :lat), 4326), {geometry_field}, :radius)"
+            return f"ST_DWithin(ST_MakePoint(:lon, :lat)::geography, {geometry_field}, :radius)"
         return None
 
 
 class BboxQuery(QueryBaseModel):
     bbox: Union[str, None] = Query(
         None,
-        regex=r"^-?\d{1,2}\.?\d{0,4},-?1?\d{1,2}\.?\d{0,4},-?\d{1,2}\.?\d{0,4},-?\d{1,2}\.?\d{0,4}$",
+        regex=r"^(-)?(?:180(?:\.0{1,4})?|((?:|[1-9]|1[0-7])[0-9])(?:\.[0-9]{1,4})?)\,(-)?(?:90(?:\.0{1,4})?|((?:|[1-8])[0-9])(?:\.[0-9]{1,4})?)\,(-)?(?:180(?:\.0{1,4})?|((?:|[1-9]|1[0-7])[0-9])(?:\.[0-9]{1,4})?)\,(-)?(?:90(?:\.0{1,4})?|((?:|[1-8])[0-9])(?:\.[0-9]{1,4})?)$",
         description="Min X, min Y, max X, max Y, up to 4 decimal points of precision e.g. -77.037,38.907,-77.0,39.910",
-        example="-77.037,38.907,-77.035,38.910",
+        example="-77.1200,38.7916,-76.9094,38.9955",
     )
     miny: Union[confloat(ge=-90, le=90), None] = None
     minx: Union[confloat(ge=-180, le=180), None] = None
