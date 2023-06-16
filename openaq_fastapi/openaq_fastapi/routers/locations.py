@@ -29,9 +29,7 @@ from ..models.queries import (
 
 logger = logging.getLogger("locations")
 
-router = APIRouter(
-    include_in_schema=True
-)
+router = APIRouter(include_in_schema=True)
 
 
 class LocationsOrder(str, Enum):
@@ -47,13 +45,13 @@ class LocationsOrder(str, Enum):
 
 
 class Locations(
-        Location,
-        City,
-        Country,
-        Geo,
-        Measurands,
-      #  HasGeo,
-        APIBase
+    Location,
+    City,
+    Country,
+    Geo,
+    Measurands,
+    #  HasGeo,
+    APIBase,
 ):
     order_by: LocationsOrder = Query(
         "lastUpdated",
@@ -166,10 +164,10 @@ class Locations(
                         """
                     )
                 elif f == "sensorType":
-                    if v == 'reference grade':
-                        wheres.append('ismonitor')
-                    elif v == 'low-cost sensor':
-                        wheres.append('NOT ismonitor')
+                    if v == "reference grade":
+                        wheres.append("ismonitor")
+                    elif v == "low-cost sensor":
+                        wheres.append("NOT ismonitor")
                 elif f == "modelName":
                     wheres.append(
                         """
@@ -187,7 +185,7 @@ class Locations(
                         """
                     )
                 elif f == "isMobile":
-                    wheres.append(f' ismobile = {bool(v)} ')
+                    wheres.append(f" ismobile = {bool(v)} ")
                 elif f == "isAnalysis":
                     wheres.append(f' "is_analysis" = {bool(v)} ')
                 elif f == "unit":
@@ -225,7 +223,6 @@ async def locations_get(
     db: DB = Depends(),
     locations: Locations = Depends(Locations.depends()),
 ):
-
     qparams = locations.params()
 
     hidejson = "rawData,"
@@ -284,7 +281,6 @@ async def latest_get(
     db: DB = Depends(),
     locations: Locations = Depends(Locations.depends()),
 ):
-
     qparams = locations.params()
 
     q = f"""
@@ -308,7 +304,6 @@ async def latest_get(
     return output
 
 
-
 @router.get(
     "/v1/latest/{location_id}",
     response_model=LatestResponseV1,
@@ -325,7 +320,6 @@ async def latest_v1_get(
     db: DB = Depends(),
     locations: Locations = Depends(Locations.depends()),
 ):
-
     locations.entity = "government"
     qparams = locations.params()
 
@@ -383,7 +377,6 @@ async def locationsv1_get(
     db: DB = Depends(),
     locations: Locations = Depends(Locations.depends()),
 ):
-
     locations.entity = "government"
     qparams = locations.params()
 
