@@ -132,7 +132,6 @@ class CountriesRow(BaseModel):
         allow_population_by_field_name = True
 
 
-
 class CountriesResponse(OpenAQResult):
     results: List[CountriesRow]
 
@@ -162,7 +161,6 @@ class CityRow(BaseModel):
     first_updated: str = Field(..., alias="firstUpdated")
     last_updated: str = Field(..., alias="lastUpdated")
     parameters: List[str]
-
 
     class Config:
         allow_population_by_field_name = True
@@ -234,8 +232,8 @@ class CountsByMeasurementItem(BaseModel):
 class LocationsRowV1(BaseModel):
     id: int
     country: str
-    city: str
-    cities: List[str]
+    city: Union[str, None]
+    cities: Union[List[Union[str, None]], None]
     location: str
     locations: List[str]
     source_name: str = Field(..., alias="sourceName")
@@ -342,6 +340,7 @@ class MeasurementsResponse(OpenAQResult):
 
 # /v2/models
 
+
 class ModelsResponse(OpenAQResult):
     results: List[str]
 
@@ -375,6 +374,7 @@ class ParametersRow(BaseModel):
 
     class Config:
         allow_population_by_field_name = True
+
 
 class ParametersResponse(OpenAQResult):
     results: List[ParametersRow]
