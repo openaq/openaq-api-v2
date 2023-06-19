@@ -21,8 +21,8 @@ class Settings(BaseSettings):
     LOG_BUCKET: str = None
     CERTIFICATE_ARN: str = None
     TOPIC_ARN: str = None
-    API_LAMBDA_MEMORY_SIZE: int = 1536
-    API_LAMBDA_TIMEOUT: int = 30  # lambda timeout in seconds
+    API_LAMBDA_MEMORY_SIZE: int = 1024
+    API_LAMBDA_TIMEOUT: int = 15  # lambda timeout in seconds
     CF_LOGS_LAMBDA_MEMORY_SIZE: int = 1792
     CF_LOG_LAMBDA_TIMEOUT: int = 180  # lambda timeout in seconds
 

@@ -281,8 +281,8 @@ class LambdaApiStack(Stack):
             log_lambda.add_event_source(
                 SqsEventSource(
                     log_event_queue,
-                    batch_size=10,
-                    max_batching_window=Duration.minutes(1),
+                    batch_size=100,
+                    max_batching_window=Duration.minutes(3),
                     report_batch_item_failures=True,
                 )
             )
