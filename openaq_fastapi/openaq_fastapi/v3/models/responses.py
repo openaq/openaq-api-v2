@@ -16,7 +16,7 @@ class Meta(JsonBase):
     website: str = "/"
     page: int = 1
     limit: int = 100
-    found: int = 0
+    found: Union[int, str, None]
 
 
 class OpenAQResult(JsonBase):
@@ -25,7 +25,6 @@ class OpenAQResult(JsonBase):
 
 
 #
-
 
 class DatetimeObject(JsonBase):
     utc: str

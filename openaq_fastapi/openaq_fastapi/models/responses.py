@@ -25,7 +25,7 @@ class Meta(BaseModel):
     website: str = "/"
     page: int = 1
     limit: int = 100
-    found: int = 0
+    found: Union[int, str, None]
 
 
 class Date(BaseModel):
