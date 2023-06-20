@@ -133,12 +133,15 @@ class DB:
     async def fetchPage(self, query, kwargs):
         if "limit" in kwargs.keys():
             page = kwargs.get("page", 1)
-            kwargs["offset"] = abs((page - 1) * kwargs.get("limit"))
+            limit = kwargs.get("limit")
+            kwargs["offset"] = abs((page - 1) * limit)
 
         data = await self.fetch(query, kwargs)
         if len(data) > 0:
             if "found" in data[0].keys():
                 kwargs["found"] = data[0]["found"]
+            elif len(data) == limit:
+                kwargs["found"] = f">{limit}"
             else:
                 kwargs["found"] = len(data)
         else:

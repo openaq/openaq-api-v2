@@ -78,11 +78,11 @@ async def fetch_measurements(q, db):
     if q.period_name in [None, "hour"]:
         # Query for hourly data
         sql = f"""
-        SELECT sy.sensor_nodes_id as id
+        SELECT sn.id
         , json_build_object(
         'label', '1hour'
-        , 'datetime_from', get_datetime_object(h.datetime - '1hour'::interval, ts.tzid)
-        , 'datetime_to', get_datetime_object(h.datetime, ts.tzid)
+        , 'datetime_from', get_datetime_object(h.datetime - '1hour'::interval, sn.timezone)
+        , 'datetime_to', get_datetime_object(h.datetime, sn.timezone)
         , 'interval',  '01:00:00'
         ) as period
         , json_build_object(
@@ -107,16 +107,14 @@ async def fetch_measurements(q, db):
         , s.data_logging_period_seconds
         , {expected_hours} * 3600
         )||jsonb_build_object(
-          'datetime_from', get_datetime_object(h.first_datetime, tzid)
-        , 'datetime_to', get_datetime_object(h.last_datetime, tzid)
+          'datetime_from', get_datetime_object(h.first_datetime, sn.timezone)
+        , 'datetime_to', get_datetime_object(h.last_datetime, sn.timezone)
         ) as coverage
         {query.fields()}
-        {query.total()}
         FROM hourly_data h
         JOIN sensors s USING (sensors_id)
         JOIN sensor_systems sy USING (sensor_systems_id)
-        JOIN sensor_nodes sn ON (sy.sensor_nodes_id = sn.sensor_nodes_id)
-        JOIN timezones ts ON (sn.timezones_id = ts.gid)
+        JOIN locations_view_cached sn ON (sy.sensor_nodes_id = sn.id)
         JOIN measurands m ON (m.measurands_id = h.measurands_id)
         {query.where()}
         ORDER BY datetime
@@ -134,15 +132,15 @@ async def fetch_measurements(q, db):
         sql = f"""
 WITH meas AS (
 SELECT
-  sy.sensor_nodes_id
+  sn.id
  , s.measurands_id
- , ts.tzid
- , truncate_timestamp(datetime, :period_name, ts.tzid) as datetime
+ , sn.timezone
+ , truncate_timestamp(datetime, :period_name, timezone) as datetime
  , AVG(s.data_averaging_period_seconds) as avg_seconds
  , AVG(s.data_logging_period_seconds) as log_seconds
- , MAX(truncate_timestamp(datetime, :period_name, ts.tzid, '1{q.period_name}'::interval)) as last_period
- , MIN(timezone(ts.tzid, datetime - '1sec'::interval)) as first_datetime
- , MAX(timezone(ts.tzid, datetime - '1sec'::interval)) as last_datetime
+ , MAX(truncate_timestamp(datetime, :period_name, sn.timezone, '1{q.period_name}'::interval)) as last_period
+ , MIN(timezone(sn.timezone, datetime - '1sec'::interval)) as first_datetime
+ , MAX(timezone(sn.timezone, datetime - '1sec'::interval)) as last_datetime
  , COUNT(1) as value_count
  , AVG(value_avg) as value_avg
  , STDDEV(value_avg) as value_sd
@@ -157,15 +155,14 @@ SELECT
  FROM hourly_data m
  JOIN sensors s ON (m.sensors_id = s.sensors_id)
  JOIN sensor_systems sy ON (s.sensor_systems_id = sy.sensor_systems_id)
- JOIN sensor_nodes sn ON (sy.sensor_nodes_id = sn.sensor_nodes_id)
- JOIN timezones ts ON (sn.timezones_id = ts.gid)
+ JOIN locations_view_cached sn ON (sy.sensor_nodes_id = sn.id)
  {query.where()}
  GROUP BY 1, 2, 3, 4)
- SELECT t.sensor_nodes_id
+ SELECT t.id
  , json_build_object(
     'label', '1{q.period_name}'
-    , 'datetime_from', get_datetime_object(datetime, t.tzid)
-    , 'datetime_to', get_datetime_object(last_period, t.tzid)
+    , 'datetime_from', get_datetime_object(datetime, t.timezone)
+    , 'datetime_to', get_datetime_object(last_period, t.timezone)
     , 'interval',  '{dur}'
     ) as period
  , sig_digits(value_avg, 2) as value
@@ -190,13 +187,10 @@ SELECT
     , 3600
     , EXTRACT(EPOCH FROM last_period - datetime)
  )||jsonb_build_object(
-          'datetime_from', get_datetime_object(first_datetime, tzid)
-        , 'datetime_to', get_datetime_object(last_datetime, tzid)
+          'datetime_from', get_datetime_object(first_datetime, t.timezone)
+        , 'datetime_to', get_datetime_object(last_datetime, t.timezone)
         ) as coverage
- {query.total()}
  FROM meas t
- --JOIN sensor_nodes sn ON (t.sensor_nodes_id = sn.sensor_nodes_id)
- --JOIN timezones ts ON (sn.timezones_id = ts.gid)
  JOIN measurands m ON (t.measurands_id = m.measurands_id)
  {query.pagination()}
     """
