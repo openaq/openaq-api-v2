@@ -13,6 +13,7 @@ from openaq_fastapi.v3.models.queries import (
     DateFromQuery,
     DateToQuery,
     PeriodNameQuery,
+    Paging,
 )
 
 
@@ -40,6 +41,7 @@ class LocationPathQuery(QueryBaseModel):
 
 
 class LocationTrendsQueries(
+    Paging,
     LocationPathQuery,
     ParameterPathQuery,
     DateFromQuery,
@@ -79,10 +81,10 @@ async def fetch_trends(q, db):
     sql = f"""
 WITH trends AS (
 SELECT
-  sy.sensor_nodes_id
+  sn.id
  , s.measurands_id
- , ts.tzid
- , to_char(timezone(ts.tzid, datetime - '1sec'::interval), '{fmt}') as factor
+ , sn.timezone
+ , to_char(timezone(sn.timezone, datetime - '1sec'::interval), '{fmt}') as factor
  , AVG(s.data_averaging_period_seconds) as avg_seconds
  , AVG(s.data_logging_period_seconds) as log_seconds
  , MIN(datetime - '1sec'::interval) as datetime_from
@@ -101,11 +103,10 @@ SELECT
  FROM hourly_data m
  JOIN sensors s ON (m.sensors_id = s.sensors_id)
  JOIN sensor_systems sy ON (s.sensor_systems_id = sy.sensor_systems_id)
- JOIN sensor_nodes sn ON (sy.sensor_nodes_id = sn.sensor_nodes_id)
- JOIN timezones ts ON (sn.timezones_id = ts.gid)
+ JOIN locations_view_cached sn ON (sy.sensor_nodes_id = sn.id)
  {query.where()}
  GROUP BY 1, 2, 3, 4)
- SELECT sensor_nodes_id
+ SELECT t.id
  , jsonb_build_object(
     'label', factor
     , 'interval', '{dur}'
@@ -133,11 +134,12 @@ SELECT
    , t.log_seconds
   , expected_hours(datetime_from, datetime_to, '{q.period_name}', factor) * 3600.0
 )||jsonb_build_object(
-          'datetime_from', get_datetime_object(datetime_from, tzid)
-        , 'datetime_to', get_datetime_object(datetime_to, tzid)
+          'datetime_from', get_datetime_object(datetime_from, t.timezone)
+        , 'datetime_to', get_datetime_object(datetime_to, t.timezone)
  ) as coverage
  FROM trends t
  JOIN measurands m ON (t.measurands_id = m.measurands_id)
+ {query.pagination()}
     """
 
     logger.debug(

@@ -98,8 +98,8 @@ async def averages_v3_get(
     if av.period_name in [None, "hour"]:
         # Query for hourly data
         sql = f"""
-        SELECT sy.sensor_nodes_id as id
-        , sn.site_name as name
+        SELECT sn.id
+        , sn.name
         , datetime as hour
         , datetime::date as day
         , date_trunc('month', datetime) as month
@@ -115,12 +115,10 @@ async def averages_v3_get(
         , h.first_datetime
         , h.last_datetime
         {query.fields()}
-        {query.total()}
         FROM hourly_data h
         JOIN sensors s USING (sensors_id)
         JOIN sensor_systems sy USING (sensor_systems_id)
-        JOIN sensor_nodes sn ON (sy.sensor_nodes_id = sn.sensor_nodes_id)
-        JOIN timezones ts ON (sn.timezones_id = ts.gid)
+        JOIN locations_view_cached sn ON (sy.sensor_nodes_id = sn.id)
         JOIN measurands m ON (m.measurands_id = h.measurands_id)
         {query.where()}
         {query.pagination()}
@@ -141,8 +139,8 @@ async def averages_v3_get(
             factor = "to_char(datetime - '1sec'::interval, 'MM') as moy"
 
         sql = f"""
-        SELECT sn.sensor_nodes_id as id
-        , site_name as name
+        SELECT sn.id
+        , sn.name
         , {factor}
         , m.measurand as parameter
         , m.measurands_id as "parameterId"
@@ -152,11 +150,10 @@ async def averages_v3_get(
         , COUNT(1) as measurement_count
         , MIN(datetime) as first_datetime
         , MAX(datetime) as last_datetime
-        {query.total()}
         FROM hourly_data h
         JOIN sensors s ON (h.sensors_id = s.sensors_id)
         JOIN sensor_systems sy ON (s.sensor_systems_id = sy.sensor_systems_id)
-        JOIN sensor_nodes sn ON (sy.sensor_nodes_id = sn.sensor_nodes_id)
+        JOIN locations_view_cached sn ON (sy.sensor_nodes_id = sn.id)
         JOIN measurands m ON (h.measurands_id = m.measurands_id)
         {query.where()}
         GROUP BY 1, 2, 3, 4, 5, 6, 7

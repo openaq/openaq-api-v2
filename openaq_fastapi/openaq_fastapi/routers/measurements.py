@@ -214,7 +214,6 @@ async def measurements_get(
                ELSE 'low-cost sensor'
                END as "sensorType"
         , sn.is_analysis
-        --, COUNT(1) OVER() as found
         FROM hourly_data h
         JOIN sensors s USING (sensors_id)
         JOIN sensor_systems sy USING (sensor_systems_id)
@@ -266,7 +265,6 @@ async def measurements_get_v1(
              'longitude', st_x(sn.geom)
         ) as coordinates
         , c.iso as country
-        , COUNT(1) OVER() as found
         FROM hourly_data h
         JOIN sensors s USING (sensors_id)
         JOIN sensor_systems sy USING (sensor_systems_id)
