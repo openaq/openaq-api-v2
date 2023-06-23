@@ -2,7 +2,7 @@ import logging
 from typing import List
 
 import jq
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Path
 from pydantic.typing import Union
 from enum import Enum
 
@@ -25,6 +25,7 @@ from ..models.queries import (
     Sort,
     EntityTypes,
     SensorTypes,
+    maxint,
 )
 
 logger = logging.getLogger("locations")
@@ -53,6 +54,8 @@ class Locations(
     #  HasGeo,
     APIBase,
 ):
+    location_id: Union[int, None] = Path(None, gt=0, le=maxint)
+
     order_by: LocationsOrder = Query(
         "lastUpdated",
         description="Order by a field",
