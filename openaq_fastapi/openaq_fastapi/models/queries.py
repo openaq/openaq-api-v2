@@ -8,7 +8,7 @@ from typing import Dict, List, Union
 import humps
 from dateutil.parser import parse
 from dateutil.tz import UTC
-from fastapi import Query
+from fastapi import Query, Path
 from pydantic import (
     BaseModel,
     Field,
@@ -137,6 +137,20 @@ class Country(OBaseModel):
             logger.debug(f"returning countries {v} {values}")
             return [str.upper(val) for val in v]
         return None
+
+
+class CountryByPath(OBaseModel):
+    country_id: Union[int, None] = Path(
+        None,
+        description="Limit results by a certain country using two digit country ID. e.g. 13",
+        example=13,
+    )
+
+    @validator("country_id", check_fields=False)
+    def validate_country_id(cls, v, values):
+        if v is not None and not isinstance(v, int):
+            raise ValueError("country_id must be an integer")
+        return v
 
 
 class SourceName(OBaseModel):
