@@ -81,8 +81,14 @@ class Countries(Country, APIBase):
                         c.iso = ANY(:country)
                         """
                     )
+                elif f == "country_id":
+                    wheres.append(
+                        """
+                        c.countries_id = :country_id
+                        """
+                    )
         if len(wheres) > 0:
-            return (" AND ").join(wheres)
+            return (" OR ").join(wheres)
         return " TRUE "
 
 

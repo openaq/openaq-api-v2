@@ -110,13 +110,10 @@ class City(OBaseModel):
 
 
 class Country(OBaseModel):
-    country_id: Union[str, None] = Query(
+    country_id: Union[int, None] = Query(
         None,
-        min_length=2,
-        max_length=2,
-        regex="[a-zA-Z][a-zA-Z]",
-        description="Limit results by a certain country using two letter country code. e.g. US",
-        example="US",
+        description="Limit results by a certain country using two digit country ID. e.g. 13",
+        example=13,
     )
     country: Union[List[str], None] = Query(
         None,
@@ -127,12 +124,18 @@ class Country(OBaseModel):
         example="US",
     )
 
+    @validator("country_id", check_fields=False)
+    def validate_country_id(cls, v, values):
+        if v is not None and not isinstance(v, int):
+            raise ValueError("country_id must be an integer")
+        return v
+
     @validator("country", check_fields=False)
     def validate_country(cls, v, values):
         logger.debug(f"validating countries {v} {values}")
         cid = values.get("country_id")
         if cid is not None:
-            v = [cid]
+            v = [str(cid)]
         if v is not None:
             logger.debug(f"returning countries {v} {values}")
             return [str.upper(val) for val in v]
