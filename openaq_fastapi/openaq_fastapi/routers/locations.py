@@ -179,9 +179,7 @@ class Locations(
                 elif f == "manufacturerName":
                     wheres.append(
                         """
-                        manufacturers @> ANY(
-                            jsonb_array_query('manufacturerName',:manufacturer_name::text[])
-                            )
+                        l.manufacturers @> :manufacturer_name::text[]
                         """
                     )
                 elif f == "isMobile":
