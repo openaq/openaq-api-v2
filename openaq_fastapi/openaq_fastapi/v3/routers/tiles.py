@@ -1,6 +1,6 @@
 import logging
 import urllib
-from typing import List, Union
+from typing import List, Union, Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, Request, Response
 from pydantic import BaseModel, Field
 from openaq_fastapi.db import DB
@@ -34,9 +34,10 @@ class TileProvidersQuery(QueryBaseModel):
 
 
 class TileOwnersQuery(QueryBaseModel):
-    owners_id: Union[CommaSeparatedList[int], None] = Query(
-        description="Limit the results to a specific owner or owners"
-    )
+    owners_id: Annotated[
+        Union[CommaSeparatedList[int], None],
+        Query(description="Limit the results to a specific owner or owners"),
+    ]
 
     def where(self) -> Union[str, None]:
         if self.has("owners_id"):

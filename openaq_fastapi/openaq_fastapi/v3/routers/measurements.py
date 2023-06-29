@@ -36,7 +36,9 @@ class LocationPathQuery(QueryBaseModel):
 
 
 class MeasurementsParametersQuery(QueryBaseModel):
-    parameters_id: Union[CommaSeparatedList[int], None] = Query(description="")
+    parameters_id: Annotated[
+        Union[CommaSeparatedList[int], None], Query(description="")
+    ]
 
     def where(self) -> Union[str, None]:
         if self.has("parameters_id"):
@@ -48,7 +50,7 @@ class LocationMeasurementsQueries(
     LocationPathQuery,
     DateFromQuery,
     DateToQuery,
-    # MeasurementsParametersQuery,
+    MeasurementsParametersQuery,
     PeriodNameQuery,
 ):
     ...
