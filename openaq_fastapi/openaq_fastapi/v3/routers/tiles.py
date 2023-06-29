@@ -24,9 +24,10 @@ router = APIRouter(
 
 
 class TileProvidersQuery(QueryBaseModel):
-    providers_id: Union[CommaSeparatedList[int], None] = Query(
-        description="Limit the results to a specific provider or providers"
-    )
+    providers_id: Annotated[
+        Union[CommaSeparatedList[int], None],
+        Query(description="Limit the results to a specific provider or providers"),
+    ]
 
     def where(self) -> Union[str, None]:
         if self.has("providers_id"):
