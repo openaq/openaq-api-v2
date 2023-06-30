@@ -24,7 +24,7 @@ class ProjectsOrder(str, Enum):
 
 class Projects(Project, Measurands, APIBase, Country):
     project_id: int = Path(
-        description="Limit the results to a specific project by id", ge=1
+        ..., description="Limit the results to a specific project by id", ge=1
     )
     order_by: ProjectsOrder = Query("lastUpdated")
     isMobile: Union[bool, None] = None

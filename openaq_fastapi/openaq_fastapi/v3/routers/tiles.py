@@ -63,9 +63,9 @@ class ThresholdsQuery(QueryBaseModel):
 
 
 class TileBase(QueryBaseModel):
-    z: int = (Path(..., ge=0, le=30, description="Mercator tiles's zoom level"),)
-    x: int = (Path(..., description="Mercator tiles's column"),)
-    y: int = (Path(..., description="Mercator tiles's row"),)
+    z: int = Path(..., ge=0, le=30, description="Mercator tiles's zoom level")
+    x: int = Path(..., description="Mercator tiles's column")
+    y: int = Path(..., description="Mercator tiles's row")
 
 
 class Tile(
