@@ -2,7 +2,7 @@ import logging
 from fastapi import APIRouter, Depends, Path, Query
 from openaq_fastapi.db import DB
 from datetime import date, datetime
-from typing import Union
+from typing import Union, Annotated
 from openaq_fastapi.v3.models.responses import TrendsResponse
 
 logger = logging.getLogger("trends")
@@ -25,14 +25,16 @@ router = APIRouter(
 
 
 class ParameterPathQuery(QueryBaseModel):
-    measurands_id: int
+    measurands_id: int = Path(description="The parameter to query")
 
     def where(self) -> str:
         return "s.measurands_id = :measurands_id"
 
 
 class LocationPathQuery(QueryBaseModel):
-    locations_id: int
+    locations_id: int = Path(
+        description="Limit the results to a specific location by id", ge=1
+    )
 
     def where(self) -> str:
         return "sy.sensor_nodes_id = :locations_id"
@@ -56,15 +58,9 @@ class LocationTrendsQueries(
     description="Provides a list of aggregated measurements by location ID and factor",
 )
 async def trends_get(
-    locations_id: int = Path(
-        ..., description="Limit the results to a specific location by id", ge=1
-    ),
-    measurands_id: int = Path(..., description="The parameter to query"),
-    trends: LocationTrendsQueries = Depends(),
+    trends: Annotated[LocationTrendsQueries, Depends(LocationTrendsQueries)],
     db: DB = Depends(),
 ):
-    trends.locations_id = locations_id
-    trends.measurands_id = measurands_id
     response = await fetch_trends(trends, db)
     return response
 

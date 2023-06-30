@@ -1,5 +1,6 @@
 import logging
 from fastapi import APIRouter, Depends, Query, Path
+from typing import Annotated
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.models.queries import (
     QueryBuilder,
@@ -21,7 +22,10 @@ router = APIRouter(
 
 
 class ProviderPathQuery(QueryBaseModel):
-    providers_id: int
+    providers_id: int = Path(
+        description="Limit the results to a specific provider by id",
+        ge=1,
+    )
 
     def where(self):
         return "id = :providers_id"
@@ -38,15 +42,10 @@ class ProvidersQueries(QueryBaseModel, Paging):
     description="Provides a provider by provider ID",
 )
 async def provider_get(
-    providers_id: int = Path(
-        description="Limit the results to a specific provider by id",
-        ge=1,
-    ),
-    provider: ProviderPathQuery = Depends(),
+    providers: Annotated[ProviderPathQuery, Depends(ProviderPathQuery)],
     db: DB = Depends(),
 ):
-    provider.providers_id = providers_id
-    response = await fetch_providers(provider, db)
+    response = await fetch_providers(providers, db)
     return response
 
 

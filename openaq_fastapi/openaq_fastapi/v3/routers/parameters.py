@@ -1,6 +1,6 @@
 from enum import Enum
 import logging
-from typing import Union
+from typing import Union, Annotated
 from fastapi import APIRouter, Depends, Query, Path
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.models.responses import ParametersResponse
@@ -24,7 +24,9 @@ router = APIRouter(
 
 
 class ParameterPathQuery(QueryBaseModel):
-    parameters_id: int
+    parameters_id: int = Path(
+        ..., description="Limit the results to a specific parameters id", ge=1
+    )
 
     def where(self) -> str:
         return "id = :parameters_id"
@@ -59,13 +61,9 @@ class ParametersQueries(
     description="Provides a parameter by parameter ID",
 )
 async def parameter_get(
-    parameters_id: int = Path(
-        ..., description="Limit the results to a specific parameters id", ge=1
-    ),
-    parameter: ParameterPathQuery = Depends(),
+    parameter: Annotated[ParameterPathQuery, Depends(ParameterPathQuery)],
     db: DB = Depends(),
 ):
-    parameter.parameters_id = parameters_id
     response = await fetch_parameters(parameter, db)
     return response
 

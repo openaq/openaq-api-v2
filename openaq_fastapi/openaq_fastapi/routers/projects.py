@@ -1,6 +1,7 @@
 import logging
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Path
+from typing import Annotated
 from openaq_fastapi.models.responses import ProjectsResponse
 from pydantic.typing import Union, List
 
@@ -22,6 +23,9 @@ class ProjectsOrder(str, Enum):
 
 
 class Projects(Project, Measurands, APIBase, Country):
+    project_id: int = Path(
+        description="Limit the results to a specific project by id", ge=1
+    )
     order_by: ProjectsOrder = Query("lastUpdated")
     isMobile: Union[bool, None] = None
     isAnalysis: Union[bool, None] = None
@@ -117,8 +121,8 @@ class Projects(Project, Measurands, APIBase, Country):
     tags=["v2"],
 )
 async def projects_get(
+    projects: Annotated[Projects, Depends(Projects)],
     db: DB = Depends(),
-    projects: Projects = Depends(),
 ):
     q = f"""
         WITH bysensor AS (

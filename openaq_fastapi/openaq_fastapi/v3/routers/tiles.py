@@ -24,10 +24,9 @@ router = APIRouter(
 
 
 class TileProvidersQuery(QueryBaseModel):
-    providers_id: Annotated[
-        Union[CommaSeparatedList[int], None],
-        Query(description="Limit the results to a specific provider or providers"),
-    ]
+    providers_id: Union[CommaSeparatedList[int], None] = Query(
+        description="Limit the results to a specific provider or providers"
+    )
 
     def where(self) -> Union[str, None]:
         if self.has("providers_id"):
@@ -35,10 +34,9 @@ class TileProvidersQuery(QueryBaseModel):
 
 
 class TileOwnersQuery(QueryBaseModel):
-    owners_id: Annotated[
-        Union[CommaSeparatedList[int], None],
-        Query(description="Limit the results to a specific owner or owners"),
-    ]
+    owners_id: Union[CommaSeparatedList[int], None] = Query(
+        description="Limit the results to a specific owner or owners"
+    )
 
     def where(self) -> Union[str, None]:
         if self.has("owners_id"):
@@ -65,9 +63,9 @@ class ThresholdsQuery(QueryBaseModel):
 
 
 class TileBase(QueryBaseModel):
-    z: int
-    x: int
-    y: int
+    z: int = (Path(..., ge=0, le=30, description="Mercator tiles's zoom level"),)
+    x: int = (Path(..., description="Mercator tiles's column"),)
+    y: int = (Path(..., description="Mercator tiles's row"),)
 
 
 class Tile(
@@ -121,15 +119,9 @@ class MobileTile(TileBase):
     response_class=Response,
 )
 async def get_tile(
-    z: int = Path(..., ge=0, le=30, description="Mercator tiles's zoom level"),
-    x: int = Path(..., description="Mercator tiles's column"),
-    y: int = Path(..., description="Mercator tiles's row"),
+    tile: Annotated[Tile, Depends(Tile)],
     db: DB = Depends(),
-    tile: Tile = Depends(),
 ):
-    tile.z = z
-    tile.x = x
-    tile.y = y
     vt = await fetch_tiles(tile, db)
     if vt is None:
         raise HTTPException(status_code=204, detail="no data found for this tile")
@@ -143,15 +135,9 @@ async def get_tile(
     response_class=Response,
 )
 async def get_threshold_tile(
-    z: int = Path(..., ge=0, le=30, description="Mercator tiles's zoom level"),
-    x: int = Path(..., description="Mercator tiles's column"),
-    y: int = Path(..., description="Mercator tiles's row"),
+    threshold_tile: Annotated[ThresholdTile, Depends(ThresholdTile)],
     db: DB = Depends(),
-    threshold_tile: ThresholdTile = Depends(),
 ):
-    threshold_tile.z = z
-    threshold_tile.x = x
-    threshold_tile.y = y
     vt = await fetch_threshold_tiles(threshold_tile, db)
     if vt is None:
         raise HTTPException(status_code=204, detail="no data found for this tile")
@@ -295,8 +281,8 @@ async def fetch_threshold_tiles(query, db):
     response_class=Response,
 )
 async def get_mobile_gen_tiles(
+    tile: Annotated[Tile, Depends(Tile)],
     db: DB = Depends(),
-    tile: Tile = Depends(Tile),
 ):
     ...
 
@@ -314,17 +300,9 @@ async def fetch_mobile_gen_tiles(where, db):
     response_class=Response,
 )
 async def get_mobile_path_tiles(
-    z: int = Path(..., ge=0, le=30, description="Mercator tiles's zoom level"),
-    x: int = Path(..., description="Mercator tiles's column"),
-    y: int = Path(..., description="Mercator tiles's row"),
+    tile: Annotated[Tile, Depends(Tile)],
     db: DB = Depends(),
-    tile: Tile = Depends(),
 ):
-    tile.z = z
-    tile.x = x
-    tile.y = y
-    # Rest of your code
-
     ...
 
 
@@ -341,15 +319,9 @@ async def fetch_mobile_path_tiles(where, db):
     response_class=Response,
 )
 async def get_mobiletiles(
-    z: int = Path(..., ge=0, le=30, description="Mercator tiles's zoom level"),
-    x: int = Path(..., description="Mercator tiles's column"),
-    y: int = Path(..., description="Mercator tiles's row"),
+    mt: Annotated[MobileTile, Depends(MobileTile)],
     db: DB = Depends(),
-    mt: MobileTile = Depends(),
 ):
-    mt.z = z
-    mt.x = x
-    mt.y = y
     ...
 
 

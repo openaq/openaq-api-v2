@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import List, Annotated
 
 import jq
 from fastapi import APIRouter, Depends, Query, Path
@@ -206,7 +206,7 @@ class Locations(
 
 
 class LocationQuery(LocationPath, APIBase):
-    location_id: int
+    location_id: int = (Path(..., description="The ID of the location"),)
 
     def where(self) -> str:
         return "l.id = :location_id"
@@ -220,11 +220,9 @@ class LocationQuery(LocationPath, APIBase):
     tags=["v2"],
 )
 async def get_v2_location_by_id(
-    location_id: int = Path(..., description="The ID of the location"),
-    locations: LocationQuery = Depends(),
+    locations: Annotated[LocationQuery, Depends(LocationQuery)],
     db: DB = Depends(),
 ):
-    locations.location_id = location_id
     qparams = locations.params()
 
     # row_number is required to make sure that the order is
@@ -268,8 +266,8 @@ async def get_v2_location_by_id(
     tags=["v2"],
 )
 async def locations_get(
+    locations: Annotated[Locations, Depends(Locations)],
     db: DB = Depends(),
-    locations: Locations = Depends(Locations.depends()),
 ):
     qparams = locations.params()
 
@@ -319,11 +317,9 @@ async def locations_get(
     tags=["v2"],
 )
 async def get_v2_latest_by_id(
-    location_id: int = Path(..., description="The ID of the location"),
-    locations: LocationQuery = Depends(),
+    locations: Annotated[LocationQuery, Depends(LocationQuery)],
     db: DB = Depends(),
 ):
-    locations.location_id = location_id
     qparams = locations.params()
 
     q = f"""
@@ -387,11 +383,9 @@ async def latest_get(
     tags=["v1"],
 )
 async def get_v1_latest_by_id(
-    location_id: int = Path(..., description="The ID of the location"),
-    locations: LocationQuery = Depends(),
+    locations: LocationQuery = Depends(LocationQuery),
     db: DB = Depends(),
 ):
-    locations.location_id = location_id
     qparams = locations.params()
 
     q = f"""
@@ -489,11 +483,9 @@ SELECT l.id
     tags=["v1"],
 )
 async def get_v1_locations_by_id(
-    location_id: int = Path(..., description="The ID of the location"),
-    locations: LocationQuery = Depends(),
+    locations: Annotated[LocationQuery, Depends(LocationQuery)],
     db: DB = Depends(),
 ):
-    locations.location_id = location_id
     qparams = locations.params()
     q = f"""
 WITH locations AS (
