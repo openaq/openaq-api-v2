@@ -118,7 +118,7 @@ class Projects(Project, Measurands, APIBase, Country):
 )
 async def projects_get(
     db: DB = Depends(),
-    projects: Projects = Depends(Projects.depends()),
+    projects: Projects = Depends(),
 ):
     q = f"""
         WITH bysensor AS (

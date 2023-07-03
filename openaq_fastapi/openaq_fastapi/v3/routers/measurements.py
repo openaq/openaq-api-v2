@@ -27,9 +27,7 @@ router = APIRouter(
 
 
 class LocationPathQuery(QueryBaseModel):
-    locations_id: int = Path(
-        description="Limit the results to a specific location by id", ge=1
-    )
+    locations_id: int
 
     def where(self) -> str:
         return "sy.sensor_nodes_id = :locations_id"
@@ -61,11 +59,13 @@ class LocationMeasurementsQueries(
     description="Provides a list of measurements by location ID",
 )
 async def measurements_get(
-    measurements: LocationMeasurementsQueries = Depends(
-        LocationMeasurementsQueries.depends()
+    locations_id: int = Path(
+        ..., description="Limit the results to a specific location by id", ge=1
     ),
+    measurements: LocationMeasurementsQueries = Depends(),
     db: DB = Depends(),
 ):
+    measurements.locations_id = locations_id
     response = await fetch_measurements(measurements, db)
     return response
 
@@ -218,11 +218,13 @@ class MeasurementsV2Response(OpenAQResult):
     description="Provides a list of measurements by location ID",
 )
 async def measurements_get_v2(
-    measurements: LocationMeasurementsQueries = Depends(
-        LocationMeasurementsQueries.depends()
+    locations_id: int = Path(
+        description="Limit the results to a specific location by id", ge=1
     ),
+    measurements: LocationMeasurementsQueries = Depends(),
     db: DB = Depends(),
 ):
+    measurements.locations_id = locations_id
     response = await fetch_measurements_v2(measurements, db)
     return response
 

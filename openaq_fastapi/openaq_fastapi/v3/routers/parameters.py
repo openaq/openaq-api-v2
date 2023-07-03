@@ -24,9 +24,7 @@ router = APIRouter(
 
 
 class ParameterPathQuery(QueryBaseModel):
-    parameters_id: int = Path(
-        description="Limit the results to a specific parameters id", ge=1
-    )
+    parameters_id: int
 
     def where(self) -> str:
         return "id = :parameters_id"
@@ -61,9 +59,13 @@ class ParametersQueries(
     description="Provides a parameter by parameter ID",
 )
 async def parameter_get(
-    parameter: ParameterPathQuery = Depends(ParameterPathQuery.depends()),
+    parameters_id: int = Path(
+        ..., description="Limit the results to a specific parameters id", ge=1
+    ),
+    parameter: ParameterPathQuery = Depends(),
     db: DB = Depends(),
 ):
+    parameter.parameters_id = parameters_id
     response = await fetch_parameters(parameter, db)
     return response
 

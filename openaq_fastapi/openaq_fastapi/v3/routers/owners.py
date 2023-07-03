@@ -16,10 +16,7 @@ router = APIRouter(
 
 
 class OwnerPathQuery(QueryBaseModel):
-    owners_id: int = Path(
-        description="Limit the results to a specific owner by id",
-        ge=1,
-    )
+    owners_id: int
 
     def where(self) -> str:
         return "id = :owners_id"
@@ -36,9 +33,14 @@ class OwnersQueries(QueryBaseModel, Paging):
     description="Provides a owner by owner ID",
 )
 async def owner_get(
+    owners_id: int = Path(
+        description="Limit the results to a specific owner by id",
+        ge=1,
+    ),
     owner: OwnerPathQuery = Depends(OwnerPathQuery.depends()),
     db: DB = Depends(),
 ):
+    owner.owners_id = owners_id
     response = await fetch_owners(owner, db)
     return response
 

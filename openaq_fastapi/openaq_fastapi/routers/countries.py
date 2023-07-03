@@ -1,6 +1,6 @@
 import logging
 from typing import Union, List
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Path
 from enum import Enum
 from ..db import DB
 from ..models.queries import APIBase, Country, CountryByPath
@@ -118,26 +118,14 @@ class CountriesPath(CountryByPath, APIBase):
     tags=["v2"],
 )
 async def countries_by_path(
-    country_id: int,
+    country_id: int = Path(
+        ...,
+        description="Limit results by a certain country using two digit country ID. e.g. 13",
+        example=13,
+    ),
     db: DB = Depends(),
-    countries: CountriesPath = Depends(CountriesPath.depends()),
+    countries: CountriesPath = Depends(),
 ):
-    order_by = countries.order_by
-    if countries.order_by == "lastUpdated":
-        order_by = "8"
-    elif countries.order_by == "code":
-        order_by = "code"
-    elif countries.order_by == "firstUpdated":
-        order_by = "7"
-    elif countries.order_by == "country":
-        order_by = "country"
-    elif countries.order_by == "count":
-        order_by = "count"
-    elif countries.order_by == "locations":
-        order_by = "locations"
-    elif countries.order_by == "name":
-        order_by = "name"
-
     q = f"""
         SELECT
         c.iso AS code
@@ -168,7 +156,6 @@ async def countries_by_path(
         c.iso IS NOT NULL
         AND c.countries_id = :country_id
         GROUP BY code, c.name, c.countries_id
-        ORDER BY {order_by} {countries.sort}
         OFFSET :offset
         LIMIT :limit
         """

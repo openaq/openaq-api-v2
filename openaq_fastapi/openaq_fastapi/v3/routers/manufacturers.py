@@ -15,9 +15,7 @@ router = APIRouter(
 
 
 class ManufacturerPathQuery(QueryBaseModel):
-    manufacturers_id: int = Path(
-        description="Limit the results to a specific manufacturers id", ge=1
-    )
+    manufacturers_id: int
 
     def where(self) -> str:
         return "id = :manufacturers_id"
@@ -34,9 +32,13 @@ class ManufacturersQueries(QueryBaseModel, Paging):
     description="Provides a manufacturer by manufacturer ID",
 )
 async def manufacturer_get(
+    manufacturers_id: int = Path(
+        ..., description="Limit the results to a specific manufacturers id", ge=1
+    ),
     manufacturer: ManufacturerPathQuery = Depends(ManufacturerPathQuery.depends()),
     db: DB = Depends(),
 ):
+    manufacturer.manufacturers_id = manufacturers_id
     response = await fetch_manufacturers(manufacturer, db)
     return response
 

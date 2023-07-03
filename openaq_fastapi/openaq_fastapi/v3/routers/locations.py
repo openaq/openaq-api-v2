@@ -26,9 +26,7 @@ router = APIRouter(
 
 
 class LocationQuery(QueryBaseModel):
-    locations_id: int = Path(
-        description="Limit the results to a specific location by id", ge=1
-    )
+    locations_id: int
 
     def where(self) -> str:
         return "id = :locations_id"
@@ -54,9 +52,13 @@ class LocationsQueries(
     description="Provides a location by location ID",
 )
 async def location_get(
-    location: LocationQuery = Depends(LocationQuery.depends()),
+    locations_id: int = Path(
+        description="Limit the results to a specific location by id", ge=1
+    ),
+    location: LocationQuery = Depends(),
     db: DB = Depends(),
 ):
+    location.locations_id = locations_id
     response = await fetch_locations(location, db)
     return response
 

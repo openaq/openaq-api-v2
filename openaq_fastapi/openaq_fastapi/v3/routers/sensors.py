@@ -25,9 +25,7 @@ router = APIRouter(
 
 
 class SensorQuery(QueryBaseModel):
-    sensors_id: int = Path(
-        description="Limit the results to a specific sensors id", ge=1
-    )
+    sensors_id: int
 
     def where(self):
         return "m.sensors_id = :sensors_id"
@@ -58,9 +56,13 @@ class SensorQuery(QueryBaseModel):
     description="Provides a sensor by sensor ID",
 )
 async def sensor_get(
-    sensor: SensorQuery = Depends(SensorQuery.depends()),
+    sensors_id: int = Path(
+        ..., description="Limit the results to a specific sensors id", ge=1
+    ),
+    sensor: SensorQuery = Depends(),
     db: DB = Depends(),
 ):
+    sensor.sensors_id = sensors_id
     response = await fetch_sensors(sensor, db)
     return response
 

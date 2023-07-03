@@ -25,16 +25,14 @@ router = APIRouter(
 
 
 class ParameterPathQuery(QueryBaseModel):
-    measurands_id: int = Path(description="The parameter to query")
+    measurands_id: int
 
     def where(self) -> str:
         return "s.measurands_id = :measurands_id"
 
 
 class LocationPathQuery(QueryBaseModel):
-    locations_id: int = Path(
-        description="Limit the results to a specific location by id", ge=1
-    )
+    locations_id: int
 
     def where(self) -> str:
         return "sy.sensor_nodes_id = :locations_id"
@@ -58,9 +56,15 @@ class LocationTrendsQueries(
     description="Provides a list of aggregated measurements by location ID and factor",
 )
 async def trends_get(
-    trends: LocationTrendsQueries = Depends(LocationTrendsQueries.depends()),
+    locations_id: int = Path(
+        ..., description="Limit the results to a specific location by id", ge=1
+    ),
+    measurands_id: int = Path(..., description="The parameter to query"),
+    trends: LocationTrendsQueries = Depends(),
     db: DB = Depends(),
 ):
+    trends.locations_id = locations_id
+    trends.measurands_id = measurands_id
     response = await fetch_trends(trends, db)
     return response
 

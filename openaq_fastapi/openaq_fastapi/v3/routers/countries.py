@@ -24,10 +24,7 @@ router = APIRouter(
 
 
 class CountryPathQuery(QueryBaseModel):
-    countries_id: int = Path(
-        description="Limit the results to a specific country by id",
-        ge=1,
-    )
+    countries_id: int
 
     def where(self) -> str:
         return "id = :countries_id"
@@ -44,9 +41,14 @@ class CountriesQueries(QueryBaseModel, Paging):
     description="Provides a country by country ID",
 )
 async def country_get(
+    countries_id: int = Path(
+        description="Limit the results to a specific country by id",
+        ge=1,
+    ),
     country: CountryPathQuery = Depends(CountryPathQuery),
     db: DB = Depends(),
 ):
+    country.countries_id = countries_id
     response = await fetch_countries(country, db)
     return response
 

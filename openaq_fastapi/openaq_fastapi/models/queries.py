@@ -142,12 +142,8 @@ class Country(OBaseModel):
         return None
 
 
-class CountryByPath(OBaseModel):
-    country_id: Union[int, None] = Path(
-        None,
-        description="Limit results by a certain country using two digit country ID. e.g. 13",
-        example=13,
-    )
+class CountryByPath(BaseModel):
+    country_id: Union[int, None]
 
     @validator("country_id", check_fields=False)
     def validate_country_id(cls, v, values):
@@ -209,6 +205,16 @@ class Location(OBaseModel):
     @validator("location")
     def validate_location(cls, v, values):
         return id_or_name_validator("location", v, values)
+
+
+class LocationPath(BaseModel):
+    location_id: Union[int, None]
+
+    @validator("location_id", check_fields=False)
+    def validate_location_id(cls, v, values):
+        if v is not None and not isinstance(v, int):
+            raise ValueError("location_id must be an integer")
+        return v
 
 
 class HasGeo(OBaseModel):
