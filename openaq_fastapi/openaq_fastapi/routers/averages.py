@@ -42,20 +42,19 @@ class SpatialTypes(str, Enum):
 
 class SpatialTypeQuery(QueryBaseModel):
     spatial: Union[SpatialTypes, None] = Query(
-        "location",
-        description="Define how you want to aggregate in space"
+        "location", description="Define how you want to aggregate in space"
     )
 
 
-class LocationQuery(QueryBaseModel):
-    locations_id: int = Query(
-        70084,
-        description="Limit the results to a specific location by id",
-        ge=1,
-    )
+# class LocationQuery(QueryBaseModel):
+#     locations_id: int = Query(
+#         70084,
+#         description="Limit the results to a specific location by id",
+#         ge=1,
+#     )
 
-    def where(self) -> str:
-        return "sy.sensor_nodes_id = :locations_id"
+#     def where(self) -> str:
+#         return "sy.sensor_nodes_id = :locations_id"
 
 
 class ParametersQuery(QueryBaseModel):
@@ -72,7 +71,7 @@ class ParametersQuery(QueryBaseModel):
 class AveragesQueries(
     Paging,
     SpatialTypeQuery,
-    LocationQuery,
+    # LocationQuery,
     DateFromQuery,
     DateToQuery,
     ParametersQuery,

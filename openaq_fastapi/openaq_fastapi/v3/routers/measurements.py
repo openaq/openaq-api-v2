@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Path
 from openaq_fastapi.db import DB
-from typing import List, Union
+from typing import List, Union, Annotated
 from fastapi import Query
 from pydantic import Field
 from openaq_fastapi.v3.models.responses import (
@@ -27,7 +27,9 @@ router = APIRouter(
 
 
 class LocationPathQuery(QueryBaseModel):
-    locations_id: int
+    locations_id: int = Path(
+        description="Limit the results to a specific location by id", ge=1
+    )
 
     def where(self) -> str:
         return "sy.sensor_nodes_id = :locations_id"
@@ -46,7 +48,7 @@ class LocationMeasurementsQueries(
     LocationPathQuery,
     DateFromQuery,
     DateToQuery,
-    MeasurementsParametersQuery,
+    # MeasurementsParametersQuery,
     PeriodNameQuery,
 ):
     ...
@@ -59,13 +61,11 @@ class LocationMeasurementsQueries(
     description="Provides a list of measurements by location ID",
 )
 async def measurements_get(
-    locations_id: int = Path(
-        ..., description="Limit the results to a specific location by id", ge=1
-    ),
-    measurements: LocationMeasurementsQueries = Depends(),
+    measurements: Annotated[
+        LocationMeasurementsQueries, Depends(LocationMeasurementsQueries)
+    ],
     db: DB = Depends(),
 ):
-    measurements.locations_id = locations_id
     response = await fetch_measurements(measurements, db)
     return response
 
@@ -130,69 +130,73 @@ async def fetch_measurements(q, db):
             dur = "1 month"
 
         sql = f"""
-WITH meas AS (
-SELECT
-  sn.id
- , s.measurands_id
- , sn.timezone
- , truncate_timestamp(datetime, :period_name, timezone) as datetime
- , AVG(s.data_averaging_period_seconds) as avg_seconds
- , AVG(s.data_logging_period_seconds) as log_seconds
- , MAX(truncate_timestamp(datetime, :period_name, sn.timezone, '1{q.period_name}'::interval)) as last_period
- , MIN(timezone(sn.timezone, datetime - '1sec'::interval)) as first_datetime
- , MAX(timezone(sn.timezone, datetime - '1sec'::interval)) as last_datetime
- , COUNT(1) as value_count
- , AVG(value_avg) as value_avg
- , STDDEV(value_avg) as value_sd
- , MIN(value_avg) as value_min
- , MAX(value_avg) as value_max
- , PERCENTILE_CONT(0.02) WITHIN GROUP(ORDER BY value_avg) as value_p02
- , PERCENTILE_CONT(0.25) WITHIN GROUP(ORDER BY value_avg) as value_p25
- , PERCENTILE_CONT(0.5) WITHIN GROUP(ORDER BY value_avg) as value_p50
- , PERCENTILE_CONT(0.75) WITHIN GROUP(ORDER BY value_avg) as value_p75
- , PERCENTILE_CONT(0.98) WITHIN GROUP(ORDER BY value_avg) as value_p98
- , current_timestamp as calculated_on
- FROM hourly_data m
- JOIN sensors s ON (m.sensors_id = s.sensors_id)
- JOIN sensor_systems sy ON (s.sensor_systems_id = sy.sensor_systems_id)
- JOIN locations_view_cached sn ON (sy.sensor_nodes_id = sn.id)
- {query.where()}
- GROUP BY 1, 2, 3, 4)
- SELECT t.id
- , json_build_object(
-    'label', '1{q.period_name}'
-    , 'datetime_from', get_datetime_object(datetime, t.timezone)
-    , 'datetime_to', get_datetime_object(last_period, t.timezone)
-    , 'interval',  '{dur}'
-    ) as period
- , sig_digits(value_avg, 2) as value
- , json_build_object(
-    'id', t.measurands_id
-    , 'units', m.units
-    , 'name', m.measurand
- ) as parameter
- , json_build_object(
-    'sd', t.value_sd
-   , 'min', t.value_min
-   , 'q02', t.value_p02
-   , 'q25', t.value_p25
-   , 'median', t.value_p50
-   , 'q75', t.value_p75
-   , 'q98', t.value_p98
-   , 'max', t.value_max
- ) as summary
- , calculate_coverage(
-     value_count::int
-    , 3600
-    , 3600
-    , EXTRACT(EPOCH FROM last_period - datetime)
- )||jsonb_build_object(
-          'datetime_from', get_datetime_object(first_datetime, t.timezone)
-        , 'datetime_to', get_datetime_object(last_datetime, t.timezone)
-        ) as coverage
- FROM meas t
- JOIN measurands m ON (t.measurands_id = m.measurands_id)
- {query.pagination()}
+            WITH meas AS (
+            SELECT
+            sy.sensor_nodes_id
+            , s.measurands_id
+            , ts.tzid
+            , truncate_timestamp(datetime, :period_name, ts.tzid) as datetime
+            , AVG(s.data_averaging_period_seconds) as avg_seconds
+            , AVG(s.data_logging_period_seconds) as log_seconds
+            , MAX(truncate_timestamp(datetime, :period_name, ts.tzid, '1{q.period_name}'::interval)) as last_period
+            , MIN(timezone(ts.tzid, datetime - '1sec'::interval)) as first_datetime
+            , MAX(timezone(ts.tzid, datetime - '1sec'::interval)) as last_datetime
+            , COUNT(1) as value_count
+            , AVG(value_avg) as value_avg
+            , STDDEV(value_avg) as value_sd
+            , MIN(value_avg) as value_min
+            , MAX(value_avg) as value_max
+            , PERCENTILE_CONT(0.02) WITHIN GROUP(ORDER BY value_avg) as value_p02
+            , PERCENTILE_CONT(0.25) WITHIN GROUP(ORDER BY value_avg) as value_p25
+            , PERCENTILE_CONT(0.5) WITHIN GROUP(ORDER BY value_avg) as value_p50
+            , PERCENTILE_CONT(0.75) WITHIN GROUP(ORDER BY value_avg) as value_p75
+            , PERCENTILE_CONT(0.98) WITHIN GROUP(ORDER BY value_avg) as value_p98
+            , current_timestamp as calculated_on
+            FROM hourly_data m
+            JOIN sensors s ON (m.sensors_id = s.sensors_id)
+            JOIN sensor_systems sy ON (s.sensor_systems_id = sy.sensor_systems_id)
+            JOIN sensor_nodes sn ON (sy.sensor_nodes_id = sn.sensor_nodes_id)
+            JOIN timezones ts ON (sn.timezones_id = ts.gid)
+            {query.where()}
+            GROUP BY 1, 2, 3, 4)
+            SELECT t.sensor_nodes_id
+            , json_build_object(
+                'label', '1{q.period_name}'
+                , 'datetime_from', get_datetime_object(datetime, t.tzid)
+                , 'datetime_to', get_datetime_object(last_period, t.tzid)
+                , 'interval',  '{dur}'
+                ) as period
+            , sig_digits(value_avg, 2) as value
+            , json_build_object(
+                'id', t.measurands_id
+                , 'units', m.units
+                , 'name', m.measurand
+            ) as parameter
+            , json_build_object(
+                'sd', t.value_sd
+            , 'min', t.value_min
+            , 'q02', t.value_p02
+            , 'q25', t.value_p25
+            , 'median', t.value_p50
+            , 'q75', t.value_p75
+            , 'q98', t.value_p98
+            , 'max', t.value_max
+            ) as summary
+            , calculate_coverage(
+                value_count::int
+                , 3600
+                , 3600
+                , EXTRACT(EPOCH FROM last_period - datetime)
+            )||jsonb_build_object(
+                    'datetime_from', get_datetime_object(first_datetime, tzid)
+                    , 'datetime_to', get_datetime_object(last_datetime, tzid)
+                    ) as coverage
+            {query.total()}
+            FROM meas t
+            --JOIN sensor_nodes sn ON (t.sensor_nodes_id = sn.sensor_nodes_id)
+            --JOIN timezones ts ON (sn.timezones_id = ts.gid)
+            JOIN measurands m ON (t.measurands_id = m.measurands_id)
+            {query.pagination()}
     """
     response = await db.fetchPage(sql, query.params())
     return response
