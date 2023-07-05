@@ -49,6 +49,7 @@ pytz==2022.1
 pytz-deprecation-shim==0.1.0.post0
 redis==4.3.3
 regex==2022.3.2
+requests==2.31.0
 rfc3986==1.5.0
 s3transfer==0.6.0
 six==1.16.0
