@@ -3,7 +3,7 @@ adapted from https://aws.amazon.com/blogs/mt/sending-cloudfront-standard-logs-to
 """
 
 from io import BytesIO
-from typing import List
+from typing import Dict
 from gzip import GzipFile
 from datetime import datetime
 import logging
@@ -35,7 +35,8 @@ log_group_name = f"openaq-api-{settings.ENV}-cf-access-log"
 log_stream_name = f"openaq-api-{settings.ENV}-cf-access-log-stream"
 
 
-def put_log(records: List[CloudwatchLog], *sequence_token):
+def put_log(records: Dict, *sequence_token):
+    records = [{"timestamp": int(k), "message": v} for k, v in records.items()]
     records = sorted(records, key=itemgetter("timestamp"))
     put_log_events_kwargs = {
         "logGroupName": log_group_name,
@@ -136,7 +137,7 @@ def parse_log_file(key: str, bucket: str):
     """
     parses cloudfront s3 log in batches and puts to cloudwatch logs
     """
-    records = []
+    records = {}
     sequence_token = None
     try:
         response = s3_client.get_object(Bucket=bucket, Key=key)
@@ -151,6 +152,7 @@ def parse_log_file(key: str, bucket: str):
         if not line.startswith("#"):
             try:
                 split_line = line.split(sep="\t")
+
                 timestamp = datetime.strptime(
                     "%s %s" % (split_line[0], split_line[1]), "%Y-%m-%d %H:%M:%S"
                 ).timestamp()
@@ -187,15 +189,11 @@ def parse_log_file(key: str, bucket: str):
 
             try:
                 message = parse_line(line)
-                if message.status not in (
-                    403,
-                    429,
-                ):  # skip HTTP 403 and 429 to avoid writing too many logs in case of spike in requests
-                    cloudwatch_log = CloudwatchLog(
-                        timestamp=time_in_ms, message=message.json(by_alias=True)
-                    )
-                    records.append(cloudwatch_log.dict())
-
+                if not str(time_in_ms) in records.keys():
+                    records[str(time_in_ms)] = {}
+                records[str(time_in_ms)][str(message.status)] = (
+                    records[str(time_in_ms)].get(str(message.status), 0) + 1
+                )
             except Exception as e:
                 logger.error(f"error adding Log Record to List: {e}")
     put_records_response = put_log(records)
