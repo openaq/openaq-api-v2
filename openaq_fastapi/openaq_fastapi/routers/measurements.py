@@ -133,23 +133,37 @@ class Measurements(
             )
         for f, v in self:
             if v is not None:
-                if f == "location" and all(isinstance(x, int) for x in v):
-                    wheres.append(" sn.id = ANY(:location) ")
-                elif f == "location":
-                    wheres.append(" sn.name = ANY(:location) ")
-                elif f == "parameter":
+                if f == "location":
                     if all(isinstance(x, int) for x in v):
-                        wheres.append(
-                            """
-                            m.measurands_id = ANY(:parameter::int[])
-                            """
-                        )
+                        type = "int[]"
+                        col = "sn.id"
                     else:
-                        wheres.append(
-                            """
-                            m.measurand = ANY(:parameter::text[])
-                            """
-                        )
+                        type = "text[]"
+                        col = "sn.name"
+
+                    if len(v)>1:
+                        clause = f"ANY(:location::{type})"
+                    else:
+                        clause = f"(:location::{type})[1]"
+
+                    wheres.append(f" {col}={clause}")
+                    
+                elif f == "parameter":
+
+                    if all(isinstance(x, int) for x in v):
+                        type = "int[]"
+                        col = "m.measurands_id"
+                    else:
+                        type = "text[]"
+                        col = "m.measurand"
+
+                    if len(v)>1:
+                        clause = f"ANY(:parameter::{type})"
+                    else:
+                        clause = f"(:parameter::{type})[1]"
+
+                    wheres.append(f" {col}={clause}")
+                    
                 elif f == "unit":
                     wheres.append("units = ANY(:unit) ")
                 elif f == "isMobile":
@@ -206,7 +220,7 @@ async def measurements_get(
             'latitude', st_y(sn.geom),
              'longitude', st_x(sn.geom)
         ) as coordinates
-        , 'NA' as country
+        , sn.country->>'code' as country
         , sn.ismobile as "isMobile"
         , sn.owner->>'type' as entity
         , CASE WHEN i.is_monitor
@@ -219,7 +233,6 @@ async def measurements_get(
         JOIN sensor_systems sy USING (sensor_systems_id)
         JOIN instruments i USING (instruments_id)
         JOIN locations_view_cached sn ON (sy.sensor_nodes_id = sn.id)
-        JOIN countries c ON (c.countries_id = sn.countries_id)
         JOIN measurands m ON (m.measurands_id = h.measurands_id)
         WHERE {where}
         OFFSET :offset
