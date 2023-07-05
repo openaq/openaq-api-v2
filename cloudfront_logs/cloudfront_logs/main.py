@@ -36,7 +36,9 @@ log_stream_name = f"openaq-api-{settings.ENV}-cf-access-log-stream"
 
 
 def put_log(records: Dict, *sequence_token):
-    records = [{"timestamp": int(k), "message": v} for k, v in records.items()]
+    records = [
+        {"timestamp": int(k), "message": json.dumps(v)} for k, v in records.items()
+    ]
     records = sorted(records, key=itemgetter("timestamp"))
     put_log_events_kwargs = {
         "logGroupName": log_group_name,
