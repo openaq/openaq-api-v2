@@ -192,14 +192,26 @@ def parse_log_file(key: str, bucket: str):
             try:
                 message = parse_line(line)
                 if not str(time_in_ms) in records.keys():
-                    records[str(time_in_ms)] = {}
-                records[str(time_in_ms)][str(message.status)] = (
-                    records[str(time_in_ms)].get(str(message.status), 0) + 1
-                )
+                    records[str(time_in_ms)] = []
+                if not any(v.get('code', None) == message.status for _, v in records.items()):
+                    status = {}
+                    status['code'] = message.status
+                    status['count'] = 1
+                    records[str(time_in_ms)].append(status)
+                else:
+                    idx = next((index for (index, d) in enumerate(records[str(time_in_ms)]) if d["code"] == message.status), None)
+                    records[str(time_in_ms)][idx]['count'] = records[str(time_in_ms)][idx]['count'] + 1
             except Exception as e:
                 logger.error(f"error adding Log Record to List: {e}")
     put_records_response = put_log(records)
     logger.info(put_records_response)
+
+
+
+foo = {}
+if status not in foo.: 
+
+
 
 
 def handler(event, context):
