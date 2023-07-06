@@ -13,7 +13,7 @@ import json
 import boto3
 from pydantic import ValidationError
 
-from .models import CloudfrontLog, CloudwatchLog
+from .models import CloudfrontLog, HTTPStatusLog
 from .settings import settings
 
 s3_client = boto3.client("s3")
@@ -193,25 +193,25 @@ def parse_log_file(key: str, bucket: str):
                 message = parse_line(line)
                 if not str(time_in_ms) in records.keys():
                     records[str(time_in_ms)] = []
-                if not any(v.get('code', None) == message.status for _, v in records.items()):
-                    status = {}
-                    status['code'] = message.status
-                    status['count'] = 1
-                    records[str(time_in_ms)].append(status)
+                if not any(
+                    v.get("code", None) == message.status for _, v in records.items()
+                ):
+                    http_status_log = HTTPStatusLog(message.status)
+                    records[str(time_in_ms)].append(http_status_log)
                 else:
-                    idx = next((index for (index, d) in enumerate(records[str(time_in_ms)]) if d["code"] == message.status), None)
-                    records[str(time_in_ms)][idx]['count'] = records[str(time_in_ms)][idx]['count'] + 1
+                    idx = next(
+                        (
+                            index
+                            for (index, d) in enumerate(records[str(time_in_ms)])
+                            if d.status_code == message.status
+                        ),
+                        None,
+                    )
+                    records[str(time_in_ms)][idx].increment_count()
             except Exception as e:
                 logger.error(f"error adding Log Record to List: {e}")
     put_records_response = put_log(records)
     logger.info(put_records_response)
-
-
-
-foo = {}
-if status not in foo.: 
-
-
 
 
 def handler(event, context):
