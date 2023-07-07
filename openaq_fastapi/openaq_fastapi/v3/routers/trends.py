@@ -2,7 +2,7 @@ import logging
 from fastapi import APIRouter, Depends, Path, Query
 from openaq_fastapi.db import DB
 from datetime import date, datetime
-from typing import Union
+from typing import Union, Annotated
 from openaq_fastapi.v3.models.responses import TrendsResponse
 
 logger = logging.getLogger("trends")
@@ -58,7 +58,7 @@ class LocationTrendsQueries(
     description="Provides a list of aggregated measurements by location ID and factor",
 )
 async def trends_get(
-    trends: LocationTrendsQueries = Depends(LocationTrendsQueries.depends()),
+    trends: Annotated[LocationTrendsQueries, Depends(LocationTrendsQueries)],
     db: DB = Depends(),
 ):
     response = await fetch_trends(trends, db)

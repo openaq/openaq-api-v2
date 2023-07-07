@@ -1,5 +1,5 @@
 import logging
-from typing import Union
+from typing import Union, Annotated
 from fastapi import APIRouter, Depends, Path
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.models.responses import OwnersResponse
@@ -36,10 +36,10 @@ class OwnersQueries(QueryBaseModel, Paging):
     description="Provides a owner by owner ID",
 )
 async def owner_get(
-    owner: OwnerPathQuery = Depends(OwnerPathQuery.depends()),
+    owners: Annotated[OwnerPathQuery, Depends(OwnerPathQuery)],
     db: DB = Depends(),
 ):
-    response = await fetch_owners(owner, db)
+    response = await fetch_owners(owners, db)
     return response
 
 

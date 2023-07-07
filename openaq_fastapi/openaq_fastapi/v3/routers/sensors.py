@@ -1,5 +1,5 @@
 import logging
-from typing import Union
+from typing import Union, Annotated
 from fastapi import APIRouter, Depends, Query, Path
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.routers.measurements import fetch_measurements
@@ -26,7 +26,7 @@ router = APIRouter(
 
 class SensorQuery(QueryBaseModel):
     sensors_id: int = Path(
-        description="Limit the results to a specific sensors id", ge=1
+        ..., description="Limit the results to a specific sensors id", ge=1
     )
 
     def where(self):
@@ -58,10 +58,10 @@ class SensorQuery(QueryBaseModel):
     description="Provides a sensor by sensor ID",
 )
 async def sensor_get(
-    sensor: SensorQuery = Depends(SensorQuery.depends()),
+    sensors: Annotated[SensorQuery, Depends(SensorQuery)],
     db: DB = Depends(),
 ):
-    response = await fetch_sensors(sensor, db)
+    response = await fetch_sensors(sensors, db)
     return response
 
 

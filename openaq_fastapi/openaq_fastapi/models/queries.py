@@ -8,7 +8,7 @@ from typing import Dict, List, Union
 import humps
 from dateutil.parser import parse
 from dateutil.tz import UTC
-from fastapi import Query
+from fastapi import Query, Path
 from pydantic import (
     BaseModel,
     Field,
@@ -110,13 +110,10 @@ class City(OBaseModel):
 
 
 class Country(OBaseModel):
-    country_id: Union[str, None] = Query(
+    country_id: Union[int, None] = Query(
         None,
-        min_length=2,
-        max_length=2,
-        regex="[a-zA-Z][a-zA-Z]",
-        description="Limit results by a certain country using two letter country code. e.g. US",
-        example="US",
+        description="Limit results by a certain country using two digit country ID. e.g. 13",
+        example=13,
     )
     country: Union[List[str], None] = Query(
         None,
@@ -127,16 +124,32 @@ class Country(OBaseModel):
         example="US",
     )
 
+    @validator("country_id", check_fields=False)
+    def validate_country_id(cls, v, values):
+        if v is not None and not isinstance(v, int):
+            raise ValueError("country_id must be an integer")
+        return v
+
     @validator("country", check_fields=False)
     def validate_country(cls, v, values):
         logger.debug(f"validating countries {v} {values}")
         cid = values.get("country_id")
         if cid is not None:
-            v = [cid]
+            v = [str(cid)]
         if v is not None:
             logger.debug(f"returning countries {v} {values}")
             return [str.upper(val) for val in v]
         return None
+
+
+class CountryByPath(BaseModel):
+    country_id: Union[int, None]
+
+    @validator("country_id", check_fields=False)
+    def validate_country_id(cls, v, values):
+        if v is not None and not isinstance(v, int):
+            raise ValueError("country_id must be an integer")
+        return v
 
 
 class SourceName(OBaseModel):
@@ -192,6 +205,16 @@ class Location(OBaseModel):
     @validator("location")
     def validate_location(cls, v, values):
         return id_or_name_validator("location", v, values)
+
+
+class LocationPath(BaseModel):
+    location_id: Union[int, None]
+
+    @validator("location_id", check_fields=False)
+    def validate_location_id(cls, v, values):
+        if v is not None and not isinstance(v, int):
+            raise ValueError("location_id must be an integer")
+        return v
 
 
 class HasGeo(OBaseModel):

@@ -1,9 +1,9 @@
 import logging
 from typing import Union, List
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Path
 from enum import Enum
 from ..db import DB
-from ..models.queries import APIBase, Country
+from ..models.queries import APIBase, Country, CountryByPath
 
 from openaq_fastapi.models.responses import (
     CountriesResponse,
@@ -81,9 +81,26 @@ class Countries(Country, APIBase):
                         c.iso = ANY(:country)
                         """
                     )
+                elif f == "country_id":
+                    wheres.append(
+                        """
+                        c.countries_id = :country_id
+                        """
+                    )
         if len(wheres) > 0:
-            return (" AND ").join(wheres)
+            return (" OR ").join(wheres)
         return " TRUE "
+
+
+class CountriesPath(CountryByPath, APIBase):
+    order_by: CountriesOrder = Query(
+        "name", description="Order by a field e.g. ?order_by=name", example="name"
+    )
+    limit: int = Query(
+        100,
+        description="Limit the number of results returned. e.g. limit=100 will return up to 100 results",
+        example="100",
+    )
 
 
 @router.get(
@@ -100,6 +117,56 @@ class Countries(Country, APIBase):
     description="Provides a single country by country ID",
     tags=["v2"],
 )
+async def countries_by_path(
+    country_id: int = Path(
+        ...,
+        description="Limit results by a certain country using two digit country ID. e.g. 13",
+        example=13,
+    ),
+    db: DB = Depends(),
+    countries: CountriesPath = Depends(),
+):
+    q = f"""
+        SELECT
+        c.iso AS code
+        , c.countries_id AS country_id
+        , c.name
+        , COUNT(DISTINCT sn.sensor_nodes_id) AS locations
+        , MIN(sr.datetime_first)::TEXT AS first_updated
+        , MAX(sr.datetime_last)::TEXT AS last_updated
+        , array_agg(DISTINCT m.measurand) AS parameters
+        , SUM(sr.value_count) AS "count"
+        , count (DISTINCT sn.city) AS cities
+        , count (DISTINCT p.source_name) AS sources
+        FROM
+            sensors_rollup sr
+        JOIN
+            sensors s USING (sensors_id)
+        JOIN
+            sensor_systems ss USING (sensor_systems_id)
+        JOIN
+            sensor_nodes sn USING (sensor_nodes_id)
+        JOIN
+            countries c USING (countries_id)
+        JOIN
+            measurands m USING (measurands_id)
+        JOIN
+            providers p USING (providers_id)
+        WHERE
+        c.iso IS NOT NULL
+        AND c.countries_id = :country_id
+        GROUP BY code, c.name, c.countries_id
+        OFFSET :offset
+        LIMIT :limit
+        """
+
+    params = countries.params()
+    params["country_id"] = country_id
+    output = await db.fetchPage(q, params)
+
+    return output
+
+
 @router.get(
     "/v2/countries",
     response_model=CountriesResponse,

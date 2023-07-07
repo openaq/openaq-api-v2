@@ -16,7 +16,7 @@ Deprecated==1.2.13
 dnspython==2.3.0
 email-validator==2.0.0.post2
 exceptiongroup==1.0.4
-fastapi==0.87.0
+fastapi==0.99.1
 fastapi-utils==0.2.1
 greenlet==1.1.2
 h11==0.12.0
@@ -49,15 +49,16 @@ pytz==2022.1
 pytz-deprecation-shim==0.1.0.post0
 redis==4.3.3
 regex==2022.3.2
+requests==2.31.0
 rfc3986==1.5.0
 s3transfer==0.6.0
 six==1.16.0
 sniffio==1.2.0
 SQLAlchemy==1.4.36
-starlette==0.21.0
+starlette==0.27.0
 tomli==2.0.1
 typer==0.4.1
-typing_extensions==4.2.0
+typing_extensions==4.7.1
 tzdata==2022.1
 tzlocal==4.2
 urllib3==1.26.15

@@ -109,7 +109,7 @@ class TypeParametersMemoizer(type):
         return GenericAlias(TypeParamsWrapper, typeparams)
 
 
-class CommaSeparatedList(list, metaclass=TypeParametersMemoizer):
+class CommaSeparatedList(List, metaclass=TypeParametersMemoizer):
     """
     adapted from
     https://github.com/tiangolo/fastapi/issues/50#issuecomment-1267068112
