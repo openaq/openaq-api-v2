@@ -16,7 +16,8 @@ from fastapi import Query
 from datetime import date, datetime
 from pydantic import BaseModel, conint, confloat, root_validator
 from inspect import signature
-from fastapi.exceptions import ValidationError, HTTPException
+from fastapi.exceptions import HTTPException
+from pydantic import ValidationError
 
 logger = logging.getLogger("queries")
 
