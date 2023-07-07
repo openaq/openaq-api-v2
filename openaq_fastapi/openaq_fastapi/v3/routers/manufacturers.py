@@ -1,5 +1,6 @@
 import logging
 from fastapi import APIRouter, Depends, Path
+from typing import Annotated
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.models.responses import ManufacturersResponse
 
@@ -16,7 +17,7 @@ router = APIRouter(
 
 class ManufacturerPathQuery(QueryBaseModel):
     manufacturers_id: int = Path(
-        description="Limit the results to a specific manufacturers id", ge=1
+        ..., description="Limit the results to a specific manufacturers id", ge=1
     )
 
     def where(self) -> str:
@@ -34,10 +35,10 @@ class ManufacturersQueries(QueryBaseModel, Paging):
     description="Provides a manufacturer by manufacturer ID",
 )
 async def manufacturer_get(
-    manufacturer: ManufacturerPathQuery = Depends(ManufacturerPathQuery.depends()),
+    manufacturers: Annotated[ManufacturerPathQuery, Depends(ManufacturerPathQuery)],
     db: DB = Depends(),
 ):
-    response = await fetch_manufacturers(manufacturer, db)
+    response = await fetch_manufacturers(manufacturers, db)
     return response
 
 

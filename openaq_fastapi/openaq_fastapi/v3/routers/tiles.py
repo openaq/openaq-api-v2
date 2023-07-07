@@ -1,6 +1,6 @@
 import logging
 import urllib
-from typing import List, Union
+from typing import List, Union, Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, Request, Response
 from pydantic import BaseModel, Field
 from openaq_fastapi.db import DB
@@ -63,9 +63,9 @@ class ThresholdsQuery(QueryBaseModel):
 
 
 class TileBase(QueryBaseModel):
-    z: int = (Path(..., ge=0, le=30, description="Mercator tiles's zoom level"),)
-    x: int = (Path(..., description="Mercator tiles's column"),)
-    y: int = (Path(..., description="Mercator tiles's row"),)
+    z: int = Path(..., ge=0, le=30, description="Mercator tiles's zoom level")
+    x: int = Path(..., description="Mercator tiles's column")
+    y: int = Path(..., description="Mercator tiles's row")
 
 
 class Tile(
@@ -119,8 +119,8 @@ class MobileTile(TileBase):
     response_class=Response,
 )
 async def get_tile(
+    tile: Annotated[Tile, Depends(Tile)],
     db: DB = Depends(),
-    tile: Tile = Depends(Tile.depends()),
 ):
     vt = await fetch_tiles(tile, db)
     if vt is None:
@@ -135,8 +135,8 @@ async def get_tile(
     response_class=Response,
 )
 async def get_threshold_tile(
+    threshold_tile: Annotated[ThresholdTile, Depends(ThresholdTile)],
     db: DB = Depends(),
-    threshold_tile: ThresholdTile = Depends(ThresholdTile.depends()),
 ):
     vt = await fetch_threshold_tiles(threshold_tile, db)
     if vt is None:
@@ -281,8 +281,8 @@ async def fetch_threshold_tiles(query, db):
     response_class=Response,
 )
 async def get_mobile_gen_tiles(
+    tile: Annotated[Tile, Depends(Tile)],
     db: DB = Depends(),
-    tile: Tile = Depends(Tile),
 ):
     ...
 
@@ -300,8 +300,8 @@ async def fetch_mobile_gen_tiles(where, db):
     response_class=Response,
 )
 async def get_mobile_path_tiles(
+    tile: Annotated[Tile, Depends(Tile)],
     db: DB = Depends(),
-    tile: Tile = Depends(Tile.depends()),
 ):
     ...
 
@@ -319,8 +319,8 @@ async def fetch_mobile_path_tiles(where, db):
     response_class=Response,
 )
 async def get_mobiletiles(
+    mt: Annotated[MobileTile, Depends(MobileTile)],
     db: DB = Depends(),
-    mt: MobileTile = Depends(MobileTile.depends()),
 ):
     ...
 
