@@ -75,7 +75,7 @@ async def parameters_getv1(
         measurands_id as id
         , measurand as name
         , display as "displayName"
-        , coalesce(description, display) as description
+        , coalesce(description, display, 'n/a') as description
         , units as "preferredUnit"
     FROM measurands
     ORDER BY "{parameters.order_by}" {parameters.sort}
