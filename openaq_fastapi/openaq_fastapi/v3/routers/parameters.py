@@ -3,6 +3,8 @@ import logging
 from typing import Union, Annotated
 from fastapi import APIRouter, Depends, Query, Path
 from openaq_fastapi.db import DB
+from openaq_fastapi.models.responses import OpenAQResult
+from openaq_fastapi.v3.models.responses import Meta, Parameter
 from openaq_fastapi.v3.models.responses import ParametersResponse
 
 from openaq_fastapi.v3.models.queries import (
@@ -39,7 +41,7 @@ class ParameterType(str, Enum):
 
 class ParameterTypeQuery(QueryBaseModel):
     parameter_type: Union[ParameterType, None] = Query(
-        description="Limit the results to a specific parameters id"
+        None, description="Limit the results to a specific parameters id"
     )
 
     def where(self) -> str:
@@ -63,7 +65,9 @@ class ParametersQueries(
 async def parameter_get(
     parameter: Annotated[ParameterPathQuery, Depends(ParameterPathQuery)],
     db: DB = Depends(),
-):
+) -> ParametersResponse:
+    print("PARAMETER\n\n\n")
+    print(parameter.where())
     response = await fetch_parameters(parameter, db)
     return response
 
@@ -75,15 +79,17 @@ async def parameter_get(
     description="Provides a list of parameters",
 )
 async def parameters_get(
-    parameter: ParametersQueries = Depends(ParametersQueries.depends()),
+    parameter: Annotated[ParametersQueries, Depends(ParametersQueries)],
     db: DB = Depends(),
 ):
     response = await fetch_parameters(parameter, db)
     return response
 
 
-async def fetch_parameters(query, db):
+async def fetch_parameters(query, db) -> ParametersResponse:
     query_builder = QueryBuilder(query)
+    print("QUERY BUILDER\n\n\n")
+    print(query_builder.where())
     sql = f"""
     SELECT id
         , p.name

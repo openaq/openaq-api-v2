@@ -30,7 +30,6 @@ endpoints = [
 ]
 
 
-
 # @pytest.mark.parametrize("endpoint", endpoints)
 # class TestEndpointsHealth:
 #     def test_endpoint_list_good(self, client, endpoint):

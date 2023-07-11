@@ -202,7 +202,7 @@ async def post_register(
     response = send_verification_email(
         verification_code, form.full_name, form.email_address
     )
-    logger.info(InfoLog(detail=json.dumps(response)).json())
+    logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
     return RedirectResponse("/check-email", status_code=status.HTTP_303_SEE_OTHER)
 
 

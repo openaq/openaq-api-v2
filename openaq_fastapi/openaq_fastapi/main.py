@@ -169,21 +169,25 @@ class OpenAQValidationResponse(BaseModel):
     detail: List[OpenAQValidationResponseDetail] = None
 
 
-@app.exception_handler(RequestValidationError)
-async def openaq_request_validation_exception_handler(
-    request: Request, exc: RequestValidationError
-):
-    detail = orjson.loads(exc.json())
-    logger.debug(traceback.format_exc())
-    logger.info(UnprocessableEntityLog(request=request, detail=exc.json()).json())
-    detail = OpenAQValidationResponse(detail=detail)
-    return ORJSONResponse(status_code=422, content=jsonable_encoder(detail))
+# @app.exception_handler(RequestValidationError)
+# async def openaq_request_validation_exception_handler(
+#     request: Request, exc: RequestValidationError
+# ):
+#     detail = orjson.loads(exc.json())
+#     logger.debug(traceback.format_exc())
+#     logger.info(
+#         UnprocessableEntityLog(request=request, detail=exc.json()).model_dump_json()
+#     )
+#     detail = OpenAQValidationResponse(detail=detail)
+#     return ORJSONResponse(status_code=422, content=jsonable_encoder(detail))
 
 
 @app.exception_handler(ValidationError)
 async def openaq_exception_handler(request: Request, exc: ValidationError):
     logger.debug(traceback.format_exc())
-    logger.error(ModelValidationError(request=request, detail=exc.json()).json())
+    logger.error(
+        ModelValidationError(request=request, detail=exc.json()).model_dump_json()
+    )
     return ORJSONResponse(status_code=500, content={"message": "internal server error"})
 
 

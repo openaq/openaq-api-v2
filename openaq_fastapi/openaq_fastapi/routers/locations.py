@@ -1,9 +1,8 @@
 import logging
-from typing import List, Annotated
+from typing import List, Annotated, Union
 
 import jq
 from fastapi import APIRouter, Depends, Query, Path
-from pydantic.typing import Union
 from enum import Enum
 
 from ..models.responses import (
@@ -11,7 +10,6 @@ from ..models.responses import (
     LatestResponseV1,
     LocationsResponse,
     LocationsResponseV1,
-    converter,
 )
 from ..db import DB
 from ..models.queries import (
@@ -60,10 +58,10 @@ class Locations(
         description="Order by a field",
     )
     sort: Union[Sort, None] = Query(
-        "desc", description="Sort Direction e.g. sort=desc", example="desc"
+        "desc", description="Sort Direction e.g. sort=desc", examples=["desc"]
     )
     isMobile: Union[bool, None] = Query(
-        None, description="Location is mobile e.g. ?isMobile=true", example="true"
+        None, description="Location is mobile e.g. ?isMobile=true", examples=["true"]
     )
     isAnalysis: Union[bool, None] = Query(
         None,
@@ -72,30 +70,30 @@ class Locations(
             "analysis/aggregation and not raw measurements "
             "e.g. ?isAnalysis=true "
         ),
-        example="true",
+        examples=["true"],
     )
     sourceName: Union[List[str], None] = Query(
         None,
         description="Name of the data source e.g. ?sourceName=Houston%20Mobile",
-        example="Houston%20Mobile",
+        examples=["Houston%20Mobile"],
     )
     entity: Union[EntityTypes, None] = Query(
         None,
         description="Source entity type. e.g. ?entity=government",
-        example="government",
+        examples=["government"],
     )
     sensorType: Union[SensorTypes, None] = Query(
         None,
         description="Type of Sensor e.g. ?sensorType=reference%20grade",
-        example="reference%20grade",
+        examples=["reference%20grade"],
     )
     modelName: Union[List[str], None] = Query(
-        None, description="Model Name of Sensor e.g. ?modelName=AE33", example="AE33"
+        None, description="Model Name of Sensor e.g. ?modelName=AE33", examples=["AE33"]
     )
     manufacturerName: Union[List[str], None] = Query(
         None,
         description="Manufacturer of Sensor e.g. ?manufacturer=Ecotech",
-        example="Ecotech",
+        examples=["Ecotech"],
     )
     dumpRaw: Union[bool, None] = False
 
@@ -350,8 +348,8 @@ async def get_v2_latest_by_id(
     tags=["v2"],
 )
 async def latest_get(
+    locations: Annotated[Locations, Depends(Locations)],
     db: DB = Depends(),
-    locations: Locations = Depends(Locations.depends()),
 ):
     qparams = locations.params()
 
@@ -432,8 +430,8 @@ SELECT l.id
     tags=["v1"],
 )
 async def latest_v1_get(
+    locations: Annotated[Locations, Depends(Locations)],
     db: DB = Depends(),
-    locations: Locations = Depends(Locations.depends()),
 ):
     locations.entity = "government"
     qparams = locations.params()
@@ -552,8 +550,8 @@ SELECT l.*
     tags=["v1"],
 )
 async def locationsv1_get(
+    locations: Annotated[Locations, Depends(Locations)],
     db: DB = Depends(),
-    locations: Locations = Depends(Locations.depends()),
 ):
     locations.entity = "government"
     qparams = locations.params()

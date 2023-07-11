@@ -1,22 +1,11 @@
 import logging
 
-from dateutil.tz import UTC
 from fastapi import APIRouter, Depends, Query
-from typing import Union, List
+from typing import Annotated, Union
 from enum import Enum
 from ..db import DB
-from ..models.queries import (
-    APIBase,
-    Country,
-    DateRange,
-    Measurands,
-    Project,
-    Spatial,
-    Temporal,
-    Sort,
-)
-from ..models.responses import AveragesResponse, OpenAQResult
-from pydantic import root_validator
+
+from ..models.responses import AveragesResponse
 
 from openaq_fastapi.v3.models.queries import (
     QueryBuilder,
@@ -88,9 +77,9 @@ class AveragesQueries(
     description="",
     tags=["v2"],
 )
-async def averages_v3_get(
+async def averages_v2_get(
+    av: Annotated[AveragesQueries, Depends(AveragesQueries)],
     db: DB = Depends(),
-    av: AveragesQueries = Depends(AveragesQueries.depends()),
 ):
     query = QueryBuilder(av)
 

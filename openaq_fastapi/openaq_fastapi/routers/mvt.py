@@ -3,7 +3,7 @@ import os
 import pathlib
 import urllib
 from datetime import date, datetime
-from pydantic.typing import List, Union
+from typing import List, Union
 
 from fastapi import APIRouter, Depends, Path, Query, Response
 from fastapi.exceptions import HTTPException
@@ -27,12 +27,12 @@ class TileJSON(BaseModel):
     """
 
     tilejson: str = "2.2.0"
-    name: Union[str, None]
-    description: Union[str, None]
+    name: Union[str, None] = None
+    description: Union[str, None] = None
     version: str = "1.0.0"
-    attribution: Union[str, None]
-    template: Union[str, None]
-    legend: Union[str, None]
+    attribution: Union[str, None] = None
+    template: Union[str, None] = None
+    legend: Union[str, None] = None
     scheme: str = "xyz"
     tiles: List[str]
     grids: List[str] = []

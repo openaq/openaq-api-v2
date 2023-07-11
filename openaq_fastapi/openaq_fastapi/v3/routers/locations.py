@@ -22,7 +22,7 @@ logger = logging.getLogger("locations")
 router = APIRouter(
     prefix="/v3",
     tags=["v3"],
-    include_in_schema=False,
+    include_in_schema=True,
 )
 
 
@@ -69,9 +69,10 @@ async def location_get(
     description="Provides a list of locations",
 )
 async def locations_get(
-    locations: LocationsQueries = Depends(LocationsQueries.depends()),
+    locations: Annotated[LocationsQueries, Depends(LocationsQueries)],
     db: DB = Depends(),
 ):
+    print(locations.providers_id)
     response = await fetch_locations(locations, db)
     return response
 

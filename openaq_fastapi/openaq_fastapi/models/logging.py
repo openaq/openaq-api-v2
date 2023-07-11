@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Union
 
-from pydantic import BaseModel, Field, validator
+from pydantic import ConfigDict, BaseModel, Field, FieldValidationInfo, field_validator
 from fastapi import status, Request
 
 from humps import camelize
@@ -24,99 +24,98 @@ class BaseLog(BaseModel):
     """
 
     type: LogType
-    detail: Union[str, None]
+    detail: Union[str, None] = None
 
-    def json(self, **kwargs):
+    def model_dump_json(self, **kwargs):
         kwargs["by_alias"] = True
-        return super().json(**kwargs)
+        return super().model_dump_json(**kwargs)
 
-    class Config:
-        alias_generator = camelize
-        arbitrary_types_allowed = True
-        allow_population_by_field_name = True
+    model_config = ConfigDict(
+        alias_generator=camelize, arbitrary_types_allowed=True, populate_by_name=True
+    )
 
 
 class InfoLog(BaseLog):
-    type = LogType.INFO
+    type: LogType = LogType.INFO
 
 
 class WarnLog(BaseLog):
-    type = LogType.WARNING
+    type: LogType = LogType.WARNING
 
 
 class InfrastructureErrorLog(BaseLog):
-    type = LogType.INFRASTRUCTURE_ERROR
+    type: LogType = LogType.INFRASTRUCTURE_ERROR
 
 
 class HTTPLog(BaseLog):
     http_code: int
     request: Request = Field(..., exclude=True)
-    path: Union[str, None]
-    params: Union[str, None]
-    params_obj: Union[dict, None]
-    params_keys: Union[list, None]
-    ip: Union[str, None]
-    api_key: Union[str, None]
-    timing: Union[float, None]
-    rate_limiter: Union[str, None]
-    counter: Union[str, None]
+    path: Union[str, None] = None
+    params: Union[str, None] = None
+    params_obj: Union[dict, None] = None
+    params_keys: Union[list, None] = None
+    ip: Union[str, None] = None
+    api_key: Union[str, None] = None
+    timing: Union[float, None] = None
+    rate_limiter: Union[str, None] = None
+    counter: Union[int, None] = None
 
-    @validator("api_key", always=True)
-    def set_api_key(cls, v, values) -> dict:
-        request = values["request"]
+    @field_validator("api_key")
+    def set_api_key(cls, v, info: FieldValidationInfo) -> dict:
+        request = info.data["request"]
         api_key = request.headers.get("X-API-Key", None)
         return v or api_key
 
-    @validator("ip", always=True)
-    def set_ip(cls, v, values) -> dict:
-        request = values["request"]
+    @field_validator("ip")
+    def set_ip(cls, v, info: FieldValidationInfo) -> dict:
+        request = info.data["request"]
         ip = request.client.host
         return v or ip
 
-    @validator("path", always=True)
-    def set_path(cls, v, values) -> dict:
-        request = values["request"]
+    @field_validator("path")
+    def set_path(cls, v, info: FieldValidationInfo) -> dict:
+        request = info.data["request"]
         path = request.url.path
         return v or path
 
-    @validator("params", always=True)
-    def set_params(cls, v, values) -> dict:
-        request = values["request"]
+    @field_validator("params")
+    def set_params(cls, v, info: FieldValidationInfo) -> dict:
+        request = info.data["request"]
         params = request.url.query
         return v or params
 
-    @validator("params_obj", always=True)
-    def set_params_obj(cls, v, values) -> dict:
-        params = values.get("params", "")
+    @field_validator("params_obj")
+    def set_params_obj(cls, v, info: FieldValidationInfo) -> dict:
+        params = info.data.get("params", "")
         if "=" in params:
             return v or dict(x.split("=", 1) for x in params.split("&") if "=" in x)
         else:
             return None
 
-    @validator("params_keys", always=True)
-    def set_params_keys(cls, v, values) -> dict:
-        params = values.get("params_obj", {})
+    @field_validator("params_keys")
+    def set_params_keys(cls, v, info: FieldValidationInfo) -> dict:
+        params = info.data.get("params_obj", {})
         return [] if params is None else list(params.keys())
 
 
 class ErrorLog(HTTPLog):
-    http_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    http_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
 class UnprocessableEntityLog(HTTPLog):
-    http_code = status.HTTP_422_UNPROCESSABLE_ENTITY
-    type = LogType.UNPROCESSABLE_ENTITY
+    http_code: int = status.HTTP_422_UNPROCESSABLE_ENTITY
+    type: LogType = LogType.UNPROCESSABLE_ENTITY
 
 
 class TooManyRequestsLog(HTTPLog):
-    http_code = status.HTTP_429_TOO_MANY_REQUESTS
-    type = LogType.TOO_MANY_REQUESTS
+    http_code: int = status.HTTP_429_TOO_MANY_REQUESTS
+    type: LogType = LogType.TOO_MANY_REQUESTS
 
 
 class UnauthorizedLog(HTTPLog):
-    http_code = status.HTTP_401_UNAUTHORIZED
-    type = LogType.UNAUTHORIZED
+    http_code: int = status.HTTP_401_UNAUTHORIZED
+    type: LogType = LogType.UNAUTHORIZED
 
 
 class ModelValidationError(ErrorLog):
-    type = LogType.VALIDATION_ERROR
+    type: LogType = LogType.VALIDATION_ERROR
