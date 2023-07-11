@@ -3,7 +3,7 @@ adapted from https://aws.amazon.com/blogs/mt/sending-cloudfront-standard-logs-to
 """
 
 from io import BytesIO
-from typing import List
+from typing import Dict
 from gzip import GzipFile
 from datetime import datetime
 import logging
@@ -13,7 +13,7 @@ import json
 import boto3
 from pydantic import ValidationError
 
-from .models import CloudfrontLog, CloudwatchLog
+from .models import CloudfrontLog, HTTPStatusLog
 from .settings import settings
 
 s3_client = boto3.client("s3")
@@ -35,7 +35,10 @@ log_group_name = f"openaq-api-{settings.ENV}-cf-access-log"
 log_stream_name = f"openaq-api-{settings.ENV}-cf-access-log-stream"
 
 
-def put_log(records: List[CloudwatchLog], *sequence_token):
+def put_log(records: Dict, *sequence_token):
+    records = [
+        {"timestamp": int(k), "message": json.dumps(v)} for k, v in records.items()
+    ]
     records = sorted(records, key=itemgetter("timestamp"))
     put_log_events_kwargs = {
         "logGroupName": log_group_name,
@@ -136,7 +139,7 @@ def parse_log_file(key: str, bucket: str):
     """
     parses cloudfront s3 log in batches and puts to cloudwatch logs
     """
-    records = []
+    records = {}
     sequence_token = None
     try:
         response = s3_client.get_object(Bucket=bucket, Key=key)
@@ -151,6 +154,7 @@ def parse_log_file(key: str, bucket: str):
         if not line.startswith("#"):
             try:
                 split_line = line.split(sep="\t")
+
                 timestamp = datetime.strptime(
                     "%s %s" % (split_line[0], split_line[1]), "%Y-%m-%d %H:%M:%S"
                 ).timestamp()
@@ -187,15 +191,23 @@ def parse_log_file(key: str, bucket: str):
 
             try:
                 message = parse_line(line)
-                if message.status not in (
-                    403,
-                    429,
-                ):  # skip HTTP 403 and 429 to avoid writing too many logs in case of spike in requests
-                    cloudwatch_log = CloudwatchLog(
-                        timestamp=time_in_ms, message=message.json(by_alias=True)
+                if not str(time_in_ms) in records.keys():
+                    records[str(time_in_ms)] = []
+                if not any(
+                    v.get("code", None) == message.status for _, v in records.items()
+                ):
+                    http_status_log = HTTPStatusLog(message.status)
+                    records[str(time_in_ms)].append(http_status_log)
+                else:
+                    idx = next(
+                        (
+                            index
+                            for (index, d) in enumerate(records[str(time_in_ms)])
+                            if d.status_code == message.status
+                        ),
+                        None,
                     )
-                    records.append(cloudwatch_log.dict())
-
+                    records[str(time_in_ms)][idx].increment_count()
             except Exception as e:
                 logger.error(f"error adding Log Record to List: {e}")
     put_records_response = put_log(records)
