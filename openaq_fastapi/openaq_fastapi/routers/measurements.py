@@ -141,15 +141,14 @@ class Measurements(
                         type = "text[]"
                         col = "sn.name"
 
-                    if len(v)>1:
+                    if len(v) > 1:
                         clause = f"ANY(:location::{type})"
                     else:
                         clause = f"(:location::{type})[1]"
 
                     wheres.append(f" {col}={clause}")
-                    
-                elif f == "parameter":
 
+                elif f == "parameter":
                     if all(isinstance(x, int) for x in v):
                         type = "int[]"
                         col = "m.measurands_id"
@@ -157,13 +156,13 @@ class Measurements(
                         type = "text[]"
                         col = "m.measurand"
 
-                    if len(v)>1:
+                    if len(v) > 1:
                         clause = f"ANY(:parameter::{type})"
                     else:
                         clause = f"(:parameter::{type})[1]"
 
                     wheres.append(f" {col}={clause}")
-                    
+
                 elif f == "unit":
                     wheres.append("units = ANY(:unit) ")
                 elif f == "isMobile":
@@ -173,12 +172,12 @@ class Measurements(
                 elif f == "entity":
                     wheres.append("sn.owner->>'type' ~* :entity ")
                 elif f == "sensorType":
-                    if v == 'reference grade':
-                        wheres.append('i.is_monitor')
-                    elif v == 'low-cost sensor':
-                        wheres.append('NOT i.is_monitor')
+                    if v == "reference grade":
+                        wheres.append("i.is_monitor")
+                    elif v == "low-cost sensor":
+                        wheres.append("NOT i.is_monitor")
                 elif f == "country":
-                    wheres.append(f"c.iso = ANY(:{f})")
+                    wheres.append(f"sn.country->>'code' = ANY(:{f})")
                 elif f == "city":
                     wheres.append(f"{f} = ANY(:{f})")
                 elif f == "date_from":
