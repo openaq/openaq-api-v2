@@ -1,5 +1,5 @@
 import logging
-from typing import Union, List
+from typing import Annotated, Union, List
 from fastapi import APIRouter, Depends, Query, Path
 from enum import Enum
 from ..db import DB
@@ -38,12 +38,12 @@ class CountriesOrderV1(str, Enum):
 
 class CountriesV1(APIBase):
     order_by: CountriesOrderV1 = Query(
-        "code", description="Order by a field e.g. ?order_by=code", example="code"
+        "code", description="Order by a field e.g. ?order_by=code", examples=["code"]
     )
     limit: int = Query(
         100,
         description="Limit the number of results returned. e.g. limit=100 will return up to 100 results",
-        example="100",
+        examples=["100"],
     )
 
     def where(self):
@@ -63,12 +63,12 @@ class CountriesV1(APIBase):
 
 class Countries(Country, APIBase):
     order_by: CountriesOrder = Query(
-        "name", description="Order by a field e.g. ?order_by=name", example="name"
+        "name", description="Order by a field e.g. ?order_by=name", examples=["name"]
     )
     limit: int = Query(
         100,
         description="Limit the number of results returned. e.g. limit=100 will return up to 100 results",
-        example="100",
+        examples=["100"],
     )
 
     def where(self):
@@ -94,12 +94,12 @@ class Countries(Country, APIBase):
 
 class CountriesPath(CountryByPath, APIBase):
     order_by: CountriesOrder = Query(
-        "name", description="Order by a field e.g. ?order_by=name", example="name"
+        "name", description="Order by a field e.g. ?order_by=name", examples=["name"]
     )
     limit: int = Query(
         100,
         description="Limit the number of results returned. e.g. limit=100 will return up to 100 results",
-        example="100",
+        examples=["100"],
     )
 
 
@@ -118,13 +118,8 @@ class CountriesPath(CountryByPath, APIBase):
     tags=["v2"],
 )
 async def countries_by_path(
-    country_id: int = Path(
-        ...,
-        description="Limit results by a certain country using two digit country ID. e.g. 13",
-        example=13,
-    ),
+    countries: Annotated[CountriesPath, Depends(CountriesPath)],
     db: DB = Depends(),
-    countries: CountriesPath = Depends(),
 ):
     q = f"""
         SELECT
@@ -175,8 +170,8 @@ async def countries_by_path(
     tags=["v2"],
 )
 async def countries_get(
+    countries: Annotated[Countries, Depends(Countries)],
     db: DB = Depends(),
-    countries: Countries = Depends(Countries.depends()),
 ):
     order_by = countries.order_by
     if countries.order_by == "lastUpdated":
@@ -242,8 +237,8 @@ async def countries_get(
     tags=["v1"],
 )
 async def countries_getv1(
+    countries: Annotated[CountriesV1, Depends(CountriesV1)],
     db: DB = Depends(),
-    countries: Countries = Depends(CountriesV1.depends()),
 ):
     order_by = countries.order_by
     if countries.order_by == "code":

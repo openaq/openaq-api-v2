@@ -24,7 +24,7 @@ router = APIRouter(
 
 
 class TileProvidersQuery(QueryBaseModel):
-    providers_id: Union[CommaSeparatedList[int], None] = Query(
+    providers_id: Union[Annotated[str, CommaSeparatedList], None] = Query(
         description="Limit the results to a specific provider or providers"
     )
 
@@ -34,7 +34,7 @@ class TileProvidersQuery(QueryBaseModel):
 
 
 class TileOwnersQuery(QueryBaseModel):
-    owners_id: Union[CommaSeparatedList[int], None] = Query(
+    owners_id: Union[Annotated[str, CommaSeparatedList], None] = Query(
         description="Limit the results to a specific owner or owners"
     )
 
@@ -363,12 +363,12 @@ class TileJSON(BaseModel):
     """
 
     tilejson: str = "2.2.0"
-    name: Union[str, None]
-    description: Union[str, None]
+    name: Union[str, None] = None
+    description: Union[str, None] = None
     version: str = "1.0.0"
-    attribution: Union[str, None]
-    template: Union[str, None]
-    legend: Union[str, None]
+    attribution: Union[str, None] = None
+    template: Union[str, None] = None
+    legend: Union[str, None] = None
     scheme: str = "xyz"
     tiles: List[str]
     grids: List[str] = []

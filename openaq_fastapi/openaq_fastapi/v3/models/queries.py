@@ -1,23 +1,43 @@
 import inspect
 import logging
-from types import FunctionType, GenericAlias
 from enum import Enum
+from types import FunctionType
 from typing import (
+    Annotated,
+    Any,
     Dict,
     List,
     Union,
-    Optional,
 )
-import weakref
 import itertools
+
+from pydantic_core import core_schema
+
+from pydantic.json_schema import JsonSchemaValue
 
 import humps
 from fastapi import Query
 from datetime import date, datetime
-from pydantic import BaseModel, conint, confloat, root_validator
+from pydantic import (
+    Field,
+    GetCoreSchemaHandler,
+    computed_field,
+    model_validator,
+    ConfigDict,
+    BaseModel,
+    conint,
+    confloat,
+    ConfigDict,
+)
 from inspect import signature
 from fastapi.exceptions import HTTPException
 from pydantic import ValidationError
+from pydantic import (
+    BaseModel,
+    GetCoreSchemaHandler,
+    GetJsonSchemaHandler,
+    ValidationError,
+)
 
 logger = logging.getLogger("queries")
 
@@ -32,7 +52,7 @@ ignore_in_docs = [
 ]
 
 
-def parameter_dependency_from_model(name: str, model_cls):
+def parameter_dependency_from_model(name: str, mdl_cls):
     """
     Takes a pydantic model class as input and creates
     a dependency with corresponding
@@ -51,7 +71,7 @@ def parameter_dependency_from_model(name: str, model_cls):
     names = []
     annotations: Dict[str, type] = {}
     defaults = []
-    for field_model in model_cls.__fields__.values():
+    for field_model in mdl_cls.model_fields.values():
         if field_model.name not in ["self"]:
             field_info = field_model.field_info
 
@@ -70,13 +90,13 @@ def parameter_dependency_from_model(name: str, model_cls):
         % (
             name,
             ", ".join(names),
-            model_cls.__name__,
+            mdl_cls.__name__,
             ", ".join(["%s=%s" % (name, name) for name in names]),
         )
     )
 
     compiled = compile(code, "string", "exec")
-    env = {model_cls.__name__: model_cls}
+    env = {mdl_cls.__name__: mdl_cls}
     env.update(**globals())
     func = FunctionType(compiled.co_consts[0], env, name)
     func.__annotations__ = annotations
@@ -85,59 +105,93 @@ def parameter_dependency_from_model(name: str, model_cls):
     return func
 
 
-class TypeParametersMemoizer(type):
-    """
-    https://github.com/tiangolo/fastapi/issues/50#issuecomment-1267068112
-    """
+# class TypeParametersMemoizer(type):
+#     """
+#     https://github.com/tiangolo/fastapi/issues/50#issuecomment-1267068112
+#     """
 
-    _generics_cache = weakref.WeakValueDictionary()
+#     _generics_cache = weakref.WeakValueDictionary()
 
-    def __getitem__(cls, typeparams):
-        # prevent duplication of generic types
-        if typeparams in cls._generics_cache:
-            return cls._generics_cache[typeparams]
+#     def __getitem__(cls, typeparams):
+#         # prevent duplication of generic types
+#         if typeparams in cls._generics_cache:
+#             return cls._generics_cache[typeparams]
 
-        # middleware class for holding type parameters
-        class TypeParamsWrapper(cls):
-            __type_parameters__ = (
-                typeparams if isinstance(typeparams, tuple) else (typeparams,)
-            )
+#         # middleware class for holding type parameters
+#         class TypeParamsWrapper(cls):
+#             __type_parameters__ = (
+#                 typeparams if isinstance(typeparams, tuple) else (typeparams,)
+#             )
 
-            @classmethod
-            def _get_type_parameters(cls):
-                return cls.__type_parameters__
+#             @classmethod
+#             def _get_type_parameters(cls):
+#                 return cls.__type_parameters__
 
-        return GenericAlias(TypeParamsWrapper, typeparams)
+#         return GenericAlias(TypeParamsWrapper, typeparams)
 
 
-class CommaSeparatedList(List, metaclass=TypeParametersMemoizer):
-    """
-    adapted from
-    https://github.com/tiangolo/fastapi/issues/50#issuecomment-1267068112
-    but reworked and simplified to only handled ints since we will only
-    support comma chaining for id query parameters
-    """
+class CommaSeparatedList(List[int]):
+    """ """
 
     @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
+    def __get_pydantic_core_schema__(
+        cls, _source_type: Any, _handler: GetCoreSchemaHandler
+    ) -> core_schema.CoreSchema:
+        return core_schema.no_info_after_validator_function(
+            cls.validate,
+            core_schema.str_schema(),
+        )
 
     @classmethod
-    def validate(cls, v: List[Union[str, int]]):
+    def __get_pydantic_json_schema__(
+        cls, schema: core_schema.CoreSchema, handler: GetJsonSchemaHandler
+    ) -> JsonSchemaValue:
+        json_schema = handler(schema)
+        json_schema.update(
+            examples=["42", "1,2,3"],
+        )
+        return json_schema
+
+    @classmethod
+    def validate(cls, v: str):
+        print("VALIDATE\n\n\n")
+        print(type(v))
         if v:
-            if isinstance(v[0], str):
-                v = [int(item) for x in v for item in x.split(",")]
-            elif isinstance(v[0], int):
-                pass
-            else:
-                v = list(itertools.chain.from_iterable((x.split(",") for x in v)))
+            if isinstance(v, str):
+                v = [int(item) for item in v.split(",")]
             return v
         else:
             return v
 
-    @classmethod
-    def _get_type_parameters(cls):
-        raise NotImplementedError("should be overridden in metaclass")
+
+# class CommaSeparatedList(List, metaclass=TypeParametersMemoizer):
+#     """
+#     adapted from
+#     https://github.com/tiangolo/fastapi/issues/50#issuecomment-1267068112
+#     but reworked and simplified to only handled ints since we will only
+#     support comma chaining for id query parameters
+#     """
+
+#     @classmethod
+#     def __get_validators__(cls):
+#         yield cls.validate
+
+#     @classmethod
+#     def validate(cls, v: List[Union[str, int]]):
+#         if v:
+#             if isinstance(v[0], str):
+#                 v = [int(item) for x in v for item in x.split(",")]
+#             elif isinstance(v[0], int):
+#                 pass
+#             else:
+#                 v = list(itertools.chain.from_iterable((x.split(",") for x in v)))
+#             return v
+#         else:
+#             return v
+
+#     @classmethod
+#     def _get_type_parameters(cls):
+#         raise NotImplementedError("should be overridden in metaclass")
 
 
 def make_dependable(cls):
@@ -168,8 +222,8 @@ class QueryBuilder(object):
 
     def _bases(self) -> List[type]:
         bases = list(inspect.getmro(self.query.__class__))[
-            :-4
-        ]  # removes object primitives
+            :-3
+        ]  # removes object primitives <class '__main__.QueryBaseModel'>, <class 'pydantic.main.BaseModel'>, <class 'object'>
         return bases
 
     def fields(self) -> str:
@@ -244,16 +298,17 @@ class QueryBaseModel(BaseModel):
                 error["loc"] = ("query",) + error["loc"]
             raise HTTPException(422, detail=errors)
 
-    class Config:
-        min_anystr_length = 1
-        validate_assignment = True
-        allow_population_by_field_name = True
-        alias_generator = humps.decamelize
-        anystr_strip_whitespace = True
+    model_config = ConfigDict(
+        str_min_length=1,
+        validate_assignment=True,
+        populate_by_name=True,
+        alias_generator=humps.decamelize,
+        str_strip_whitespace=True,
+    )
 
-    @classmethod
-    def depends(cls):
-        return parameter_dependency_from_model("depends", cls)
+    # @classmethod
+    # def depends(cls):
+    #     return parameter_dependency_from_model("depends", cls)
 
     def has(self, field_name: str) -> bool:
         return hasattr(self, field_name) and getattr(self, field_name) is not None
@@ -280,13 +335,13 @@ class Paging(BaseModel):
         le=1000,
         description="""Change the number of results returned.
         e.g. limit=100 will return up to 100 results""",
-        example="100",
+        examples=["100"],
     )
     page: int = Query(
         1,
         gt=0,
         description="Paginate through results. e.g. page=1 will return first page of results",
-        example="1",
+        examples=["1"],
     )
 
     def pagination(self) -> str:
@@ -294,7 +349,11 @@ class Paging(BaseModel):
 
 
 class ParametersQuery(QueryBaseModel):
-    parameters_id: Union[CommaSeparatedList[int], None] = Query(description="")
+    parameters_id: Union[Annotated[str, CommaSeparatedList], None] = Query(
+        description=""
+    )
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def where(self) -> Union[str, None]:
         if self.has("parameters_id"):
@@ -303,7 +362,7 @@ class ParametersQuery(QueryBaseModel):
 
 class MobileQuery(QueryBaseModel):
     mobile: Union[bool, None] = Query(
-        description="Is the location considered a mobile location?"
+        None, description="Is the location considered a mobile location?"
     )
 
     def where(self) -> Union[str, None]:
@@ -313,7 +372,7 @@ class MobileQuery(QueryBaseModel):
 
 class MonitorQuery(QueryBaseModel):
     monitor: Union[bool, None] = Query(
-        description="Is the location considered a reference monitor?"
+        None, description="Is the location considered a reference monitor?"
     )
 
     def where(self) -> Union[str, None]:
@@ -322,9 +381,11 @@ class MonitorQuery(QueryBaseModel):
 
 
 class ProviderQuery(QueryBaseModel):
-    providers_id: Union[CommaSeparatedList[int], None] = Query(
-        description="Limit the results to a specific provider"
+    providers_id: Annotated[str, CommaSeparatedList] = Query(
+        None, description="Limit the results to a specific provider"
     )
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def where(self) -> Union[str, None]:
         if self.has("providers_id"):
@@ -332,9 +393,11 @@ class ProviderQuery(QueryBaseModel):
 
 
 class OwnerQuery(QueryBaseModel):
-    owner_contacts_id: Union[CommaSeparatedList[int], None] = Query(
-        description="Limit the results to a specific owner", ge=1
+    owner_contacts_id: Union[Annotated[str, CommaSeparatedList], None] = Query(
+        None, description="Limit the results to a specific owner", ge=1
     )
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def where(self) -> Union[str, None]:
         if self.owner_contacts_id is not None:
@@ -348,14 +411,19 @@ class CountryQuery(QueryBaseModel):
     powerful query method
     """
 
-    countries_id: Union[CommaSeparatedList[int], None] = Query(
+    countries_id: Union[Annotated[str, CommaSeparatedList], None] = Query(
+        None,
         description="Limit the results to a specific country or countries",
     )
     iso: Union[str, None] = Query(
+        None,
         description="Limit the results to a specific country using ISO code",
     )
 
-    @root_validator(pre=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @model_validator(mode="before")
+    @classmethod
     def check_only_one(cls, values):
         countries_id = values.get("countries_id", None)
         iso = values.get("iso", None)
@@ -371,7 +439,7 @@ class CountryQuery(QueryBaseModel):
 
 
 class DateFromQuery(QueryBaseModel):
-    date_from: Optional[Union[datetime, date]] = Query(
+    date_from: Union[Union[datetime, date], None] = Query(
         "2022-10-01", description="From when?"
     )
 
@@ -388,7 +456,7 @@ class DateFromQuery(QueryBaseModel):
 
 
 class DateToQuery(QueryBaseModel):
-    date_to: Optional[Union[datetime, date]] = Query(
+    date_to: Union[Union[datetime, date], None] = Query(
         datetime.utcnow(), description="To when?"
     )
 
@@ -424,19 +492,22 @@ class PeriodNameQuery(QueryBaseModel):
 class RadiusQuery(QueryBaseModel):
     coordinates: Union[str, None] = Query(
         None,
-        regex=r"^(-)?(?:90(?:\.0{1,4})?|((?:|[1-8])[0-9])(?:\.[0-9]{1,4})?)\,(-)?(?:180(?:\.0{1,4})?|((?:|[1-9]|1[0-7])[0-9])(?:\.[0-9]{1,4})?)$",
+        pattern=r"^(-)?(?:90(?:\.0{1,4})?|((?:|[1-8])[0-9])(?:\.[0-9]{1,4})?),(-)?(?:180(?:\.0{1,4})?|((?:|[1-9]|1[0-7])[0-9])(?:\.[0-9]{1,4})?)$",
         description="Coordinate pair in form latitude,longitude. Up to 4 decimal points of precision e.g. 38.907,-77.037",
-        example="38.907,-77.037",
+        examples=["38.907,-77.037"],
     )
-    radius: conint(gt=0, le=25000) = Query(
+    radius: Union[int, None] = Query(
         None,
+        gt=0,
+        le=250000,
         description="Search radius from coordinates as center in meters. Maximum of 25,000 (25km) defaults to 1000 (1km) e.g. radius=1000",
-        example="1000",
+        examples=["1000"],
     )
     lat: Union[confloat(ge=-90, le=90), None] = None
     lon: Union[confloat(ge=-180, le=180), None] = None
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def addlatlon(cls, values):
         coords = values.get("coordinates", None)
         if coords is not None and "," in coords:
@@ -446,7 +517,8 @@ class RadiusQuery(QueryBaseModel):
                 values["lon"] = float(lon)
         return values
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def check_spatial_inputs(cls, values):
         bbox = values.get("bbox", None)
         coordinates = values.get("coordinates", None)
@@ -473,27 +545,50 @@ class RadiusQuery(QueryBaseModel):
 
 class BboxQuery(QueryBaseModel):
     bbox: Union[str, None] = Query(
-        None,
-        regex=r"^(-)?(?:180(?:\.0{1,4})?|((?:|[1-9]|1[0-7])[0-9])(?:\.[0-9]{1,4})?)\,(-)?(?:90(?:\.0{1,4})?|((?:|[1-8])[0-9])(?:\.[0-9]{1,4})?)\,(-)?(?:180(?:\.0{1,4})?|((?:|[1-9]|1[0-7])[0-9])(?:\.[0-9]{1,4})?)\,(-)?(?:90(?:\.0{1,4})?|((?:|[1-8])[0-9])(?:\.[0-9]{1,4})?)$",
-        description="Min X, min Y, max X, max Y, up to 4 decimal points of precision e.g. -77.037,38.907,-77.0,39.910",
-        example="-77.1200,38.7916,-76.9094,38.9955",
+        Query(
+            None,
+            regex=r"^(-)?(?:180(?:\.0{1,4})?|((?:|[1-9]|1[0-7])[0-9])(?:\.[0-9]{1,4})?),(-)?(?:90(?:\.0{1,4})?|((?:[1-8])[0-9])(?:\.[0-9]{1,4})?),(-)?(?:180(?:\.0{1,4})?|((?:|[1-9]|1[0-7])[0-9])(?:\.[0-9]{1,4})?),(-)?(?:90(?:\.0{1,4})?|((?:|[1-8])[0-9])(?:\.[0-9]{1,4})?)$",
+            description="Min X, min Y, max X, max Y, up to 4 decimal points of precision e.g. -77.037,38.907,-77.0,39.910",
+            example="-77.1200,38.7916,-76.9094,38.9955",
+        )
     )
-    miny: Union[confloat(ge=-90, le=90), None] = None
-    minx: Union[confloat(ge=-180, le=180), None] = None
-    maxy: Union[confloat(ge=-90, le=90), None] = None
-    maxx: Union[confloat(ge=-180, le=180), None] = None
+    # miny: Union[confloat(ge=-90, le=90), None] = None
+    # minx: Union[confloat(ge=-180, le=180), None] = None
+    # maxy: Union[confloat(ge=-90, le=90), None] = None
+    # maxx: Union[confloat(ge=-180, le=180), None] = None
 
-    @root_validator(pre=True)
-    def addminmax(cls, values):
-        bbox = values.get("bbox", None)
-        if bbox is not None and "," in bbox:
-            minx, miny, maxx, maxy = bbox.split(",")
-            if minx and miny and maxx and maxy:
-                values["minx"] = float(minx)
-                values["miny"] = float(miny)
-                values["maxx"] = float(maxx)
-                values["maxy"] = float(maxy)
-        return values
+    # @model_validator(mode="before")
+    # @classmethod
+    # def addminmax(cls, values):
+    #     bbox = values.get("bbox", None)
+    #     if bbox is not None and "," in bbox:
+    #         minx, miny, maxx, maxy = bbox.split(",")
+    #         if minx and miny and maxx and maxy:
+    #             values["minx"] = float(minx)
+    #             values["miny"] = float(miny)
+    #             values["maxx"] = float(maxx)
+    #             values["maxy"] = float(maxy)
+    #     return values
+
+    @computed_field(return_type=float)
+    @property
+    def minx(self) -> float:
+        return float(self.bbox.split(",")[0])
+
+    @computed_field(return_type=float)
+    @property
+    def miny(self):
+        return self.bbox.split(",")[1]
+
+    @computed_field(return_type=float)
+    @property
+    def maxx(self):
+        return self.bbox.split(",")[2]
+
+    @computed_field(return_type=float)
+    @property
+    def maxy(self):
+        return self.bbox.split(",")[3]
 
     def where(self) -> Union[str, None]:
         if self.has("bbox"):

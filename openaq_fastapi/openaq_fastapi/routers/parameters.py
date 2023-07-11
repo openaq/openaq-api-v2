@@ -1,7 +1,7 @@
 import logging
 
 from fastapi import APIRouter, Depends, Query
-from pydantic.typing import Literal
+from typing import Annotated, Literal
 
 from ..db import DB
 from ..models.queries import (
@@ -11,8 +11,6 @@ from ..models.queries import (
 
 from openaq_fastapi.models.responses import (
     ParametersResponse,
-    ParametersResponseV1,
-    converter,
 )
 
 logger = logging.getLogger("parameters")
@@ -36,8 +34,8 @@ class Parameters(APIBase):
     tags=["v2"],
 )
 async def parameters_get(
+    parameters: Annotated[Parameters, Depends(Parameters)],
     db: DB = Depends(),
-    parameters: Parameters = Depends(Parameters.depends()),
 ):
     q = f"""
     SELECT
@@ -67,8 +65,8 @@ async def parameters_get(
     tags=["v1"],
 )
 async def parameters_getv1(
+    parameters: Annotated[ParametersV1, Depends(ParametersV1)],
     db: DB = Depends(),
-    parameters: ParametersV1 = Depends(ParametersV1.depends()),
 ):
     q = f"""
     SELECT

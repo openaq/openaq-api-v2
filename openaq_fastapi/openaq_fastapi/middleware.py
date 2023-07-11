@@ -36,6 +36,7 @@ class CacheControlMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         """Add cache-control."""
         response = await call_next(request)
+
         if (
             not response.headers.get("Cache-Control")
             and self.cachecontrol
@@ -64,7 +65,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         process_time = time.time() - start_time
         timing = round(process_time * 1000, 2)
-
         if hasattr(request.app.state, "rate_limiter"):
             rate_limiter = request.app.state.rate_limiter
         else:
@@ -85,7 +85,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     rate_limiter=rate_limiter,
                     counter=counter,
                     api_key=api_key,
-                ).json()
+                ).model_dump_json()
             )
         else:
             logger.info(
@@ -97,7 +97,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     rate_limiter=rate_limiter,
                     counter=counter,
                     api_key=api_key,
-                ).json()
+                ).model_dump_json()
             )
         return response
 
@@ -158,7 +158,7 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
 
         if auth:
             if not self.check_valid_key(auth):
-                logging.info(UnauthorizedLog(request=request).json())
+                logging.info(UnauthorizedLog(request=request).model_dump_json())
                 return JSONResponse(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     content={"message": "invalid credentials"},
@@ -171,7 +171,7 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
                 TooManyRequestsLog(
                     request=request,
                     rate_limiter=f"{key}/{limit}/{self.counter}",
-                ).json()
+                ).model_dump_json()
             )
             return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,

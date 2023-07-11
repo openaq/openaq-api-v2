@@ -1,6 +1,6 @@
 import logging
 from enum import Enum
-from typing import Union, List
+from typing import Annotated, Union, List
 
 from fastapi import APIRouter, Depends, Query
 from openaq_fastapi.models.responses import CitiesResponse, CitiesResponseV1
@@ -29,16 +29,15 @@ class CitiesOrderV1(str, Enum):
 
 class CitiesV1(APIBase):
     order_by: CitiesOrderV1 = Query(
-        "city", description="Order by a field e.g. ?order_by=city", example="city"
+        "city", description="Order by a field e.g. ?order_by=city", examples=["city"]
     )
 
     country: Union[List[str], None] = Query(
         None,
         min_length=2,
         max_length=2,
-        regex="[a-zA-Z][a-zA-Z]",
         description="Limit results by a certain country using two letter country code. e.g. ?country=US or ?country=US&country=MX",
-        example="US",
+        examples=["US"],
     )
 
     def where(self):
@@ -56,7 +55,7 @@ class CitiesV1(APIBase):
 
 class Cities(City, Country, APIBase):
     order_by: CitiesOrder = Query(
-        "city", description="Order by a field e.g. ?order_by=city", example="city"
+        "city", description="Order by a field e.g. ?order_by=city", examples=["city"]
     )
     entity: Union[str, None] = None
 
@@ -89,7 +88,7 @@ class Cities(City, Country, APIBase):
     description="Provides a list of cities supported by the platform",
     tags=["v2"],
 )
-async def cities_get(db: DB = Depends(), cities: Cities = Depends(Cities.depends())):
+async def cities_get(cities: Annotated[Cities, Depends(Cities)], db: DB = Depends()):
     order_by = cities.order_by
     if cities.order_by == "lastUpdated":
         order_by = "8"
@@ -149,8 +148,7 @@ async def cities_get(db: DB = Depends(), cities: Cities = Depends(Cities.depends
     description="Provides a list of cities supported by the platform",
 )
 async def cities_getv1(
-    db: DB = Depends(),
-    cities: CitiesV1 = Depends(CitiesV1.depends()),
+    cities: Annotated[CitiesV1, Depends(CitiesV1)], db: DB = Depends()
 ):
     order_by = cities.order_by
     if cities.order_by == "country":

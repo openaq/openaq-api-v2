@@ -56,7 +56,7 @@ async def provider_get(
     description="Provides a list of providers",
 )
 async def providers_get(
-    provider: ProvidersQueries = Depends(ProvidersQueries.depends()),
+    provider: Annotated[ProvidersQueries, Depends(ProvidersQueries)],
     db: DB = Depends(),
 ):
     response = await fetch_providers(provider, db)

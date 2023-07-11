@@ -1,5 +1,5 @@
 import logging
-from typing import Union
+from typing import Annotated, Union
 
 from fastapi import APIRouter, Depends, Path, Query
 from fastapi.responses import HTMLResponse
@@ -29,7 +29,7 @@ class Sources(SourceName, APIBase):
     order_by: SourcesOrder = Query(
         "sourceName",
         description="Field by which to order the results e.g. ?order_by=sourceName or ?order_by=firstUpdated",
-        example="sourceName",
+        examples=["sourceName"],
     )
 
     def where(self):
@@ -56,8 +56,8 @@ class Sources(SourceName, APIBase):
     tags=["v2"],
 )
 async def sources_get(
+    sources: Annotated[Sources, Depends(Sources)],
     db: DB = Depends(),
-    sources: Sources = Depends(Sources.depends()),
 ):
     qparams = sources.params()
 
@@ -127,8 +127,8 @@ class SourcesV1(APIBase):
     tags=["v1"],
 )
 async def sources_v1_get(
+    sources: Annotated[SourcesV1, Depends(SourcesV1)],
     db: DB = Depends(),
-    sources: SourcesV1 = Depends(SourcesV1.depends()),
 ):
     qparams = sources.params()
 
@@ -165,7 +165,7 @@ async def sources_v1_get(
 )
 async def readme_get(
     db: DB = Depends(),
-    slug: str = Path(..., example="london_mobile"),
+    slug: str = Path(..., examples=["london_mobile"]),
 ):
     q = """
         SELECT readme FROM sources WHERE slug=:slug

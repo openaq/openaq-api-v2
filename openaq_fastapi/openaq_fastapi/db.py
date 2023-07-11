@@ -95,10 +95,10 @@ class DB:
             except asyncpg.exceptions.UndefinedColumnError as e:
                 logger.error(f"Undefined Column Error: {e}\n{rquery}\n{kwargs}")
                 raise ValueError(f"{e}") from e
+            except asyncpg.exceptions.CharacterNotInRepertoireError as e:
+                raise ValueError(f"{e}") from e
             except asyncpg.exceptions.DataError as e:
                 logger.error(f"Data Error: {e}\n{rquery}\n{kwargs}")
-                raise ValueError(f"{e}") from e
-            except asyncpg.exceptions.CharacterNotInRepertoireError as e:
                 raise ValueError(f"{e}") from e
             except TimeoutError:
                 raise HTTPException(
@@ -130,7 +130,7 @@ class DB:
             return r[0]
         return None
 
-    async def fetchPage(self, query, kwargs):
+    async def fetchPage(self, query, kwargs) -> OpenAQResult:
         if "limit" in kwargs.keys():
             page = kwargs.get("page", 1)
             limit = kwargs.get("limit")
@@ -147,7 +147,9 @@ class DB:
         else:
             kwargs["found"] = 0
 
-        output = OpenAQResult(meta=Meta.parse_obj(kwargs), results=data)
+        output = OpenAQResult(
+            meta=Meta.model_validate(kwargs), results=[dict(x) for x in data]
+        )
         return output
 
     async def create_user(self, user: User) -> str:
@@ -158,7 +160,7 @@ class DB:
         SELECT * FROM create_user(:full_name, :email_address, :password_hash, :ip_address, :entity_type)
         """
         conn = await asyncpg.connect(settings.DATABASE_WRITE_URL)
-        rquery, args = render(query, **user.dict())
+        rquery, args = render(query, **user.model_dump())
         verification_token = await conn.fetch(rquery, *args)
         await conn.close()
         return verification_token[0][0]

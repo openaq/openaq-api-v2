@@ -20,6 +20,7 @@ logger = logging.getLogger("countries")
 router = APIRouter(
     prefix="/v3",
     tags=["v3"],
+    include_in_schema=False,
 )
 
 
@@ -58,7 +59,7 @@ async def country_get(
     description="Provides a list of countries",
 )
 async def countries_get(
-    countries: CountriesQueries = Depends(CountriesQueries.depends()),
+    countries: Annotated[CountriesQueries, Depends(CountriesQueries)],
     db: DB = Depends(),
 ):
     response = await fetch_countries(countries, db)

@@ -25,14 +25,14 @@ class TestMobileQuery:
     def test_has_value(self):
         mobile_query = MobileQuery(mobile=True)
         where = mobile_query.where()
-        params = mobile_query.dict()
+        params = mobile_query.model_dump()
         assert where == "ismobile = :mobile"
         assert params == {"mobile": True}
 
     def test_no_value(self):
         mobile_query = MobileQuery()
         where = mobile_query.where()
-        params = mobile_query.dict()
+        params = mobile_query.model_dump()
         assert where is None
         assert params == {"mobile": None}
 
@@ -41,37 +41,37 @@ class TestMonitorQuery:
     def test_has_value(self):
         mobile_query = MonitorQuery(monitor=True)
         where = mobile_query.where()
-        params = mobile_query.dict()
+        params = mobile_query.model_dump()
         assert where == "ismonitor = :monitor"
         assert params == {"monitor": True}
 
     def test_no_value(self):
         mobile_query = MonitorQuery()
         where = mobile_query.where()
-        params = mobile_query.dict()
+        params = mobile_query.model_dump()
         assert where is None
         assert params == {"monitor": None}
 
 
 class TestProviderQuery:
     def test_comma_int_values(self):
-        provider_query = ProviderQuery(providers_id=[1, 2, 3])
+        provider_query = ProviderQuery(providers_id="1,2,3")
         where = provider_query.where()
-        params = provider_query.dict()
+        params = provider_query.model_dump()
         assert where == "(provider->'id')::int = ANY (:providers_id)"
         assert params == {"providers_id": [1, 2, 3]}
 
     def test_string_value(self):
-        provider_query = ProviderQuery(providers_id=["1,2,3"])
+        provider_query = ProviderQuery(providers_id="1,2,3")
         where = provider_query.where()
-        params = provider_query.dict()
+        params = provider_query.model_dump()
         assert where == "(provider->'id')::int = ANY (:providers_id)"
         assert params == {"providers_id": [1, 2, 3]}
 
     def test_no_value(self):
         provider_query = ProviderQuery()
         where = provider_query.where()
-        params = provider_query.dict()
+        params = provider_query.model_dump()
         assert where == None
         assert params == {"providers_id": None}
 
@@ -80,21 +80,21 @@ class TestCountryQuery:
     def test_countries_id_comma_int_values(self):
         country_query = CountryQuery(countries_id=[1, 2, 3])
         where = country_query.where()
-        params = country_query.dict()
+        params = country_query.model_dump()
         assert where == "(country->'id')::int = ANY (:countries_id)"
         assert params == {"countries_id": [1, 2, 3], "iso": None}
 
     def test_countries_id_string_value(self):
         country_query = CountryQuery(countries_id=["1,2,3"])
         where = country_query.where()
-        params = country_query.dict()
+        params = country_query.model_dump()
         assert where == "(country->'id')::int = ANY (:countries_id)"
         assert params == {"countries_id": [1, 2, 3], "iso": None}
 
     def test_iso(self):
         country_query = CountryQuery(iso="us")
         where = country_query.where()
-        params = country_query.dict()
+        params = country_query.model_dump()
         assert where == "country->>'code' = :iso"
         assert params == {"iso": "us", "countries_id": None}
 
@@ -107,21 +107,21 @@ class TestOwnerQuery:
     def test_comma_int_values(self):
         owner_query = OwnerQuery(owner_contacts_id=[1, 2, 3])
         where = owner_query.where()
-        params = owner_query.dict()
+        params = owner_query.model_dump()
         assert where == "(owner->'id')::int = ANY (:owner_contacts_id)"
         assert params == {"owner_contacts_id": [1, 2, 3]}
 
     def test_string_value(self):
         owner_query = OwnerQuery(owner_contacts_id=["1,2,3"])
         where = owner_query.where()
-        params = owner_query.dict()
+        params = owner_query.model_dump()
         assert where == "(owner->'id')::int = ANY (:owner_contacts_id)"
         assert params == {"owner_contacts_id": [1, 2, 3]}
 
     def test_no_value(self):
         owner_query = OwnerQuery()
         where = owner_query.where()
-        params = owner_query.dict()
+        params = owner_query.model_dump()
         assert where == None
         assert params == {"owner_contacts_id": None}
 
@@ -173,7 +173,7 @@ class TestQueryBuilder:
 class TestLocationQuery:
     def test_location_query(self):
         location_queries = LocationQuery(locations_id=42)
-        where = render(location_queries.where(), **location_queries.dict())
+        where = render(location_queries.where(), **location_queries.model_dump())
         assert where[0] == f"id = $1"
         assert where[1] == [42]
 

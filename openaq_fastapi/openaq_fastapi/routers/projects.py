@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, Query, Path
 from typing import Annotated
 from openaq_fastapi.models.responses import ProjectsResponse
-from pydantic.typing import Union, List
+from typing import Union, List
 
 from ..db import DB
 from ..models.queries import APIBase, Country, Measurands, Project

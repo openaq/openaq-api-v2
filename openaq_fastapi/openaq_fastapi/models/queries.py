@@ -8,14 +8,16 @@ from typing import Dict, List, Union
 import humps
 from dateutil.parser import parse
 from dateutil.tz import UTC
-from fastapi import Query, Path
+from fastapi import Query
 from pydantic import (
+    FieldValidationInfo,
+    field_validator,
+    model_validator,
+    ConfigDict,
     BaseModel,
     Field,
     confloat,
     conint,
-    validator,
-    root_validator,
 )
 
 logger = logging.getLogger("queries")
@@ -31,6 +33,7 @@ ignore_in_docs = [
 ]
 
 
+'''
 def parameter_dependency_from_model(name: str, model_cls):
     """
     Takes a pydantic model class as input and creates
@@ -82,30 +85,32 @@ def parameter_dependency_from_model(name: str, model_cls):
     func.__defaults__ = (*defaults,)
 
     return func
+'''
 
 
 class OBaseModel(BaseModel):
-    class Config:
-        min_anystr_length = 1
-        validate_assignment = True
-        allow_population_by_field_name = True
-        alias_generator = humps.decamelize
-        anystr_strip_whitespace = True
+    model_config = ConfigDict(
+        str_min_length=1,
+        validate_assignment=True,
+        populate_by_name=True,
+        alias_generator=humps.decamelize,
+        str_strip_whitespace=True,
+    )
 
-    @classmethod
-    def depends(cls):
-        logger.debug(f"Depends {cls}")
-        return parameter_dependency_from_model("depends", cls)
+    # @classmethod
+    # def depends(cls):
+    #     logger.debug(f"Depends {cls}")
+    #     return parameter_dependency_from_model("depends", cls)
 
     def params(self):
-        return self.dict(exclude_unset=True, by_alias=True)
+        return self.model_dump(exclude_unset=True, by_alias=True)
 
 
 class City(OBaseModel):
     city: Union[List[str], None] = Query(
         None,
         description="Limit results by a certain city or cities. (e.g. ?city=Chicago or ?city=Chicago&city=Boston)",
-        example="Chicago",
+        examples=["Chicago"],
     )
 
 
@@ -113,40 +118,37 @@ class Country(OBaseModel):
     country_id: Union[int, None] = Query(
         None,
         description="Limit results by a certain country using two digit country ID. e.g. 13",
-        example=13,
+        examples=[13],
     )
     country: Union[List[str], None] = Query(
         None,
         min_length=2,
         max_length=2,
-        regex="[a-zA-Z][a-zA-Z]",
         description="Limit results by a certain country using two letter country code. e.g. ?country=US or ?country=US&country=MX",
-        example="US",
+        examples=["US"],
     )
 
-    @validator("country_id", check_fields=False)
-    def validate_country_id(cls, v, values):
+    @field_validator("country_id")
+    def validate_country_id(cls, v):
         if v is not None and not isinstance(v, int):
             raise ValueError("country_id must be an integer")
         return v
 
-    @validator("country", check_fields=False)
-    def validate_country(cls, v, values):
-        logger.debug(f"validating countries {v} {values}")
-        cid = values.get("country_id")
+    @field_validator("country")
+    def validate_country(cls, v, info: FieldValidationInfo):
+        cid = info.data.get("country_id")
         if cid is not None:
             v = [str(cid)]
         if v is not None:
-            logger.debug(f"returning countries {v} {values}")
             return [str.upper(val) for val in v]
         return None
 
 
 class CountryByPath(BaseModel):
-    country_id: Union[int, None]
+    country_id: Union[int, None] = None
 
-    @validator("country_id", check_fields=False)
-    def validate_country_id(cls, v, values):
+    @field_validator("country_id")
+    def validate_country_id(cls, v):
         if v is not None and not isinstance(v, int):
             raise ValueError("country_id must be an integer")
         return v
@@ -169,10 +171,10 @@ class SensorTypes(str, Enum):
     lcs = "low-cost sensor"
 
 
-def id_or_name_validator(name, v, values):
+def id_or_name_validator(name, v, info: FieldValidationInfo):
     ret = None
-    logger.debug(f"validating {name} {v} {values}")
-    id = values.get(f"{name}_id", None)
+    logger.debug(f"validating {name} {v} {info.data}")
+    id = info.data.get(f"{name}_id", None)
     if id is not None:
         ret = [id]
     elif v is not None:
@@ -193,25 +195,25 @@ class Project(OBaseModel):
     project_id: Union[int, None] = None
     project: Union[List[Union[int, str]], None] = Query(None, gt=0, le=maxint)
 
-    @validator("project")
-    def validate_project(cls, v, values):
-        return id_or_name_validator("project", v, values)
+    @field_validator("project")
+    def validate_project(cls, v, info: FieldValidationInfo):
+        return id_or_name_validator("project", v, info)
 
 
 class Location(OBaseModel):
     location_id: Union[int, None] = Query(None, gt=0, le=maxint)
     location: Union[List[Union[int, str]], None] = Query(None, gt=0, le=maxint)
 
-    @validator("location")
-    def validate_location(cls, v, values):
-        return id_or_name_validator("location", v, values)
+    @field_validator("location")
+    def validate_location(cls, v, info: FieldValidationInfo):
+        return id_or_name_validator("location", v, info)
 
 
 class LocationPath(BaseModel):
-    location_id: Union[int, None]
+    location_id: Union[int, None] = None
 
-    @validator("location_id", check_fields=False)
-    def validate_location_id(cls, v, values):
+    @field_validator("location_id")
+    def validate_location_id(cls, v):
         if v is not None and not isinstance(v, int):
             raise ValueError("location_id must be an integer")
         return v
@@ -224,27 +226,28 @@ class HasGeo(OBaseModel):
 class Geo(OBaseModel):
     coordinates: Union[str, None] = Query(
         None,
-        regex=r"^-?\d{1,2}\.?\d{0,8},-?1?\d{1,2}\.?\d{0,8}$",
+        pattern=r"^-?\d{1,2}\.?\d{0,8},-?1?\d{1,2}\.?\d{0,8}$",
         description="Coordinate pair in form lat,lng. Up to 8 decimal points of precision e.g. 38.907,-77.037",
-        example="38.907,-77.037",
+        examples=["38.907,-77.037"],
     )
     lat: Union[confloat(ge=-90, le=90), None] = None
     lon: Union[confloat(ge=-180, le=180), None] = None
     radius: conint(gt=0, le=25000) = Query(
         1000,
         description="Search radius from coordinates as center in meters. Maximum of 25,000 (25km) defaults to 1000 (1km) e.g. radius=10000",
-        example="10000",
+        examples=["10000"],
     )
 
-    @root_validator(pre=True)
-    def addlatlon(cls, values):
-        coords = values.get("coordinates", None)
+    @model_validator(mode="before")
+    @classmethod
+    def addlatlon(cls, info: FieldValidationInfo):
+        coords = info.data.get("coordinates", None)
         if coords is not None and "," in coords:
             lat, lon = coords.split(",")
             if lat and lon:
-                values["lat"] = float(lat)
-                values["lon"] = float(lon)
-        return values
+                info.data["lat"] = float(lat)
+                info.data["lon"] = float(lon)
+        return info.data
 
     def where_geo(self):
         if self.lat is not None and self.lon is not None:
@@ -256,14 +259,14 @@ class Measurands(OBaseModel):
     parameter_id: Union[int, None] = Query(
         None,
         description="(optional) A parameter ID to filter measurement results. e.g. parameter_id=2 (i.e. PM2.5) will limit measurement results to only PM2.5 measurements",
-        example="2",
+        examples=["2"],
     )
     parameter: Union[List[Union[int, str]], None] = Query(
         None,
         gt=0,
         le=maxint,
         description="(optional) A parameter name or ID by which to filter measurement results. e.g. parameter=pm25 or parameter=pm25&parameter=pm10",
-        example="pm25",
+        examples=["pm25"],
     )
     measurand: Union[List[str], None] = Query(None, description="")
     unit: Union[List[str], None] = Query(
@@ -271,17 +274,17 @@ class Measurands(OBaseModel):
         description="",
     )
 
-    @validator("measurand", check_fields=False)
-    def check_measurand(cls, v, values):
+    @field_validator("measurand")
+    def check_measurand(cls, v, info: FieldValidationInfo):
         if v is None:
-            return values.get("parameter")
+            return info.data.get("parameter")
         return v
 
-    @validator("parameter", check_fields=False)
-    def validate_parameter(cls, v, values):
+    @field_validator("parameter")
+    def validate_parameter(cls, v, info: FieldValidationInfo):
         if v is None:
-            v = values.get("measurand")
-        return id_or_name_validator("project", v, values)
+            v = info.data.get("measurand")
+        return id_or_name_validator("project", v, info)
 
 
 class Paging(OBaseModel):
@@ -290,14 +293,14 @@ class Paging(OBaseModel):
         gt=0,
         le=100000,
         description="Change the number of results returned. e.g. limit=1000 will return up to 1000 results",
-        example="1000",
+        examples=["1000"],
     )
     page: int = Query(
         1,
         gt=0,
         le=6000,
         description="Paginate through results. e.g. page=1 will return first page of results",
-        example="1",
+        examples=["1"],
     )
     offset: int = Query(
         0,
@@ -305,11 +308,11 @@ class Paging(OBaseModel):
         le=10000,
     )
 
-    @validator("offset", check_fields=False)
-    def check_offset(cls, v, values, **kwargs):
-        offset = values["limit"] * (values["page"] - 1)
+    @field_validator("offset")
+    def check_offset(cls, _, info: FieldValidationInfo):
+        offset = info.data["limit"] * (info.data["page"] - 1)
         logger.debug(f"checking offset: {offset}")
-        if offset + values["limit"] > 100000:
+        if offset + info.data["limit"] > 100000:
             raise ValueError("offset + limit must be < 100000")
         return offset
 
@@ -381,12 +384,11 @@ class DateRange(OBaseModel):
     date_from_adj: Union[datetime, date, str, int, None] = None
     date_to_adj: Union[datetime, date, str, int, None] = None
 
-    @validator(
+    @field_validator(
         "date_from",
         "date_to",
         "date_from_adj",
         "date_to_adj",
-        check_fields=False,
     )
-    def check_dates(cls, v, values):
+    def check_dates(cls, v):
         return fix_datetime(v)

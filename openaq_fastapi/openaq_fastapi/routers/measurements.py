@@ -1,7 +1,7 @@
 from enum import Enum
 import logging
 import os
-from typing import Union
+from typing import Annotated, Union
 import jq
 
 import orjson as json
@@ -27,7 +27,6 @@ from ..models.queries import (
 import csv
 import io
 
-from openaq_fastapi.models.responses import OpenAQResult, converter
 
 logger = logging.getLogger("measurements")
 
@@ -102,26 +101,26 @@ class Measurements(
     order_by: MeasOrder = Query("datetime")
     sort: Sort = Query("desc")
     isMobile: Union[bool, None] = Query(
-        None, description="Location is mobile e.g. ?isMobile=true", example="true"
+        None, description="Location is mobile e.g. ?isMobile=true", examples=["true"]
     )
     isAnalysis: Union[bool, None] = Query(
         None,
         description="Data is the product of a previous analysis/aggregation and not raw measurements e.g. ?isAnalysis=false",
-        example="true",
+        examples=["true"],
     )
     project: Union[int, None] = Query(None)
     entity: Union[EntityTypes, None] = Query(None)
     sensorType: Union[SensorTypes, None] = Query(
         None,
         description="Filter by sensor type (i,e. reference grade, low-cost sensor) e.g. ?sensorType=reference%20grade",
-        example="reference%20grade",
+        examples=["reference%20grade"],
     )
     value_from: Union[float, None] = Query(None, description="", example="")
     value_to: Union[float, None] = Query(None, description="", example="")
     include_fields: Union[str, None] = Query(
         None,
         description="Additional fields to include in response e.g. ?include_fields=sourceName",
-        example="sourceName",
+        examples=["sourceName"],
     )
 
     def where(self):
@@ -141,15 +140,14 @@ class Measurements(
                         type = "text[]"
                         col = "sn.name"
 
-                    if len(v)>1:
+                    if len(v) > 1:
                         clause = f"ANY(:location::{type})"
                     else:
                         clause = f"(:location::{type})[1]"
 
                     wheres.append(f" {col}={clause}")
-                    
-                elif f == "parameter":
 
+                elif f == "parameter":
                     if all(isinstance(x, int) for x in v):
                         type = "int[]"
                         col = "m.measurands_id"
@@ -157,13 +155,13 @@ class Measurements(
                         type = "text[]"
                         col = "m.measurand"
 
-                    if len(v)>1:
+                    if len(v) > 1:
                         clause = f"ANY(:parameter::{type})"
                     else:
                         clause = f"(:parameter::{type})[1]"
 
                     wheres.append(f" {col}={clause}")
-                    
+
                 elif f == "unit":
                     wheres.append("units = ANY(:unit) ")
                 elif f == "isMobile":
@@ -173,10 +171,10 @@ class Measurements(
                 elif f == "entity":
                     wheres.append("sn.owner->>'type' ~* :entity ")
                 elif f == "sensorType":
-                    if v == 'reference grade':
-                        wheres.append('i.is_monitor')
-                    elif v == 'low-cost sensor':
-                        wheres.append('NOT i.is_monitor')
+                    if v == "reference grade":
+                        wheres.append("i.is_monitor")
+                    elif v == "low-cost sensor":
+                        wheres.append("NOT i.is_monitor")
                 elif f == "country":
                     wheres.append(f"c.iso = ANY(:{f})")
                 elif f == "city":
@@ -201,8 +199,8 @@ class Measurements(
     tags=["v2"],
 )
 async def measurements_get(
+    m: Annotated[Measurements, Depends(Measurements)],
     db: DB = Depends(),
-    m: Measurements = Depends(Measurements.depends()),
     format: Union[str, None] = None,
 ):
     where = m.where()
@@ -258,8 +256,8 @@ async def measurements_get(
     tags=["v1"],
 )
 async def measurements_get_v1(
+    m: Annotated[Measurements, Depends(Measurements)],
     db: DB = Depends(),
-    m: Measurements = Depends(Measurements.depends()),
     format: Union[str, None] = None,
 ):
     m.entity = "government"
