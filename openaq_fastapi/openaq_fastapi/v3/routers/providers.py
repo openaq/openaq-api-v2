@@ -16,8 +16,8 @@ logger = logging.getLogger("providers")
 
 router = APIRouter(
     prefix="/v3",
-    tags=["v3"],
-    include_in_schema=False,
+    tags=["v3-alpha"],
+    include_in_schema=True,
 )
 
 
@@ -42,7 +42,7 @@ class ProvidersQueries(QueryBaseModel, Paging):
     description="Provides a provider by provider ID",
 )
 async def provider_get(
-    providers: Annotated[ProviderPathQuery, Depends(ProviderPathQuery)],
+    providers: Annotated[ProviderPathQuery, Depends(ProviderPathQuery.depends())],
     db: DB = Depends(),
 ):
     response = await fetch_providers(providers, db)
@@ -56,7 +56,7 @@ async def provider_get(
     description="Provides a list of providers",
 )
 async def providers_get(
-    provider: Annotated[ProvidersQueries, Depends(ProvidersQueries)],
+    provider: Annotated[ProvidersQueries, Depends(ProvidersQueries.depends())],
     db: DB = Depends(),
 ):
     response = await fetch_providers(provider, db)

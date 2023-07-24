@@ -23,9 +23,6 @@ class ProjectsOrder(str, Enum):
 
 
 class Projects(Project, Measurands, APIBase, Country):
-    project_id: int = Path(
-        ..., description="Limit the results to a specific project by id", ge=1
-    )
     order_by: ProjectsOrder = Query("lastUpdated")
     isMobile: Union[bool, None] = None
     isAnalysis: Union[bool, None] = None
@@ -113,6 +110,14 @@ class Projects(Project, Measurands, APIBase, Country):
     description="Provides a project by project ID",
     tags=["v2"],
 )
+async def projects_get(
+    projects: Annotated[Projects, Depends(Projects)],
+    db: DB = Depends(),
+):
+    ...
+    # TODO implement projects/{project_id}
+
+
 @router.get(
     "/v2/projects",
     response_model=ProjectsResponse,

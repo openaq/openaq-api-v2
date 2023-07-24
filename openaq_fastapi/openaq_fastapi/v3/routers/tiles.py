@@ -18,13 +18,13 @@ logger = logging.getLogger("tiles")
 
 router = APIRouter(
     prefix="/v3",
-    tags=["v3"],
+    tags=["v3-alpha"],
     include_in_schema=False,
 )
 
 
 class TileProvidersQuery(QueryBaseModel):
-    providers_id: Union[Annotated[str, CommaSeparatedList], None] = Query(
+    providers_id: Union[CommaSeparatedList[int], None] = Query(
         description="Limit the results to a specific provider or providers"
     )
 
@@ -34,7 +34,7 @@ class TileProvidersQuery(QueryBaseModel):
 
 
 class TileOwnersQuery(QueryBaseModel):
-    owners_id: Union[Annotated[str, CommaSeparatedList], None] = Query(
+    owners_id: Union[CommaSeparatedList[int], None] = Query(
         description="Limit the results to a specific owner or owners"
     )
 

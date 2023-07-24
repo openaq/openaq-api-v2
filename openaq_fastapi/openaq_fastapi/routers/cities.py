@@ -82,13 +82,14 @@ class Cities(City, Country, APIBase):
 
 @router.get(
     "/v2/cities",
-    include_in_schema=False,
     response_model=CitiesResponse,
     summary="Get cities",
     description="Provides a list of cities supported by the platform",
     tags=["v2"],
 )
-async def cities_get(cities: Annotated[Cities, Depends(Cities)], db: DB = Depends()):
+async def cities_get(
+    cities: Annotated[Cities, Depends(Cities.depends())], db: DB = Depends()
+):
     order_by = cities.order_by
     if cities.order_by == "lastUpdated":
         order_by = "8"
@@ -141,14 +142,13 @@ async def cities_get(cities: Annotated[Cities, Depends(Cities)], db: DB = Depend
 
 @router.get(
     "/v1/cities",
-    include_in_schema=False,
     response_model=CitiesResponseV1,
     tags=["v1"],
     summary="Get cities",
     description="Provides a list of cities supported by the platform",
 )
 async def cities_getv1(
-    cities: Annotated[CitiesV1, Depends(CitiesV1)], db: DB = Depends()
+    cities: Annotated[CitiesV1, Depends(CitiesV1.depends())], db: DB = Depends()
 ):
     order_by = cities.order_by
     if cities.order_by == "country":

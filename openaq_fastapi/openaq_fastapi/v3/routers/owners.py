@@ -10,8 +10,8 @@ logger = logging.getLogger("owners")
 
 router = APIRouter(
     prefix="/v3",
-    tags=["v3"],
-    include_in_schema=False,
+    tags=["v3-alpha"],
+    include_in_schema=True,
 )
 
 
@@ -36,7 +36,7 @@ class OwnersQueries(QueryBaseModel, Paging):
     description="Provides a owner by owner ID",
 )
 async def owner_get(
-    owners: Annotated[OwnerPathQuery, Depends(OwnerPathQuery)],
+    owners: Annotated[OwnerPathQuery, Depends(OwnerPathQuery.depends())],
     db: DB = Depends(),
 ):
     response = await fetch_owners(owners, db)
@@ -50,7 +50,7 @@ async def owner_get(
     description="Provides a list of owners",
 )
 async def owners_get(
-    owner: OwnersQueries = Depends(OwnersQueries.depends()),
+    owner: Annotated[OwnersQueries, Depends(OwnersQueries.depends())],
     db: DB = Depends(),
 ):
     response = await fetch_owners(owner, db)

@@ -265,16 +265,6 @@ class LocationsRow(BaseModel):
     bounds: Union[List[float], None] = None
     manufacturers: Union[List[Manufacturer], None] = None
 
-    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
-    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
-    @validator("is_nullable", check_fields=False)
-    def check_nullable(cls, v, values, **kwargs):
-        not_nullable = ["entity"]
-        offset = values["limit"] * (values["page"] - 1)
-        # if offset + values["limit"] > 100000:
-        #     raise ValueError("offset + limit must be < 100000")
-        return offset
-
 
 class LocationsResponse(OpenAQResult):
     results: List[LocationsRow]

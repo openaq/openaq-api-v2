@@ -3,8 +3,6 @@ import logging
 from typing import Union, Annotated
 from fastapi import APIRouter, Depends, Query, Path
 from openaq_fastapi.db import DB
-from openaq_fastapi.models.responses import OpenAQResult
-from openaq_fastapi.v3.models.responses import Meta, Parameter
 from openaq_fastapi.v3.models.responses import ParametersResponse
 
 from openaq_fastapi.v3.models.queries import (
@@ -20,8 +18,8 @@ logger = logging.getLogger("parameters")
 
 router = APIRouter(
     prefix="/v3",
-    tags=["v3"],
-    include_in_schema=False,
+    tags=["v3-alpha"],
+    include_in_schema=True,
 )
 
 
@@ -63,11 +61,9 @@ class ParametersQueries(
     description="Provides a parameter by parameter ID",
 )
 async def parameter_get(
-    parameter: Annotated[ParameterPathQuery, Depends(ParameterPathQuery)],
+    parameter: Annotated[ParameterPathQuery, Depends(ParameterPathQuery.depends())],
     db: DB = Depends(),
 ) -> ParametersResponse:
-    print("PARAMETER\n\n\n")
-    print(parameter.where())
     response = await fetch_parameters(parameter, db)
     return response
 
@@ -79,7 +75,7 @@ async def parameter_get(
     description="Provides a list of parameters",
 )
 async def parameters_get(
-    parameter: Annotated[ParametersQueries, Depends(ParametersQueries)],
+    parameter: Annotated[ParametersQueries, Depends(ParametersQueries.depends())],
     db: DB = Depends(),
 ):
     response = await fetch_parameters(parameter, db)
@@ -88,8 +84,6 @@ async def parameters_get(
 
 async def fetch_parameters(query, db) -> ParametersResponse:
     query_builder = QueryBuilder(query)
-    print("QUERY BUILDER\n\n\n")
-    print(query_builder.where())
     sql = f"""
     SELECT id
         , p.name

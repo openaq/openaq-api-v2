@@ -186,7 +186,9 @@ class OpenAQValidationResponse(BaseModel):
 async def openaq_exception_handler(request: Request, exc: ValidationError):
     logger.debug(traceback.format_exc())
     logger.error(
-        ModelValidationError(request=request, detail=exc.json()).model_dump_json()
+        ModelValidationError(
+            request=request, detail=exc.model_dump_json()
+        ).model_dump_json()
     )
     return ORJSONResponse(status_code=500, content={"message": "internal server error"})
 

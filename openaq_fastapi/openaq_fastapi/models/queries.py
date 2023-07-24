@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta
 from enum import Enum
 from types import FunctionType
 from typing import Dict, List, Union
+import fastapi
 
 import humps
 from dateutil.parser import parse
@@ -15,7 +16,6 @@ from pydantic import (
     model_validator,
     ConfigDict,
     BaseModel,
-    Field,
     confloat,
     conint,
 )
@@ -33,8 +33,7 @@ ignore_in_docs = [
 ]
 
 
-'''
-def parameter_dependency_from_model(name: str, model_cls):
+def parameter_dependency_from_model(name: str, model_class):
     """
     Takes a pydantic model class as input and creates
     a dependency with corresponding
@@ -53,16 +52,17 @@ def parameter_dependency_from_model(name: str, model_cls):
     names = []
     annotations: Dict[str, type] = {}
     defaults = []
-    for field_model in model_cls.__fields__.values():
-        if field_model.name not in ["self"]:
-            field_info = field_model.field_info
-
-            if field_model.name not in ignore_in_docs:
-                names.append(field_model.name)
-                annotations[field_model.name] = field_model.outer_type_
-                defaults.append(
-                    Query(field_model.default, description=field_info.description)
-                )
+    for field_model in model_class.model_fields.values():
+        if field_model.alias not in ["self"]:
+            if field_model.alias not in ignore_in_docs:
+                names.append(field_model.alias)
+                annotations[field_model.alias] = field_model.annotation
+                if isinstance(field_model, fastapi.params.Path):
+                    defaults.append(Path(description=field_model.description))
+                if isinstance(field_model, fastapi.params.Query):
+                    defaults.append(
+                        Query(field_model.default, description=field_model.description)
+                    )
 
     code = inspect.cleandoc(
         """
@@ -72,20 +72,19 @@ def parameter_dependency_from_model(name: str, model_cls):
         % (
             name,
             ", ".join(names),
-            model_cls.__name__,
+            model_class.__name__,
             ", ".join(["%s=%s" % (name, name) for name in names]),
         )
     )
 
     compiled = compile(code, "string", "exec")
-    env = {model_cls.__name__: model_cls}
+    env = {model_class.__name__: model_class}
     env.update(**globals())
     func = FunctionType(compiled.co_consts[0], env, name)
     func.__annotations__ = annotations
     func.__defaults__ = (*defaults,)
 
     return func
-'''
 
 
 class OBaseModel(BaseModel):
@@ -97,10 +96,10 @@ class OBaseModel(BaseModel):
         str_strip_whitespace=True,
     )
 
-    # @classmethod
-    # def depends(cls):
-    #     logger.debug(f"Depends {cls}")
-    #     return parameter_dependency_from_model("depends", cls)
+    @classmethod
+    def depends(cls):
+        logger.debug(f"Depends {cls}")
+        return parameter_dependency_from_model("depends", cls)
 
     def params(self):
         return self.model_dump(exclude_unset=True, by_alias=True)
@@ -220,7 +219,7 @@ class LocationPath(BaseModel):
 
 
 class HasGeo(OBaseModel):
-    has_geo: bool = None
+    has_geo: Union[bool, None] = None
 
 
 class Geo(OBaseModel):
@@ -240,14 +239,14 @@ class Geo(OBaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def addlatlon(cls, info: FieldValidationInfo):
-        coords = info.data.get("coordinates", None)
+    def addlatlon(cls, data):
+        coords = data.get("coordinates", None)
         if coords is not None and "," in coords:
             lat, lon = coords.split(",")
             if lat and lon:
-                info.data["lat"] = float(lat)
-                info.data["lon"] = float(lon)
-        return info.data
+                data["lat"] = float(lat)
+                data["lon"] = float(lon)
+        return data
 
     def where_geo(self):
         if self.lat is not None and self.lon is not None:
@@ -288,21 +287,21 @@ class Measurands(OBaseModel):
 
 
 class Paging(OBaseModel):
-    limit: int = Query(
+    limit: Union[int, None] = Query(
         100,
         gt=0,
         le=100000,
         description="Change the number of results returned. e.g. limit=1000 will return up to 1000 results",
         examples=["1000"],
     )
-    page: int = Query(
+    page: Union[int, None] = Query(
         1,
         gt=0,
         le=6000,
         description="Paginate through results. e.g. page=1 will return first page of results",
         examples=["1"],
     )
-    offset: int = Query(
+    offset: Union[int, None] = Query(
         0,
         ge=0,
         le=10000,

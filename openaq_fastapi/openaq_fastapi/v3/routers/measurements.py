@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, Path
 from openaq_fastapi.db import DB
 from typing import List, Union, Annotated
 from fastapi import Query
-from pydantic import Field
 from openaq_fastapi.v3.models.responses import (
     MeasurementsResponse,
     JsonBase,
@@ -21,8 +20,8 @@ from openaq_fastapi.v3.models.queries import (
 
 router = APIRouter(
     prefix="/v3",
-    tags=["v3"],
-    include_in_schema=False,
+    tags=["v3-alpha"],
+    include_in_schema=True,
 )
 
 
@@ -36,9 +35,7 @@ class LocationPathQuery(QueryBaseModel):
 
 
 class MeasurementsParametersQuery(QueryBaseModel):
-    parameters_id: Annotated[
-        Union[Annotated[str, CommaSeparatedList], None], Query(description="")
-    ]
+    parameters_id: Union[CommaSeparatedList[int], None] = Query(description="")
 
     def where(self) -> Union[str, None]:
         if self.has("parameters_id"):

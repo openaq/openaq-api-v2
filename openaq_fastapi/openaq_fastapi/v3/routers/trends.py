@@ -19,8 +19,8 @@ from openaq_fastapi.v3.models.queries import (
 
 router = APIRouter(
     prefix="/v3",
-    tags=["v3"],
-    include_in_schema=False,
+    tags=["v3-alpha"],
+    include_in_schema=True,
 )
 
 
