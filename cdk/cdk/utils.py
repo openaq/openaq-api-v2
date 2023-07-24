@@ -10,7 +10,7 @@ def dictstr(item):
 
 
 def stringify_settings(data):
-    return dict(map(dictstr, data.dict().items()))
+    return dict(map(dictstr, data.model_dump().items()))
 
 
 def create_dependencies_layer(

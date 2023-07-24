@@ -10,8 +10,8 @@ logger = logging.getLogger("manufacturers")
 
 router = APIRouter(
     prefix="/v3",
-    tags=["v3"],
-    include_in_schema=False,
+    tags=["v3-alpha"],
+    include_in_schema=True,
 )
 
 
@@ -35,7 +35,9 @@ class ManufacturersQueries(QueryBaseModel, Paging):
     description="Provides a manufacturer by manufacturer ID",
 )
 async def manufacturer_get(
-    manufacturers: Annotated[ManufacturerPathQuery, Depends(ManufacturerPathQuery)],
+    manufacturers: Annotated[
+        ManufacturerPathQuery, Depends(ManufacturerPathQuery.depends())
+    ],
     db: DB = Depends(),
 ):
     response = await fetch_manufacturers(manufacturers, db)
@@ -49,7 +51,9 @@ async def manufacturer_get(
     description="Provides a list of manufacturers",
 )
 async def manufacturers_get(
-    manufacturer: ManufacturersQueries = Depends(ManufacturersQueries.depends()),
+    manufacturer: Annotated[
+        ManufacturersQueries, Depends(ManufacturersQueries.depends())
+    ],
     db: DB = Depends(),
 ):
     response = await fetch_manufacturers(manufacturer, db)

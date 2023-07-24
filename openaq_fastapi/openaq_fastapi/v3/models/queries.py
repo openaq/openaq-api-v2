@@ -1,43 +1,31 @@
 import inspect
-import logging
-from enum import Enum
-from types import FunctionType
-from typing import (
-    Annotated,
-    Any,
-    Dict,
-    List,
-    Union,
-)
 import itertools
-
-from pydantic_core import core_schema
-
-from pydantic.json_schema import JsonSchemaValue
-
-import humps
-from fastapi import Query
+import logging
+import operator
+import types
+import weakref
 from datetime import date, datetime
-from pydantic import (
-    Field,
-    GetCoreSchemaHandler,
-    computed_field,
-    model_validator,
-    ConfigDict,
-    BaseModel,
-    conint,
-    confloat,
-    ConfigDict,
-)
+from enum import Enum
 from inspect import signature
+from types import FunctionType
+from typing import Annotated, Any, Dict, List, Union
+
+import fastapi
+import humps
+from annotated_types import Interval
+from fastapi import Path, Query
 from fastapi.exceptions import HTTPException
-from pydantic import ValidationError
 from pydantic import (
     BaseModel,
+    ConfigDict,
     GetCoreSchemaHandler,
-    GetJsonSchemaHandler,
+    TypeAdapter,
     ValidationError,
+    computed_field,
+    field_validator,
+    model_validator,
 )
+from pydantic_core import CoreSchema, core_schema
 
 logger = logging.getLogger("queries")
 
@@ -52,7 +40,12 @@ ignore_in_docs = [
 ]
 
 
-def parameter_dependency_from_model(name: str, mdl_cls):
+def truncate_float(value: float, length: int = 4) -> float:
+    parts = str(float(value)).split(".")
+    return float(".".join([parts[0], parts[1][:length]]))
+
+
+def parameter_dependency_from_model(name: str, model_class):
     """
     Takes a pydantic model class as input and creates
     a dependency with corresponding
@@ -71,16 +64,17 @@ def parameter_dependency_from_model(name: str, mdl_cls):
     names = []
     annotations: Dict[str, type] = {}
     defaults = []
-    for field_model in mdl_cls.model_fields.values():
-        if field_model.name not in ["self"]:
-            field_info = field_model.field_info
-
-            if field_model.name not in ignore_in_docs:
-                names.append(field_model.name)
-                annotations[field_model.name] = field_model.outer_type_
-                defaults.append(
-                    Query(field_model.default, description=field_info.description)
-                )
+    for field_model in model_class.model_fields.values():
+        if field_model.alias not in ["self"]:
+            if field_model.alias not in ignore_in_docs:
+                names.append(field_model.alias)
+                annotations[field_model.alias] = field_model.annotation
+                if isinstance(field_model, fastapi.params.Path):
+                    defaults.append(Path(description=field_model.description))
+                if isinstance(field_model, fastapi.params.Query):
+                    defaults.append(
+                        Query(field_model.default, description=field_model.description)
+                    )
 
     code = inspect.cleandoc(
         """
@@ -90,13 +84,13 @@ def parameter_dependency_from_model(name: str, mdl_cls):
         % (
             name,
             ", ".join(names),
-            mdl_cls.__name__,
+            model_class.__name__,
             ", ".join(["%s=%s" % (name, name) for name in names]),
         )
     )
 
     compiled = compile(code, "string", "exec")
-    env = {mdl_cls.__name__: mdl_cls}
+    env = {model_class.__name__: model_class}
     env.update(**globals())
     func = FunctionType(compiled.co_consts[0], env, name)
     func.__annotations__ = annotations
@@ -105,93 +99,68 @@ def parameter_dependency_from_model(name: str, mdl_cls):
     return func
 
 
-# class TypeParametersMemoizer(type):
-#     """
-#     https://github.com/tiangolo/fastapi/issues/50#issuecomment-1267068112
-#     """
+class TypeParametersMemoizer(type):
+    """
+    adapted from https://github.com/tiangolo/fastapi/discussions/8225
+    """
 
-#     _generics_cache = weakref.WeakValueDictionary()
+    _generics_cache = weakref.WeakValueDictionary()
 
-#     def __getitem__(cls, typeparams):
-#         # prevent duplication of generic types
-#         if typeparams in cls._generics_cache:
-#             return cls._generics_cache[typeparams]
+    def __getitem__(cls, typeparams):
+        # prevent duplication of generic types
+        if typeparams in cls._generics_cache:
+            return cls._generics_cache[typeparams]
 
-#         # middleware class for holding type parameters
-#         class TypeParamsWrapper(cls):
-#             __type_parameters__ = (
-#                 typeparams if isinstance(typeparams, tuple) else (typeparams,)
-#             )
+        # middleware class for holding type parameters
+        class TypeParamsWrapper(cls):
+            __type_parameters__ = (
+                typeparams if isinstance(typeparams, tuple) else (typeparams,)
+            )
+            __type_adapter__ = TypeAdapter(list[__type_parameters__])
 
-#             @classmethod
-#             def _get_type_parameters(cls):
-#                 return cls.__type_parameters__
+            @classmethod
+            def _get_type_parameters(cls):
+                return cls.__type_parameters__
 
-#         return GenericAlias(TypeParamsWrapper, typeparams)
+            @classmethod
+            def _get_type_adapter(cls):
+                return cls.__type_adapter__
+
+        wrapper = cls._generics_cache[typeparams] = types.GenericAlias(
+            TypeParamsWrapper, typeparams
+        )
+        return wrapper
 
 
-class CommaSeparatedList(List[int]):
-    """ """
+class CommaSeparatedList(list, metaclass=TypeParametersMemoizer):
+    """
+    adapted from https://github.com/tiangolo/fastapi/discussions/8225
+    """
 
     @classmethod
     def __get_pydantic_core_schema__(
-        cls, _source_type: Any, _handler: GetCoreSchemaHandler
-    ) -> core_schema.CoreSchema:
-        return core_schema.no_info_after_validator_function(
-            cls.validate,
-            core_schema.str_schema(),
+        cls, _source_type: Any, handler: GetCoreSchemaHandler
+    ) -> CoreSchema:
+        return core_schema.no_info_before_validator_function(
+            cls.validate, handler(list[cls._get_type_parameters()])
         )
 
     @classmethod
-    def __get_pydantic_json_schema__(
-        cls, schema: core_schema.CoreSchema, handler: GetJsonSchemaHandler
-    ) -> JsonSchemaValue:
-        json_schema = handler(schema)
-        json_schema.update(
-            examples=["42", "1,2,3"],
-        )
-        return json_schema
+    def validate(cls, v: Any):
+        adapter = cls._get_type_adapter()
+        if isinstance(v, str):
+            v = map(str.strip, v.split(","))
+        elif isinstance(v, list) and all(isinstance(x, str) for x in v):
+            v = map(str.strip, itertools.chain.from_iterable(x.split(",") for x in v))
+        return adapter.validate_python(v)
 
     @classmethod
-    def validate(cls, v: str):
-        print("VALIDATE\n\n\n")
-        print(type(v))
-        if v:
-            if isinstance(v, str):
-                v = [int(item) for item in v.split(",")]
-            return v
-        else:
-            return v
+    def _get_type_parameters(cls):
+        raise NotImplementedError("should be overridden in metaclass")
 
-
-# class CommaSeparatedList(List, metaclass=TypeParametersMemoizer):
-#     """
-#     adapted from
-#     https://github.com/tiangolo/fastapi/issues/50#issuecomment-1267068112
-#     but reworked and simplified to only handled ints since we will only
-#     support comma chaining for id query parameters
-#     """
-
-#     @classmethod
-#     def __get_validators__(cls):
-#         yield cls.validate
-
-#     @classmethod
-#     def validate(cls, v: List[Union[str, int]]):
-#         if v:
-#             if isinstance(v[0], str):
-#                 v = [int(item) for x in v for item in x.split(",")]
-#             elif isinstance(v[0], int):
-#                 pass
-#             else:
-#                 v = list(itertools.chain.from_iterable((x.split(",") for x in v)))
-#             return v
-#         else:
-#             return v
-
-#     @classmethod
-#     def _get_type_parameters(cls):
-#         raise NotImplementedError("should be overridden in metaclass")
+    @classmethod
+    def _get_type_adapter(cls) -> TypeAdapter:
+        raise NotImplementedError("should be overridden in metaclass")
 
 
 def make_dependable(cls):
@@ -221,10 +190,16 @@ class QueryBuilder(object):
         self.query = query
 
     def _bases(self) -> List[type]:
+        """
+        inspects the objects and returns base classes
+        """
         bases = list(inspect.getmro(self.query.__class__))[
             :-3
         ]  # removes object primitives <class '__main__.QueryBaseModel'>, <class 'pydantic.main.BaseModel'>, <class 'object'>
-        return bases
+        bases_sorted = sorted(
+            bases, key=operator.attrgetter("__name__")
+        )  # sort to ensure consistent order for reliability in testing
+        return bases_sorted
 
     def fields(self) -> str:
         """
@@ -258,7 +233,7 @@ class QueryBuilder(object):
             return ""
 
     def params(self) -> dict:
-        return self.query.dict(exclude_unset=True, by_alias=True)
+        return self.query.model_dump(exclude_unset=True, by_alias=True)
 
     @staticmethod
     def total() -> str:
@@ -266,7 +241,7 @@ class QueryBuilder(object):
 
     def where(self) -> str:
         """
-        loops through all ancestor classes and calls
+        loops through ancestor classes and calls
         their respective where() methods to concatenate
         into a full where statement
         """
@@ -278,6 +253,7 @@ class QueryBuilder(object):
                     where.append(base.where(self.query))
         if len(where):
             where = list(set(where))
+            where.sort()  # ensure the order is consistent for testing
             return "WHERE " + ("\nAND ").join(where)
         else:
             return ""
@@ -306,9 +282,9 @@ class QueryBaseModel(BaseModel):
         str_strip_whitespace=True,
     )
 
-    # @classmethod
-    # def depends(cls):
-    #     return parameter_dependency_from_model("depends", cls)
+    @classmethod
+    def depends(cls):
+        return parameter_dependency_from_model("depends", cls)
 
     def has(self, field_name: str) -> bool:
         return hasattr(self, field_name) and getattr(self, field_name) is not None
@@ -349,9 +325,7 @@ class Paging(BaseModel):
 
 
 class ParametersQuery(QueryBaseModel):
-    parameters_id: Union[Annotated[str, CommaSeparatedList], None] = Query(
-        description=""
-    )
+    parameters_id: Union[CommaSeparatedList[int], None] = Query(description="")
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -381,7 +355,7 @@ class MonitorQuery(QueryBaseModel):
 
 
 class ProviderQuery(QueryBaseModel):
-    providers_id: Annotated[str, CommaSeparatedList] = Query(
+    providers_id: Union[CommaSeparatedList[int], None] = Query(
         None, description="Limit the results to a specific provider"
     )
 
@@ -393,8 +367,8 @@ class ProviderQuery(QueryBaseModel):
 
 
 class OwnerQuery(QueryBaseModel):
-    owner_contacts_id: Union[Annotated[str, CommaSeparatedList], None] = Query(
-        None, description="Limit the results to a specific owner", ge=1
+    owner_contacts_id: Union[CommaSeparatedList[int], None] = Query(
+        None, description="Limit the results to a specific owner"
     )
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -411,7 +385,7 @@ class CountryQuery(QueryBaseModel):
     powerful query method
     """
 
-    countries_id: Union[Annotated[str, CommaSeparatedList], None] = Query(
+    countries_id: Union[CommaSeparatedList[int], None] = Query(
         None,
         description="Limit the results to a specific country or countries",
     )
@@ -488,34 +462,32 @@ class PeriodNameQuery(QueryBaseModel):
     )
 
 
-# Some spatial helper queries
 class RadiusQuery(QueryBaseModel):
     coordinates: Union[str, None] = Query(
         None,
-        pattern=r"^(-)?(?:90(?:\.0{1,4})?|((?:|[1-8])[0-9])(?:\.[0-9]{1,4})?),(-)?(?:180(?:\.0{1,4})?|((?:|[1-9]|1[0-7])[0-9])(?:\.[0-9]{1,4})?)$",
-        description="Coordinate pair in form latitude,longitude. Up to 4 decimal points of precision e.g. 38.907,-77.037",
+        # pattern=r"^(-)?(?:90(?:\.\d+)?|((?:|[1-8])[0-9])(?:\.\d+)?),(-)?(?:180(?:\.\d+)?|((?:|[1-9]|1[0-7])[0-9])(?:\.\d+})?)$",
+        description="WGS 84 Coordinate pair in form latitude,longitude. Supports up to 4 decimal points of precision, additional decimal precision will be truncated in the query e.g. 38.9074,-77.0373",
         examples=["38.907,-77.037"],
     )
-    radius: Union[int, None] = Query(
+    radius: Union[Annotated[int, Interval(le=25000, gt=0)], None] = Query(
         None,
-        gt=0,
-        le=250000,
         description="Search radius from coordinates as center in meters. Maximum of 25,000 (25km) defaults to 1000 (1km) e.g. radius=1000",
         examples=["1000"],
     )
-    lat: Union[confloat(ge=-90, le=90), None] = None
-    lon: Union[confloat(ge=-180, le=180), None] = None
 
-    @model_validator(mode="before")
-    @classmethod
-    def addlatlon(cls, values):
-        coords = values.get("coordinates", None)
-        if coords is not None and "," in coords:
-            lat, lon = coords.split(",")
-            if lat and lon:
-                values["lat"] = float(lat)
-                values["lon"] = float(lon)
-        return values
+    @computed_field(return_type=Union[float, None])
+    @property
+    def lat(self) -> Union[float, None]:
+        if self.coordinates:
+            lat, _ = self.coordinates.split(",")
+            return truncate_float(float(lat))
+
+    @computed_field(return_type=Union[float, None])
+    @property
+    def lon(self) -> Union[float, None]:
+        if self.coordinates:
+            _, lon = self.coordinates.split(",")
+            return truncate_float(float(lon))
 
     @model_validator(mode="before")
     @classmethod
@@ -534,64 +506,67 @@ class RadiusQuery(QueryBaseModel):
         return values
 
     def fields(self, geometry_field: str = "geog"):
-        if self.lat is not None and self.lon is not None and self.radius is not None:
+        if self.radius and self.coordinates:
             return f"ST_Distance({geometry_field}, ST_MakePoint(:lon, :lat)::geography) as distance"
 
     def where(self, geometry_field: str = "geog"):
-        if self.lat is not None and self.lon is not None and self.radius is not None:
+        if self.radius and self.coordinates:
             return f"ST_DWithin(ST_MakePoint(:lon, :lat)::geography, {geometry_field}, :radius)"
-        return None
 
 
 class BboxQuery(QueryBaseModel):
     bbox: Union[str, None] = Query(
-        Query(
-            None,
-            regex=r"^(-)?(?:180(?:\.0{1,4})?|((?:|[1-9]|1[0-7])[0-9])(?:\.[0-9]{1,4})?),(-)?(?:90(?:\.0{1,4})?|((?:[1-8])[0-9])(?:\.[0-9]{1,4})?),(-)?(?:180(?:\.0{1,4})?|((?:|[1-9]|1[0-7])[0-9])(?:\.[0-9]{1,4})?),(-)?(?:90(?:\.0{1,4})?|((?:|[1-8])[0-9])(?:\.[0-9]{1,4})?)$",
-            description="Min X, min Y, max X, max Y, up to 4 decimal points of precision e.g. -77.037,38.907,-77.0,39.910",
-            example="-77.1200,38.7916,-76.9094,38.9955",
-        )
+        None,
+        pattern=r"-?\d{1,3}\.?\d{1,4},-?\d{1,2}\.?\d{1,4},-?\d{1,3}\.?\d{1,4},-?\d{1,2}\.?\d{1,4}",
+        description="geospatial bounding box of Min X, min Y, max X, max Y in WGS 84 coordinates. Up to 4 decimal points of precision, addtional decimal precision will be truncated to 4 decimal points precision e.g. -77.037,38.907,-77.0,39.910",
+        examples=["-77.1200,38.7916,-76.9094,38.9955"],
     )
-    # miny: Union[confloat(ge=-90, le=90), None] = None
-    # minx: Union[confloat(ge=-180, le=180), None] = None
-    # maxy: Union[confloat(ge=-90, le=90), None] = None
-    # maxx: Union[confloat(ge=-180, le=180), None] = None
 
-    # @model_validator(mode="before")
-    # @classmethod
-    # def addminmax(cls, values):
-    #     bbox = values.get("bbox", None)
-    #     if bbox is not None and "," in bbox:
-    #         minx, miny, maxx, maxy = bbox.split(",")
-    #         if minx and miny and maxx and maxy:
-    #             values["minx"] = float(minx)
-    #             values["miny"] = float(miny)
-    #             values["maxx"] = float(maxx)
-    #             values["maxy"] = float(maxy)
-    #     return values
+    @field_validator("bbox")
+    def validate_bbox_in_range(cls, v):
+        if v:
+            bbox = [float(x) for x in v.split(",")]
+            minx, miny, maxx, maxy = bbox
+            if not minx >= -180 and minx <= 180:
+                raise ValueError("X min must be between -180 and 180")
+            if not miny >= -90 and miny <= 90:
+                raise ValueError("Y min must be between -90 and 90")
+            if not maxx >= -180 and maxx <= 180:
+                raise ValueError("X max must be between -180 and 180")
+            if not maxy >= -90 and maxy <= 90:
+                raise ValueError("Y max must be between -90 and 90")
+            if minx > maxx:
+                raise ValueError("X max must be greater than X min")
+            if miny > maxy:
+                raise ValueError("Y max must be greater than Y min")
+        return v
 
-    @computed_field(return_type=float)
+    @computed_field(return_type=Union[float, None])
     @property
-    def minx(self) -> float:
-        return float(self.bbox.split(",")[0])
+    def minx(self) -> Union[float, None]:
+        if self.bbox:
+            return truncate_float(float(self.bbox.split(",")[0]))
 
-    @computed_field(return_type=float)
+    @computed_field(return_type=Union[float, None])
     @property
-    def miny(self):
-        return self.bbox.split(",")[1]
+    def miny(self) -> Union[float, None]:
+        if self.bbox:
+            return truncate_float(float(self.bbox.split(",")[1]))
 
-    @computed_field(return_type=float)
+    @computed_field(return_type=Union[float, None])
     @property
-    def maxx(self):
-        return self.bbox.split(",")[2]
+    def maxx(self) -> Union[float, None]:
+        if self.bbox:
+            return truncate_float(float(self.bbox.split(",")[2]))
 
-    @computed_field(return_type=float)
+    @computed_field(return_type=Union[float, None])
     @property
-    def maxy(self):
-        return self.bbox.split(",")[3]
+    def maxy(self) -> Union[float, None]:
+        if self.bbox:
+            return truncate_float(float(self.bbox.split(",")[3]))
 
     def where(self) -> Union[str, None]:
-        if self.has("bbox"):
+        if self.bbox:
             return "st_makeenvelope(:minx, :miny, :maxx, :maxy, 4326) && geom"
 
 

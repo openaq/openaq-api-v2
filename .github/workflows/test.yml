@@ -1,0 +1,37 @@
+name: Deploy prod
+
+on: 
+  push:
+    branches:
+      - main
+
+env:
+  DATABASE_READ_USER: ${{ secrets.DATABASE_READ_USER }}
+  DATABASE_READ_PASSWORD: ${{ secrets.DATABASE_READ_PASSWORD }}
+  DATABASE_WRITE_USER: ${{ secrets.DATABASE_WRITE_USER }}
+  DATABASE_WRITE_PASSWORD: ${{ secrets.DATABASE_WRITE_PASSWORD }}
+  DATABASE_DB: ${{ secrets.DATABASE_DB }}
+  DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
+  DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
+  FETCH_ASCENDING: ${{ secrets.FETCH_ASCENDING }}
+  PIPELINE_LIMIT: ${{ secrets.PIPELINE_LIMIT }}
+  METADATA_LIMIT: ${{ secrets.METADATA_LIMIT }}
+  REALTIME_LIMIT: ${{ secrets.REALTIME_LIMIT }}
+
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+
+      - uses: actions/setup-python@v3
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+            pip install -r requirements_dev.txt
+

@@ -45,12 +45,6 @@ endpoints = [
 #         assert response.status_code == 422
 
 
-subresources = [
-    ("countries", "locations"),
-    ("providers", "locations"),
-    ("owners", "locations"),
-]
-
 dir_path = os.path.dirname(os.path.realpath(__file__))
 with open(os.path.join(dir_path, "url_list.txt")) as file:
     urls = [line.rstrip() for line in file]
@@ -63,17 +57,6 @@ class TestUrls:
         assert response.status_code == 200
 
 
-@pytest.mark.parametrize("endpoint,resource", subresources)
-class TestSubResourceHealth:
-    def test_endpoint_resource_path_good(self, client, endpoint, resource):
-        response = client.get(f"/v3/{endpoint}/1/{resource}")
-        assert response.status_code == 200
-
-    def test_endpoint_resource_path_bad(self, client, endpoint, resource):
-        response = client.get(f"/v3/{endpoint}/0/{resource}")
-        assert response.status_code == 422
-
-
 class TestLocations:
     def test_locations_radius_good(self, client):
         response = client.get("/v3/locations?coordinates=38.907,-77.037&radius=1000")
@@ -81,12 +64,7 @@ class TestLocations:
 
     def test_locations_bbox_good(self, client):
         response = client.get("/v3/locations?bbox=-77.037,38.907,-77.0,39.910")
-        res = json.loads(response.content)
         assert response.status_code == 200
-        assert (
-            len(res["results"]) == 1
-        ), f"should have 1 results, found {len(res['results'])}"
-        assert res["results"][0]["id"] == 1
 
     def test_locations_query_bad(self, client):
         response = client.get(

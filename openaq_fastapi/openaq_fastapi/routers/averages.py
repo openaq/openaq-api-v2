@@ -71,16 +71,15 @@ class AveragesQueries(
 
 @router.get(
     "/v2/averages",
-    include_in_schema=False,
     response_model=AveragesResponse,
     summary="Get averaged values",
     description="",
     tags=["v2"],
 )
 async def averages_v2_get(
-    av: Annotated[AveragesQueries, Depends(AveragesQueries)],
+    av: Annotated[AveragesQueries, Depends(AveragesQueries.depends())],
     db: DB = Depends(),
-):
+) -> AveragesResponse:
     query = QueryBuilder(av)
 
     if av.period_name in [None, "hour"]:
@@ -90,11 +89,11 @@ async def averages_v2_get(
         , sn.name
         , datetime as hour
         , datetime::date as day
-        , date_trunc('month', datetime) as month
-        , date_trunc('year', datetime) as year
+        , date_trunc('month', datetime)::date as month
+        , date_trunc('year', datetime)::date as year
         , to_char(datetime, 'HH24') as hod
         , to_char(datetime, 'ID') as dow
-        , sig_digits(h.value_avg, 2) as average
+        , sig_digits(h.value_avg, 2)::float as average
         , h.value_count as measurement_count
         , m.measurand as parameter
         , m.measurands_id as "parameterId"
@@ -134,7 +133,7 @@ async def averages_v2_get(
         , m.measurands_id as "parameterId"
         , m.display as "displayName"
         , m.units as unit
-        , AVG(h.value_avg) as average
+        , AVG(h.value_avg)::float as average
         , COUNT(1) as measurement_count
         , MIN(datetime) as first_datetime
         , MAX(datetime) as last_datetime
