@@ -8,7 +8,7 @@ from datetime import date, datetime
 from enum import Enum
 from inspect import signature
 from types import FunctionType
-from typing import Annotated, Any, Dict, List, Union
+from typing import Annotated, Any, Dict, List, Tuple, Union
 
 import fastapi
 import humps
@@ -73,7 +73,11 @@ def parameter_dependency_from_model(name: str, model_class):
                     defaults.append(Path(description=field_model.description))
                 if isinstance(field_model, fastapi.params.Query):
                     defaults.append(
-                        Query(field_model.default, description=field_model.description)
+                        Query(
+                            field_model.default,
+                            description=field_model.description,
+                            examples=field_model.examples,
+                        )
                     )
 
     code = inspect.cleandoc(
@@ -163,24 +167,6 @@ class CommaSeparatedList(list, metaclass=TypeParametersMemoizer):
         raise NotImplementedError("should be overridden in metaclass")
 
 
-def make_dependable(cls):
-    """
-    https://github.com/tiangolo/fastapi/issues/1474#issuecomment-1160633178
-    """
-
-    def init_cls_and_handle_errors(*args, **kwargs):
-        try:
-            signature(init_cls_and_handle_errors).bind(*args, **kwargs)
-            return cls(*args, **kwargs)
-        except ValidationError as e:
-            for error in e.errors():
-                error["loc"] = ["query"] + list(error["loc"])
-            raise HTTPException(422, detail=e.errors())
-
-    init_cls_and_handle_errors.__signature__ = signature(cls)
-    return init_cls_and_handle_errors
-
-
 class QueryBuilder(object):
     def __init__(self, query):
         """
@@ -261,11 +247,16 @@ class QueryBuilder(object):
 
 class QueryBaseModel(BaseModel):
     """
-    # Using this to catch valididation errors that should be 422s
+    Base class for building query objects. All query objects
+    should inherit this model and can implement the `where`, `fields` and
+    `pagination` methods
+
+    __init__ catches valididation errors that should be 422s
     https://github.com/tiangolo/fastapi/issues/318#issuecomment-1075020514
     """
 
     def __init__(self, **kwargs):
+        """ """
         try:
             super().__init__(**kwargs)
         except ValidationError as e:
@@ -304,7 +295,7 @@ class QueryBaseModel(BaseModel):
 # a page parameter. And until pydantic supports computed
 # values (v2) we have to calculate the offset ourselves
 # see the db.py method
-class Paging(BaseModel):
+class Paging(QueryBaseModel):
     limit: int = Query(
         100,
         gt=0,
@@ -325,7 +316,7 @@ class Paging(BaseModel):
 
 
 class ParametersQuery(QueryBaseModel):
-    parameters_id: Union[CommaSeparatedList[int], None] = Query(description="")
+    parameters_id: Union[CommaSeparatedList[int], None] = Query(None, description="")
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -356,7 +347,9 @@ class MonitorQuery(QueryBaseModel):
 
 class ProviderQuery(QueryBaseModel):
     providers_id: Union[CommaSeparatedList[int], None] = Query(
-        None, description="Limit the results to a specific provider"
+        None,
+        description="Limit the results to a specific provider or multiple providers  with a single provider ID or a comma delimited list of IDs",
+        examples=["1", "1,2,3"],
     )
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -368,7 +361,8 @@ class ProviderQuery(QueryBaseModel):
 
 class OwnerQuery(QueryBaseModel):
     owner_contacts_id: Union[CommaSeparatedList[int], None] = Query(
-        None, description="Limit the results to a specific owner"
+        None,
+        description="Limit the results to a specific owner by owner ID with a single owner ID or comma delimited list of IDs",
     )
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -387,11 +381,14 @@ class CountryQuery(QueryBaseModel):
 
     countries_id: Union[CommaSeparatedList[int], None] = Query(
         None,
-        description="Limit the results to a specific country or countries",
+        description="Limit the results to a specific country or countries by country ID as a single country ID or a comma delimited list of IDs",
+        examples=["1", "1,2,3"],
     )
+
     iso: Union[str, None] = Query(
         None,
-        description="Limit the results to a specific country using ISO code",
+        description="Limit the results to a specific country using ISO 3166-1 alpha-2 code",
+        examples=["US"],
     )
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -414,7 +411,7 @@ class CountryQuery(QueryBaseModel):
 
 class DateFromQuery(QueryBaseModel):
     date_from: Union[Union[datetime, date], None] = Query(
-        "2022-10-01", description="From when?"
+        None, description="From when?"
     )
 
     def where(self) -> str:
@@ -431,7 +428,10 @@ class DateFromQuery(QueryBaseModel):
 
 class DateToQuery(QueryBaseModel):
     date_to: Union[Union[datetime, date], None] = Query(
-        datetime.utcnow(), description="To when?"
+        None,
+        description="To when?",
+        example="2022-10-01T11:19:38-06:00",
+        examples=["2022-10-01T11:19:38-06:00", "2022-10-01"],
     )
 
     def where(self) -> str:
@@ -478,6 +478,7 @@ class RadiusQuery(QueryBaseModel):
     @computed_field(return_type=Union[float, None])
     @property
     def lat(self) -> Union[float, None]:
+        print("COORDINATES\n\n\n", self.coordinates)
         if self.coordinates:
             lat, _ = self.coordinates.split(",")
             return truncate_float(float(lat))
@@ -488,6 +489,19 @@ class RadiusQuery(QueryBaseModel):
         if self.coordinates:
             _, lon = self.coordinates.split(",")
             return truncate_float(float(lon))
+
+    @field_validator("coordinates")
+    def validate_coordinates(cls, v):
+        if v:
+            errors = []
+            lat, lng = [float(x) for x in v.split(",")]
+            if lat > 90 or lat < -90:
+                errors.append("foo")
+            if lng > 180 or lng < -180:
+                errors.append("foo")
+            if errors:
+                raise ValueError(f"Invalid coordinates. Error(s): {' '.join(errors)}")
+        return v
 
     @model_validator(mode="before")
     @classmethod
@@ -525,20 +539,23 @@ class BboxQuery(QueryBaseModel):
     @field_validator("bbox")
     def validate_bbox_in_range(cls, v):
         if v:
+            errors = []
             bbox = [float(x) for x in v.split(",")]
             minx, miny, maxx, maxy = bbox
             if not minx >= -180 and minx <= 180:
-                raise ValueError("X min must be between -180 and 180")
+                errors.append("X min must be between -180 and 180")
             if not miny >= -90 and miny <= 90:
-                raise ValueError("Y min must be between -90 and 90")
+                errors.append("Y min must be between -90 and 90")
             if not maxx >= -180 and maxx <= 180:
-                raise ValueError("X max must be between -180 and 180")
+                errors.append("X max must be between -180 and 180")
             if not maxy >= -90 and maxy <= 90:
-                raise ValueError("Y max must be between -90 and 90")
+                errors.append("Y max must be between -90 and 90")
             if minx > maxx:
-                raise ValueError("X max must be greater than X min")
+                errors.append("X max must be greater than or equal to X min")
             if miny > maxy:
-                raise ValueError("Y max must be greater than Y min")
+                errors.append("Y max must be greater than or equal to Y min")
+            if errors:
+                raise ValueError("Invalid bounding box. Error(s): " + " ".join(errors))
         return v
 
     @computed_field(return_type=Union[float, None])
@@ -567,7 +584,7 @@ class BboxQuery(QueryBaseModel):
 
     def where(self) -> Union[str, None]:
         if self.bbox:
-            return "st_makeenvelope(:minx, :miny, :maxx, :maxy, 4326) && geom"
+            return "ST_MakeEnvelope(:minx, :miny, :maxx, :maxy, 4326) && geom"
 
 
 class MeasurementsQueries(Paging, ParametersQuery):
