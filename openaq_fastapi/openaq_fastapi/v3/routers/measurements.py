@@ -35,7 +35,7 @@ class LocationPathQuery(QueryBaseModel):
 
 
 class MeasurementsParametersQuery(QueryBaseModel):
-    parameters_id: Union[CommaSeparatedList[int], None] = Query(description="")
+    parameters_id: Union[CommaSeparatedList[int], None] = Query(None, description="")
 
     def where(self) -> Union[str, None]:
         if self.has("parameters_id"):
@@ -61,7 +61,7 @@ class LocationMeasurementsQueries(
 )
 async def measurements_get(
     measurements: Annotated[
-        LocationMeasurementsQueries, Depends(LocationMeasurementsQueries)
+        LocationMeasurementsQueries, Depends(LocationMeasurementsQueries.depends())
     ],
     db: DB = Depends(),
 ):
