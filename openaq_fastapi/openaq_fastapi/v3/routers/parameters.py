@@ -48,6 +48,7 @@ class ParameterTypeQuery(QueryBaseModel):
         return "m.parameter_type = :parameter_type"
 
 
+## TODO
 class ParametersQueries(
     Paging, CountryQuery, BboxQuery, RadiusQuery, ParameterTypeQuery
 ):
