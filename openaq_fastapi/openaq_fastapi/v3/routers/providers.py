@@ -9,6 +9,8 @@ from openaq_fastapi.v3.models.queries import (
     Paging,
     BboxQuery,
     RadiusQuery,
+    MonitorQuery,
+    ParametersQuery,
 )
 
 from openaq_fastapi.v3.models.responses import (
@@ -34,7 +36,10 @@ class ProviderPathQuery(QueryBaseModel):
         return "id = :providers_id"
 
 
-class ProvidersQueries(Paging, RadiusQuery, BboxQuery, CountryQuery):
+## TODO
+class ProvidersQueries(
+    Paging, RadiusQuery, BboxQuery, CountryQuery, MonitorQuery, ParametersQuery
+):
     ...
 
 

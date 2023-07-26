@@ -12,7 +12,7 @@ from openaq_fastapi.v3.models.queries import (
     Paging,
     QueryBuilder,
     ProviderQuery,
-    OwnerQuery,
+    ParametersQuery,
 )
 
 logger = logging.getLogger("countries")
@@ -34,7 +34,12 @@ class CountryPathQuery(QueryBaseModel):
         return "id = :countries_id"
 
 
-class CountriesQueries(QueryBaseModel, Paging):
+## TODO
+class CountriesQueries(
+    Paging,
+    ParametersQuery,
+    ProviderQuery,
+):
     ...
 
 
