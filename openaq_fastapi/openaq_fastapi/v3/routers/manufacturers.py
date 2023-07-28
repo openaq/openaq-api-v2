@@ -24,7 +24,7 @@ class ManufacturerPathQuery(QueryBaseModel):
         return "id = :manufacturers_id"
 
 
-class ManufacturersQueries(QueryBaseModel, Paging):
+class ManufacturersQueries(Paging):
     ...
 
 

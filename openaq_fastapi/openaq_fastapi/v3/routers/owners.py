@@ -25,7 +25,7 @@ class OwnerPathQuery(QueryBaseModel):
         return "id = :owners_id"
 
 
-class OwnersQueries(QueryBaseModel, Paging):
+class OwnersQueries(Paging):
     ...
 
 
