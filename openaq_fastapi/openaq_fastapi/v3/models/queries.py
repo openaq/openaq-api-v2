@@ -6,9 +6,8 @@ import types
 import weakref
 from datetime import date, datetime
 from enum import Enum
-from inspect import signature
 from types import FunctionType
-from typing import Annotated, Any, Dict, List, Tuple, Union
+from typing import Annotated, Any, Dict, List, Union
 
 import fastapi
 import humps
@@ -41,6 +40,15 @@ ignore_in_docs = [
 
 
 def truncate_float(value: float, length: int = 4) -> float:
+    """Truncates a float to a given number of decimal points
+
+    Args:
+        value: The float value to truncate
+        length: the number of decimal point to truncate to. Defaults to 4.
+
+    Returns:
+        The float value truncated
+    """
     parts = str(float(value)).split(".")
     return float(".".join([parts[0], parts[1][:length]]))
 
@@ -168,16 +176,24 @@ class CommaSeparatedList(list, metaclass=TypeParametersMemoizer):
 
 
 class QueryBuilder(object):
-    def __init__(self, query):
+    """A utility class to wrap multiple QueryBaseModel classes"""
+
+    def __init__(self, query: type):
         """
-        take a query object which can have multiple
-        QueryBaseModel ancestors
+        Args:
+             query: a class which inherits from one or more pydantic query
+             models, QueryBaseModel.
         """
         self.query = query
 
     def _bases(self) -> List[type]:
-        """
-        inspects the objects and returns base classes
+        """inspects the object and returns base classes
+
+        Removes primitive objects in ancestry to only include Pydantic Query
+        and Path models
+
+        Returns:
+            a sorted list of base classes
         """
         bases = list(inspect.getmro(self.query.__class__))[
             :-3
@@ -192,6 +208,9 @@ class QueryBuilder(object):
         loops through all ancestor classes and calls
         their respective fields() methods to concatenate
         into additional fields for select
+
+        Returns:
+
         """
         fields = []
         bases = self._bases()
@@ -223,13 +242,18 @@ class QueryBuilder(object):
 
     @staticmethod
     def total() -> str:
+        """Generates the SQL for the count of total records found.
+
+        Returns:
+            SQL string for the count of total records found
+        """
         return ", COUNT(1) OVER() as found"
 
     def where(self) -> str:
-        """
-        loops through ancestor classes and calls
-        their respective where() methods to concatenate
-        into a full where statement
+        """Introspects object ancestors and calls respective where() methods.
+
+        Returns:
+            SQL string of all ancestor WHERE clauses.
         """
         where = []
         bases = self._bases()
@@ -246,17 +270,21 @@ class QueryBuilder(object):
 
 
 class QueryBaseModel(BaseModel):
-    """
-    Base class for building query objects. All query objects
-    should inherit this model and can implement the `where`, `fields` and
-    `pagination` methods
+    """Base class for building query objects.
 
-    __init__ catches valididation errors that should be 422s
-    https://github.com/tiangolo/fastapi/issues/318#issuecomment-1075020514
+    All query objects should inherit this model and can implement
+    the `where`, `fields` and `pagination` methods
+
+
     """
 
     def __init__(self, **kwargs):
-        """ """
+        """
+        https://github.com/tiangolo/fastapi/issues/318#issuecomment-1075020514
+
+        Args:
+             **kwargs: Arbitrary keyword arguments.
+        """
         try:
             super().__init__(**kwargs)
         except ValidationError as e:
@@ -275,19 +303,24 @@ class QueryBaseModel(BaseModel):
 
     @classmethod
     def depends(cls):
+        """ """
         return parameter_dependency_from_model("depends", cls)
 
     def has(self, field_name: str) -> bool:
+        """ """
         return hasattr(self, field_name) and getattr(self, field_name) is not None
 
     def where(self):
-        return None
+        """abstract method for returning the SQL WHERE clause."""
+        ...
 
-    def fields(self):  # for additional fields
-        return None
+    def fields(self):
+        """abstract method for returning the fields for SQL prepared statement."""
+        ...
 
     def pagination(self):
-        return
+        """abstract method for"""
+        ...
 
 
 # Thinking about how the paging should be done
@@ -316,36 +349,76 @@ class Paging(QueryBaseModel):
 
 
 class ParametersQuery(QueryBaseModel):
+    """Pydantic query model for the parameters query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        parameters_id: parameters_id or comma separated list of parameters_id
+            for filtering results to a parameter or parameeters
+    """
+
     parameters_id: Union[CommaSeparatedList[int], None] = Query(None, description="")
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def where(self) -> Union[str, None]:
+        """ """
         if self.has("parameters_id"):
             return "parameters_id = ANY (:parameters_id)"
 
 
 class MobileQuery(QueryBaseModel):
+    """Pydantic query model for the `mobile` query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        mobile: boolean for filtering whether to include mobile monitoring
+            locations
+    """
+
     mobile: Union[bool, None] = Query(
         None, description="Is the location considered a mobile location?"
     )
 
     def where(self) -> Union[str, None]:
+        """ """
         if self.has("mobile"):
             return "ismobile = :mobile"
 
 
 class MonitorQuery(QueryBaseModel):
+    """Pydantic query model for the `monitor` query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        monitor: boolean for filtering whether to include reference monitors
+            locations. True indicates only reference monitors, False indicates
+            exclude reference monitors
+    """
+
     monitor: Union[bool, None] = Query(
         None, description="Is the location considered a reference monitor?"
     )
 
     def where(self) -> Union[str, None]:
+        """ """
         if self.has("monitor"):
             return "ismonitor = :monitor"
 
 
 class ProviderQuery(QueryBaseModel):
+    """Pydantic query model for the `providers_id` query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        providers_id: providers_id or comma separated list of providers_id
+            for filtering results to a provider or providers
+    """
+
     providers_id: Union[CommaSeparatedList[int], None] = Query(
         None,
         description="Limit the results to a specific provider or multiple providers  with a single provider ID or a comma delimited list of IDs",
@@ -355,11 +428,21 @@ class ProviderQuery(QueryBaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def where(self) -> Union[str, None]:
+        """ """
         if self.has("providers_id"):
             return "(provider->'id')::int = ANY (:providers_id)"
 
 
 class OwnerQuery(QueryBaseModel):
+    """Pydantic query model for the `owner_contacts_id` query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        owner_contacts_id: owner_contacts_id or comma separated list of
+            owner_contacts_id for filtering results to a provider or providers
+    """
+
     owner_contacts_id: Union[CommaSeparatedList[int], None] = Query(
         None,
         description="Limit the results to a specific owner by owner ID with a single owner ID or comma delimited list of IDs",
@@ -368,15 +451,19 @@ class OwnerQuery(QueryBaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def where(self) -> Union[str, None]:
+        """ """
         if self.owner_contacts_id is not None:
             return "(owner->'id')::int = ANY (:owner_contacts_id)"
 
 
-class CountryQuery(QueryBaseModel):
-    """
-    countries_id supports comma chaining but iso does not because it
-    is a string parameter. countries_id is the preferred and more
-    powerful query method
+class CountryIdQuery(QueryBaseModel):
+    """Pydantic query model for the `countries_id` query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        countries_id: countries_id or comma separated list of countries_id for
+        filtering results to a country or countries
     """
 
     countries_id: Union[CommaSeparatedList[int], None] = Query(
@@ -385,13 +472,28 @@ class CountryQuery(QueryBaseModel):
         examples=["1", "1,2,3"],
     )
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def where(self) -> Union[str, None]:
+        """ """
+        if self.countries_id is not None:
+            return "(country->'id')::int = ANY (:countries_id)"
+
+
+class CountryIsoQuery(QueryBaseModel):
+    """Pydantic query model for the `ise` query parameter.
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        iso: ISO 3166-1 alpha-2 code for filtering to a single country ISO.
+    """
+
     iso: Union[str, None] = Query(
         None,
         description="Limit the results to a specific country using ISO 3166-1 alpha-2 code",
         examples=["US"],
     )
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @model_validator(mode="before")
     @classmethod
@@ -403,18 +505,44 @@ class CountryQuery(QueryBaseModel):
         return values
 
     def where(self) -> Union[str, None]:
-        if self.countries_id is not None:
-            return "(country->'id')::int = ANY (:countries_id)"
-        elif self.iso is not None:
+        """Generates SQL condition for filtering to ISO country code.
+
+        Overrides the base QueryBaseModel `where` method
+
+        Returns:
+            string of WHERE clause if `date_from` is set
+        """
+        if self.iso is not None:
             return "country->>'code' = :iso"
 
 
 class DateFromQuery(QueryBaseModel):
+    """Pydantic query model for the `date_from` query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        date_from: date or datetime in ISO-8601 format to filter results to a
+        date range.
+    """
+
     date_from: Union[Union[datetime, date], None] = Query(
-        None, description="From when?"
+        None,
+        description="From when?",
+        examples=["2022-10-01T11:19:38-06:00", "2022-10-01"],
     )
 
     def where(self) -> str:
+        """Generates SQL condition for filtering to datetime.
+
+        Overrides the base QueryBaseModel `where` method
+
+        If `date_from` is a `date` or `datetime` without a timezone a timezone
+        is added as UTC.
+
+        Returns:
+            string of WHERE clause if `date_from` is set
+        """
         if self.date_from is None:
             return None
         elif isinstance(self.date_from, datetime):
@@ -427,14 +555,32 @@ class DateFromQuery(QueryBaseModel):
 
 
 class DateToQuery(QueryBaseModel):
+    """Pydantic query model for the `date_to` query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        date_to: date or datetime in ISO-8601 format to filter results to a
+        date range.
+    """
+
     date_to: Union[Union[datetime, date], None] = Query(
         None,
         description="To when?",
-        example="2022-10-01T11:19:38-06:00",
         examples=["2022-10-01T11:19:38-06:00", "2022-10-01"],
     )
 
     def where(self) -> str:
+        """Generates SQL condition for filtering to datetime.
+
+        Overrides the base QueryBaseModel `where` method
+
+        If `date_to` is a `date` or `datetime` without a timezone a timezone
+        is added as UTC.
+
+        Returns:
+            string of WHERE clause if `date_to` is set
+        """
         if self.date_to is None:
             return None
         elif isinstance(self.date_to, datetime):
@@ -457,15 +603,32 @@ class PeriodNames(str, Enum):
 
 
 class PeriodNameQuery(QueryBaseModel):
+    """Pydantic query model for the `period_name` query parameter.
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        period_name: value of period to aggregate measurement values.
+    """
+
     period_name: Union[PeriodNames, None] = Query(
         "hour", description="Period to aggregate. Month, day, hour"
     )
 
 
 class RadiusQuery(QueryBaseModel):
+    """Pydantic query model for the `period_name` query parameter.
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        coordinates: comma separated WGS84 latitude longitude pair.
+        radius: an integer value representing the search radius in meters from
+            `coordinates`.
+    """
+
     coordinates: Union[str, None] = Query(
         None,
-        # pattern=r"^(-)?(?:90(?:\.\d+)?|((?:|[1-8])[0-9])(?:\.\d+)?),(-)?(?:180(?:\.\d+)?|((?:|[1-9]|1[0-7])[0-9])(?:\.\d+})?)$",
         description="WGS 84 Coordinate pair in form latitude,longitude. Supports up to 4 decimal points of precision, additional decimal precision will be truncated in the query e.g. 38.9074,-77.0373",
         examples=["38.907,-77.037"],
     )
@@ -478,7 +641,10 @@ class RadiusQuery(QueryBaseModel):
     @computed_field(return_type=Union[float, None])
     @property
     def lat(self) -> Union[float, None]:
-        print("COORDINATES\n\n\n", self.coordinates)
+        """Splits `coordinates` into a float representing WGS84 latitude.
+
+        Truncates float to 4 decimal places
+        """
         if self.coordinates:
             lat, _ = self.coordinates.split(",")
             return truncate_float(float(lat))
@@ -486,12 +652,22 @@ class RadiusQuery(QueryBaseModel):
     @computed_field(return_type=Union[float, None])
     @property
     def lon(self) -> Union[float, None]:
+        """Splits `coordinates` into a float representing WGS84 longitude.
+
+        Truncates float to 4 decimal places
+        """
         if self.coordinates:
             _, lon = self.coordinates.split(",")
             return truncate_float(float(lon))
 
     @field_validator("coordinates")
     def validate_coordinates(cls, v):
+        """Vadidates that coordinates are within range [-180,180],[-90,90].
+
+        Raises:
+            ValueError: if `coordinates` x value is outside range [-180, 180] or
+            or if y value is outside range [-90,90]
+        """
         if v:
             errors = []
             lat, lng = [float(x) for x in v.split(",")]
@@ -506,6 +682,16 @@ class RadiusQuery(QueryBaseModel):
     @model_validator(mode="before")
     @classmethod
     def check_spatial_inputs(cls, values):
+        """Checks that spatial query parameters are correctly set
+
+        Checks that `radius` and `coordinates` are set together. Ensures that if
+        `radius`/`coordinates` is set `bbox` is not also set.
+
+        Raises:
+            ValueError: if `bbox` is set and `coordinates` and `radius` are
+            set or if `coordinates` is set but `radius` is not set or if
+            `coordinates` is not set but `radius` is set.
+        """
         bbox = values.get("bbox", None)
         coordinates = values.get("coordinates", None)
         radius = values.get("radius", None)
@@ -519,25 +705,57 @@ class RadiusQuery(QueryBaseModel):
             raise ValueError("Radius must be passed with a coordinate pair")
         return values
 
-    def fields(self, geometry_field: str = "geog"):
+    def fields(self, geometry_field: str = "geog") -> Union[str, None]:
+        """
+
+        Args:
+            geometry_field:
+
+        Returns:
+            SQL string representing fields
+        """
         if self.radius and self.coordinates:
             return f"ST_Distance({geometry_field}, ST_MakePoint(:lon, :lat)::geography) as distance"
 
-    def where(self, geometry_field: str = "geog"):
+    def where(self, geometry_field: str = "geog") -> Union[str, None]:
+        """Generates SQL condition for filtering to ISO country code.
+
+        Overrides the base QueryBaseModel `where` method
+
+        Args:
+            geometry_field:
+
+        Returns:
+            string of WHERE clause if `date_from` is set
+        """
         if self.radius and self.coordinates:
             return f"ST_DWithin(ST_MakePoint(:lon, :lat)::geography, {geometry_field}, :radius)"
 
 
 class BboxQuery(QueryBaseModel):
+    """Pydantic query model for the `bbox` query parameter.
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        bbox:
+    """
+
     bbox: Union[str, None] = Query(
         None,
-        pattern=r"-?\d{1,3}\.?\d{1,4},-?\d{1,2}\.?\d{1,4},-?\d{1,3}\.?\d{1,4},-?\d{1,2}\.?\d{1,4}",
+        pattern=r"-?\d{1,3}\.?\d*,-?\d{1,2}\.?\d*,-?\d{1,3}\.?\d*,-?\d{1,2}\.?\d*",
         description="geospatial bounding box of Min X, min Y, max X, max Y in WGS 84 coordinates. Up to 4 decimal points of precision, addtional decimal precision will be truncated to 4 decimal points precision e.g. -77.037,38.907,-77.0,39.910",
         examples=["-77.1200,38.7916,-76.9094,38.9955"],
     )
 
     @field_validator("bbox")
     def validate_bbox_in_range(cls, v):
+        """Validates `bbox` values are in correct order and within range.
+
+        Raises:
+            ValueError: if `bbox` is not in correct order or values fall outside
+            coordinate range.
+        """
         if v:
             errors = []
             bbox = [float(x) for x in v.split(",")]
@@ -561,28 +779,51 @@ class BboxQuery(QueryBaseModel):
     @computed_field(return_type=Union[float, None])
     @property
     def minx(self) -> Union[float, None]:
+        """Splits `bbox` into a float representing minimum x value.
+
+        Truncates float to 4 decimal places
+        """
         if self.bbox:
             return truncate_float(float(self.bbox.split(",")[0]))
 
     @computed_field(return_type=Union[float, None])
     @property
     def miny(self) -> Union[float, None]:
+        """Splits `bbox` into a float representing minimum y value.
+
+        Truncates float to 4 decimal places
+        """
         if self.bbox:
             return truncate_float(float(self.bbox.split(",")[1]))
 
     @computed_field(return_type=Union[float, None])
     @property
     def maxx(self) -> Union[float, None]:
+        """Splits `bbox` into a float representing maximum x value.
+
+        Truncates float to 4 decimal places
+        """
         if self.bbox:
             return truncate_float(float(self.bbox.split(",")[2]))
 
     @computed_field(return_type=Union[float, None])
     @property
     def maxy(self) -> Union[float, None]:
+        """Splits `bbox` into a float representing maximum y value.
+
+        Truncates float to 4 decimal places
+        """
         if self.bbox:
             return truncate_float(float(self.bbox.split(",")[3]))
 
     def where(self) -> Union[str, None]:
+        """Generates SQL condition for filtering to a bounding box.
+
+        Overrides the base QueryBaseModel `where` method.
+
+        Returns:
+            string of WHERE clause if `bbox` is set.
+        """
         if self.bbox:
             return "ST_MakeEnvelope(:minx, :miny, :maxx, :maxy, 4326) && geom"
 

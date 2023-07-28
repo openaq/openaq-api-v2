@@ -8,7 +8,8 @@ from openaq_fastapi.v3.models.responses import ParametersResponse
 from openaq_fastapi.v3.models.queries import (
     QueryBuilder,
     QueryBaseModel,
-    CountryQuery,
+    CountryIdQuery,
+    CountryIsoQuery,
     BboxQuery,
     RadiusQuery,
     Paging,
@@ -48,9 +49,23 @@ class ParameterTypeQuery(QueryBaseModel):
         return "m.parameter_type = :parameter_type"
 
 
-## TODO
+class ParametersCountryIsoQuery(CountryIsoQuery):
+    """
+    Specialty query object for parameters_view_cached to handle ISO code IN ARRAY
+    """
+
+    def where(self) -> Union[str, None]:
+        if self.iso is not None:
+            return "country->>'code' IN :iso"
+
+
 class ParametersQueries(
-    Paging, CountryQuery, BboxQuery, RadiusQuery, ParameterTypeQuery
+    Paging,
+    CountryIdQuery,
+    CountryIsoQuery,  # TODO replace with ParametersCountryIsoQuery when parameters_view_cached is updated with ISO array field
+    BboxQuery,
+    RadiusQuery,
+    ParameterTypeQuery,
 ):
     ...
 
@@ -85,6 +100,7 @@ async def parameters_get(
 
 async def fetch_parameters(query, db) -> ParametersResponse:
     query_builder = QueryBuilder(query)
+    ## TODO
     sql = f"""
     SELECT id
         , p.name

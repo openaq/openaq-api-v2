@@ -1,32 +1,30 @@
 import datetime
 from zoneinfo import ZoneInfo
-from pydantic import TypeAdapter
+
+import fastapi
 import pydantic_core
-import pytz
+import pytest
+from buildpg import render
+from pydantic import TypeAdapter
+
 from openaq_fastapi.v3.models.queries import (
-    truncate_float,
-    Paging,
     BboxQuery,
     CommaSeparatedList,
-    CountryQuery,
+    CountryIdQuery,
+    CountryIsoQuery,
     DateFromQuery,
     DateToQuery,
     MobileQuery,
     MonitorQuery,
     OwnerQuery,
+    Paging,
     ParametersQuery,
     ProviderQuery,
     QueryBuilder,
     RadiusQuery,
+    truncate_float,
 )
-from openaq_fastapi.v3.routers.locations import (
-    LocationQuery,
-    LocationsQueries,
-)
-
-from buildpg import render
-import fastapi
-import pytest
+from openaq_fastapi.v3.routers.locations import LocationQuery, LocationsQueries
 
 
 class TestTruncateFloat:
@@ -206,24 +204,22 @@ class TestProviderQuery:
         assert params == {"providers_id": None}
 
 
-class TestCountryQuery:
+class TestCountryIdQuery:
     def test_countries_id_string_value(self):
-        country_query = CountryQuery(countries_id="1,2,3")
-        where = country_query.where()
-        params = country_query.model_dump()
+        country_id_query = CountryIdQuery(countries_id="1,2,3")
+        where = country_id_query.where()
+        params = country_id_query.model_dump()
         assert where == "(country->'id')::int = ANY (:countries_id)"
-        assert params == {"countries_id": [1, 2, 3], "iso": None}
+        assert params == {"countries_id": [1, 2, 3]}
 
+
+class TestCountryIsoQuery:
     def test_iso(self):
-        country_query = CountryQuery(iso="us")
-        where = country_query.where()
-        params = country_query.model_dump()
+        country_iso_query = CountryIsoQuery(iso="us")
+        where = country_iso_query.where()
+        params = country_iso_query.model_dump()
         assert where == "country->>'code' = :iso"
-        assert params == {"iso": "us", "countries_id": None}
-
-    def test_countries_id_and_iso(self):
-        with pytest.raises(fastapi.exceptions.HTTPException):
-            CountryQuery(iso="us", countries_id=["1,2,3"])
+        assert params == {"iso": "us"}
 
 
 class TestOwnerQuery:
@@ -382,7 +378,7 @@ class TestBboxQuery:
         assert self.bbox_query.maxy == 38.9955
 
 
-class QueryContainer(CountryQuery, MonitorQuery):
+class QueryContainer(CountryIsoQuery, MonitorQuery):
     ...
 
 
@@ -390,7 +386,7 @@ class TestQueryBuilder:
     def test_bases_method(self):
         query = QueryContainer(iso="us", monitor=True)
         query_builder = QueryBuilder(query)
-        assert query_builder._bases() == [CountryQuery, MonitorQuery, QueryContainer]
+        assert query_builder._bases() == [CountryIsoQuery, MonitorQuery, QueryContainer]
 
     def test_params_method(self):
         query = QueryContainer(iso="us", monitor=True)
@@ -410,8 +406,8 @@ class TestQueryBuilder:
         assert query_builder.where() == expected
 
     def test_fields_method_none(self):
-        country_query = CountryQuery(iso="us")
-        query_builder = QueryBuilder(country_query)
+        country_iso_query = CountryIsoQuery(iso="us")
+        query_builder = QueryBuilder(country_iso_query)
         assert query_builder.fields() == ""
 
     def test_fields_method(self):

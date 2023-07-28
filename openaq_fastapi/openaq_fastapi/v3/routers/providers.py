@@ -5,7 +5,8 @@ from openaq_fastapi.db import DB
 from openaq_fastapi.v3.models.queries import (
     QueryBuilder,
     QueryBaseModel,
-    CountryQuery,
+    CountryIdQuery,
+    CountryIsoQuery,
     Paging,
     BboxQuery,
     RadiusQuery,
@@ -38,7 +39,13 @@ class ProviderPathQuery(QueryBaseModel):
 
 ## TODO
 class ProvidersQueries(
-    Paging, RadiusQuery, BboxQuery, CountryQuery, MonitorQuery, ParametersQuery
+    Paging,
+    RadiusQuery,
+    BboxQuery,
+    CountryIdQuery,
+    CountryIsoQuery,
+    MonitorQuery,
+    ParametersQuery,
 ):
     ...
 
