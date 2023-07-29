@@ -27,12 +27,27 @@ router = APIRouter(
 )
 
 
-class LocationQuery(QueryBaseModel):
+class LocationPathQuery(QueryBaseModel):
+    """Path query to filter results by locations ID.
+
+    Inherits from QueryBaseModel.
+
+    Attributes:
+        locations_id: locations ID value.
+    """
+
     locations_id: int = Path(
         description="Limit the results to a specific location by id", ge=1
     )
 
     def where(self) -> str:
+        """Generates SQL condition for filtering to a single locations_id
+
+        Overrides the base QueryBaseModel `where` method
+
+        Returns:
+            string of WHERE clause
+        """
         return "id = :locations_id"
 
 
@@ -57,7 +72,7 @@ class LocationsQueries(
     description="Provides a location by location ID",
 )
 async def location_get(
-    locations: Annotated[LocationQuery, Depends(LocationQuery.depends())],
+    locations: Annotated[LocationPathQuery, Depends(LocationPathQuery.depends())],
     db: DB = Depends(),
 ):
     response = await fetch_locations(locations, db)
