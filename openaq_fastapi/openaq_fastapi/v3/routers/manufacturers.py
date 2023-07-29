@@ -16,11 +16,26 @@ router = APIRouter(
 
 
 class ManufacturerPathQuery(QueryBaseModel):
+    """Path query to filter results by manufacturers ID
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        manufacturers_id: manufacturers ID value
+    """
+
     manufacturers_id: int = Path(
         ..., description="Limit the results to a specific manufacturers id", ge=1
     )
 
     def where(self) -> str:
+        """Generates SQL condition for filtering to a single manufacturers_id
+
+        Overrides the base QueryBaseModel `where` method
+
+        Returns:
+            string of WHERE clause
+        """
         return "id = :manufacturers_id"
 
 

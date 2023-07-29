@@ -16,12 +16,27 @@ router = APIRouter(
 
 
 class OwnerPathQuery(QueryBaseModel):
+    """Path query to filter results by Owners ID.
+
+    Inherits from QueryBaseModel.
+
+    Attributes:
+        owners_id: owners ID value.
+    """
+
     owners_id: int = Path(
         description="Limit the results to a specific owner by id",
         ge=1,
     )
 
     def where(self) -> str:
+        """Generates SQL condition for filtering to a single owners_id
+
+        Overrides the base QueryBaseModel `where` method
+
+        Returns:
+            string of WHERE clause
+        """
         return "id = :owners_id"
 
 

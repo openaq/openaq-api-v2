@@ -25,12 +25,27 @@ router = APIRouter(
 
 
 class CountryPathQuery(QueryBaseModel):
+    """Path query to filter results by countries ID
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        countries_id: countries ID value
+    """
+
     countries_id: int = Path(
         description="Limit the results to a specific country by id",
         ge=1,
     )
 
     def where(self) -> str:
+        """Generates SQL condition for filtering to a single countries_id
+
+        Overrides the base QueryBaseModel `where` method
+
+        Returns:
+            string of WHERE clause
+        """
         return "id = :countries_id"
 
 

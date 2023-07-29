@@ -28,12 +28,27 @@ router = APIRouter(
 
 
 class ProviderPathQuery(QueryBaseModel):
+    """Path query to filter results by providers ID
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        providers_id: providers ID value
+    """
+
     providers_id: int = Path(
         description="Limit the results to a specific provider by id",
         ge=1,
     )
 
     def where(self):
+        """Generates SQL condition for filtering to a single providers_id
+
+        Overrides the base QueryBaseModel `where` method
+
+        Returns:
+            string of WHERE clause
+        """
         return "id = :providers_id"
 
 
