@@ -1,7 +1,5 @@
 from datetime import timedelta
 import logging
-import json
-import re
 import time
 from os import environ
 from typing import Union
@@ -9,7 +7,7 @@ from typing import Union
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.types import ASGIApp, Receive, Send, Message, Scope
-
+from .settings import settings
 
 from fastapi.responses import JSONResponse
 from fastapi import Response, status
@@ -165,7 +163,11 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
                 )
             key = auth
             limit = self.rate_amount_key
-
+        if (
+            request.headers.get("Origin", None) == settings.ORIGIN
+            and request.headers.get("API-User-Agent", None) == settings.USER_AGENT
+        ):
+            limit = self.rate_amount_key
         if self.limited_path(route) and self.request_is_limited(key, limit):
             logging.info(
                 TooManyRequestsLog(
