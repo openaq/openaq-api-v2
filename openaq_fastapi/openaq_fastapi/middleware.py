@@ -164,8 +164,8 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
             key = auth
             limit = self.rate_amount_key
         if (
-            request.headers.get("Origin") == settings.ORIGIN
-            and request.headers.get("User-Agent") == settings.USER_AGENT
+            request.headers.get("Origin", None) == settings.ORIGIN
+            and request.headers.get("API-User-Agent", None) == settings.USER_AGENT
         ):
             limit = self.rate_amount_key
         if self.limited_path(route) and self.request_is_limited(key, limit):
