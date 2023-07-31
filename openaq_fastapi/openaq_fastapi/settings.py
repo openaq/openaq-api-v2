@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     RATE_AMOUNT: Union[int, None] = None
     RATE_AMOUNT_KEY: Union[int, None] = None
     RATE_TIME: Union[int, None] = None
+    USER_AGENT: Union[str, None] = None
+    ORIGIN: Union[str, None] = None
 
     EMAIL_SENDER: str
 
