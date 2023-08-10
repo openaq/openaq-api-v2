@@ -29,15 +29,6 @@ class HelloWorldUser(HttpUser):
             name='v2/latest/empty'
         )
 
-    @task(40)
-    def LatestRadiusV2(self):
-        lon = randrange(40000, 60000)/1000
-        lat = randrange(50000, 60000)/1000
-        rad = 80000
-        self.client.get(
-            f"/v2/latest?coordinates={lon},{lat}&radius={rad}&order_by=city&limit=10",
-            name='v2/latest/80K'
-        )
 
     @task(40)
     def LatestRadiusV2b(self):
@@ -66,7 +57,7 @@ class HelloWorldUser(HttpUser):
     def LatestRadiusV1(self):
         lon = randrange(40000, 60000)/1000
         lat = randrange(50000, 60000)/1000
-        rad = 80000
+        rad = 8000
         self.client.get(
             f"/v1/latest?coordinates={lon},{lat}&radius={rad}",
             name='v1/latest?radius'

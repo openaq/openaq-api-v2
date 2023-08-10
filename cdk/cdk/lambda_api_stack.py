@@ -23,6 +23,7 @@ from aws_cdk import (
     aws_cloudfront_origins as origins,
     aws_cloudfront as cloudfront,
 )
+
 import aws_cdk
 from aws_cdk.aws_apigatewayv2 import CfnStage
 from aws_cdk.aws_apigatewayv2_alpha import HttpApi, HttpMethod
@@ -66,13 +67,15 @@ class LambdaApiStack(Stack):
             lambda_sec_group = None
         else:
             vpc = aws_ec2.Vpc.from_lookup(self, f"{id}-vpc", vpc_id=vpc_id)
-            lambda_sec_group = aws_ec2.SecurityGroup(
-                self,
-                f"openaq-api-lambda-sec-group_{env_name}",
-                security_group_name=f"openaq-api-lambda-sec-group_{env_name}",
-                vpc=vpc,
-                allow_all_outbound=True,
-            )
+            lambda_sec_group = [
+				aws_ec2.SecurityGroup(
+					self,
+                    f"openaq-api-lambda-sec-group_{env_name}",
+					security_group_name=f"openaq-api-lambda-sec-group_{env_name}",
+					vpc=vpc,
+					allow_all_outbound=True,
+				)
+				]
             redis_sec_group = aws_ec2.SecurityGroup(
                 self,
                 f"redis-sec-group_{env_name}",
@@ -108,9 +111,10 @@ class LambdaApiStack(Stack):
             )
             redis_cluster.add_depends_on(redis_subnet_group)
 
+            lambda_env["REDIS_HOST"] = redis_cluster.attr_configuration_end_point_address
+            lambda_env["REDIS_PORT"] = redis_cluster.attr_configuration_end_point_port
+
         lambda_env = stringify_settings(lambda_env)
-        lambda_env["REDIS_HOST"] = redis_cluster.attr_configuration_end_point_address
-        lambda_env["REDIS_PORT"] = redis_cluster.attr_configuration_end_point_port
 
         openaq_api = aws_lambda.Function(
             self,
@@ -129,7 +133,7 @@ class LambdaApiStack(Stack):
             allow_public_subnet=True,
             memory_size=api_lambda_memory_size,
             environment=lambda_env,
-            security_groups=[lambda_sec_group],
+            security_groups=lambda_sec_group,
             timeout=Duration.seconds(api_lambda_timeout),
             layers=[
                 create_dependencies_layer(
