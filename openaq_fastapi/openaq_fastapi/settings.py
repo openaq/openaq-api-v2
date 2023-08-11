@@ -25,8 +25,8 @@ class Settings(BaseSettings):
     API_CACHE_TIMEOUT: int = 900
     USE_SHARED_POOL: bool = False
     LOG_LEVEL: str = "INFO"
-    LOG_BUCKET: str = None
-    DOMAIN_NAME: str = None
+    LOG_BUCKET: Union[str, None] = None
+    DOMAIN_NAME: Union[str, None] = None
 
     REDIS_HOST: Union[str, None] = None
     REDIS_PORT: Union[int, None] = 6379
@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     USER_AGENT: Union[str, None] = None
     ORIGIN: Union[str, None] = None
 
-    EMAIL_SENDER: str
+    EMAIL_SENDER: Union[str, None] = None
 
     @computed_field(return_type=str, alias="DATABASE_READ_URL")
     @property
