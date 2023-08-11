@@ -1,19 +1,14 @@
-from typing import Union
-from pydantic import BaseSettings
-from pathlib import Path
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from os import environ
 
 
 class Settings(BaseSettings):
     ENV: str = "staging"
     CF_LOGS_LOG_LEVEL: str = "INFO"
-    
-    class Config:
-        parent = Path(__file__).resolve().parent.parent.parent
-        if 'DOTENV' in environ:
-            env_file = Path.joinpath(parent, environ['DOTENV'])
-        else:
-            env_file = Path.joinpath(parent, ".env")
+
+    model_config = SettingsConfigDict(
+        extra="ignore", env_file="../.env", env_file_encoding="utf-8"
+    )
 
 
 settings = Settings()
