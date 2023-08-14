@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     CF_LOG_LAMBDA_TIMEOUT: int = 15 * 60  # lambda timeout in seconds
 
     model_config = SettingsConfigDict(
-        extra="ignore", env_file="../.env", env_file_encoding="utf-8"
+        extra="ignore", env_file=f"../{environ['DOTENV'] or '.env'}", env_file_encoding="utf-8"
     )
 
 
