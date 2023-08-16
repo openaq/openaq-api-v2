@@ -1,7 +1,8 @@
-from typing import List, Union
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from pathlib import Path
 from os import environ
+from pathlib import Path
+from typing import List, Union
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 def get_env():
