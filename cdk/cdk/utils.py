@@ -26,28 +26,29 @@ def create_dependencies_layer(
     if not environ.get("SKIP_BUILD"):
         print(f"Building {layer_id} from {requirements_file} into {output_dir}")
         if environ.get("DOCKER_BUILD"):
-            print("DOCKER_BUILD env var is True. Using Docker to build layer.")
             shutil.copy(requirements_file, f"./requirements.docker.txt")
             client = docker.from_env()
             print("starting docker image build...")
             client.images.build(
                 path=str("."),
                 dockerfile="Dockerfile",
+                platform="linux/amd64",
                 tag="openaqapidependencies",
                 nocache=False,
             )
             print("docker image built.")
+            print("running docker container.")
             client.containers.run(
                 image="openaqapidependencies",
                 remove=True,
-                volumes=[f"{str(pathlib.Path().absolute())}:/tmp/"],
+                volumes=[f"{str(Path(__file__).resolve().parent.parent)}:/tmp/"],
                 user=0,
             )
             p = pathlib.Path(f"{output_dir}").resolve().absolute()
             if not os.path.exists(p):
                 os.mkdir(p)
-            output_path = pathlib.Path(f"{output_dir}/package.zip").resolve().absolute()
-            shutil.move("./package.zip", str(output_path))
+            print("cleaning up")
+            shutil.move("./python", str(p))
             os.remove(f"./requirements.docker.txt")
         else:
             subprocess.run(
@@ -74,5 +75,6 @@ def create_dependencies_layer(
         self,
         layer_id,
         code=layer_code,
+        compatible_architectures=[aws_lambda.Architecture.X86_64],
         compatible_runtimes=[aws_lambda.Runtime.PYTHON_3_9],
     )

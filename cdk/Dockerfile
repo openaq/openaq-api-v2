@@ -6,10 +6,13 @@ COPY requirements.docker.txt /var/task/requirements.txt
 
 RUN pip install --upgrade pip
 
-RUN pip install -t /var/task -r /var/task/requirements.txt
+RUN mkdir -p /var/task/python
+
+RUN pip install -t /var/task/python -r /var/task/requirements.txt
 
 # Reduce package size and remove useless files
 RUN \
+    cd python \
     find . -type f -name '*.pyc' | \
         while read f; do n=$(echo $f | \
         sed 's/__pycache__\///' | \
@@ -21,5 +24,5 @@ RUN \
     && find . -type d -a -name '*.dist-info' -print0 | xargs -0 rm -rf \
     && find . -type f -a -name '*.so' -exec strip "{}" \;
 
-CMD zip --symlinks -r9q /tmp/package.zip *
+CMD cp -r /var/task/python /tmp/
 
