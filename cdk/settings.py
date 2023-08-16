@@ -4,6 +4,12 @@ from pathlib import Path
 from os import environ
 
 
+def get_env():
+    parent = Path(__file__).resolve().parent.parent
+    env_file = Path.joinpath(parent, environ.get("DOTENV", ".env"))
+    return env_file
+
+
 class Settings(BaseSettings):
     CDK_ACCOUNT: str
     CDK_REGION: str
@@ -26,7 +32,9 @@ class Settings(BaseSettings):
     CF_LOG_LAMBDA_TIMEOUT: int = 15 * 60  # lambda timeout in seconds
 
     model_config = SettingsConfigDict(
-        extra="ignore", env_file=f"../{environ['DOTENV'] or '.env'}", env_file_encoding="utf-8"
+        extra="ignore",
+        env_file=get_env(),
+        env_file_encoding="utf-8",
     )
 
 
