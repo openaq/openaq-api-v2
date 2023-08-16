@@ -1,7 +1,17 @@
 from typing import Union
-from pydantic import BaseSettings, validator
+from pydantic import ConfigDict, computed_field, field_validator
 from pathlib import Path
 from os import environ
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def get_env():
+    parent = Path(__file__).resolve().parent.parent.parent
+    if "DOTENV" in environ:
+        env_file = Path.joinpath(parent, environ["DOTENV"])
+    else:
+        env_file = Path.joinpath(parent, ".env")
+    return env_file
 
 
 class Settings(BaseSettings):
@@ -12,13 +22,11 @@ class Settings(BaseSettings):
     DATABASE_DB: str
     DATABASE_HOST: str
     DATABASE_PORT: int
-    DATABASE_READ_URL: Union[str, None]
-    DATABASE_WRITE_URL: Union[str, None]
     API_CACHE_TIMEOUT: int = 900
     USE_SHARED_POOL: bool = False
     LOG_LEVEL: str = "INFO"
-    LOG_BUCKET: str = None
-    DOMAIN_NAME: str = None
+    LOG_BUCKET: Union[str, None] = None
+    DOMAIN_NAME: Union[str, None] = None
 
     REDIS_HOST: Union[str, None] = None
     REDIS_PORT: Union[int, None] = 6379
@@ -30,28 +38,19 @@ class Settings(BaseSettings):
     USER_AGENT: Union[str, None] = None
     ORIGIN: Union[str, None] = None
 
-    EMAIL_SENDER: str
+    EMAIL_SENDER: Union[str, None] = None
 
-    @validator("DATABASE_READ_URL", allow_reuse=True)
-    def get_read_url(cls, v, values):
-        return (
-            v
-            or f"postgresql://{values['DATABASE_READ_USER']}:{values['DATABASE_READ_PASSWORD']}@{values['DATABASE_HOST']}:{values['DATABASE_PORT']}/{values['DATABASE_DB']}"
-        )
+    @computed_field(return_type=str, alias="DATABASE_READ_URL")
+    @property
+    def DATABASE_READ_URL(self):
+        return f"postgresql://{self.DATABASE_READ_USER}:{self.DATABASE_READ_PASSWORD}@{self.DATABASE_HOST}:{self.DATABASE_PORT}/{self.DATABASE_DB}"
 
-    @validator("DATABASE_WRITE_URL", allow_reuse=True)
-    def get_write_url(cls, v, values):
-        return (
-            v
-            or f"postgresql://{values['DATABASE_WRITE_USER']}:{values['DATABASE_WRITE_PASSWORD']}@{values['DATABASE_HOST']}:{values['DATABASE_PORT']}/{values['DATABASE_DB']}"
-        )
+    @computed_field(return_type=str, alias="DATABASE_WRITE_URL")
+    @property
+    def DATABASE_WRITE_URL(self):
+        return f"postgresql://{self.DATABASE_WRITE_USER}:{self.DATABASE_WRITE_PASSWORD}@{self.DATABASE_HOST}:{self.DATABASE_PORT}/{self.DATABASE_DB}"
 
-    class Config:
-        parent = Path(__file__).resolve().parent.parent.parent
-        if "DOTENV" in environ:
-            env_file = Path.joinpath(parent, environ["DOTENV"])
-        else:
-            env_file = Path.joinpath(parent, ".env")
+    model_config = SettingsConfigDict(extra="ignore", env_file=get_env())
 
 
 settings = Settings()

@@ -5,7 +5,6 @@ from aws_cdk import (
 )
 
 from cdk.lambda_api_stack import LambdaApiStack
-from cdk.lambda_rollup_stack import LambdaRollupStack
 
 from settings import settings
 
@@ -48,19 +47,5 @@ api = LambdaApiStack(
 Tags.of(api).add("project", settings.PROJECT)
 Tags.of(api).add("product", "api")
 Tags.of(api).add("env", settings.ENV)
-
-rollup = LambdaRollupStack(
-    app,
-    f"openaq-rollup-{settings.ENV}",
-    env_name=settings.ENV,
-    lambda_env=lambda_env,
-    lambda_timeout=settings.ROLLUP_LAMBDA_TIMEOUT,
-    lambda_memory_size=settings.ROLLUP_LAMBDA_MEMORY_SIZE,
-    rate_minutes=5,
-)
-
-Tags.of(rollup).add("project", settings.PROJECT)
-Tags.of(rollup).add("product", "api")
-Tags.of(rollup).add("env", settings.ENV)
 
 app.synth()

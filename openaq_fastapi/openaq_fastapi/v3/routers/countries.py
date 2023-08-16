@@ -1,5 +1,5 @@
 import logging
-from typing import List, Union
+from typing import List, Union, Annotated
 from fastapi import APIRouter, Depends, Path, Query
 from pydantic import root_validator
 from openaq_fastapi.db import DB
@@ -12,28 +12,49 @@ from openaq_fastapi.v3.models.queries import (
     Paging,
     QueryBuilder,
     ProviderQuery,
-    OwnerQuery,
+    ParametersQuery,
 )
 
 logger = logging.getLogger("countries")
 
 router = APIRouter(
     prefix="/v3",
-    tags=["v3"],
+    tags=["v3-alpha"],
+    include_in_schema=True,
 )
 
 
 class CountryPathQuery(QueryBaseModel):
+    """Path query to filter results by countries ID
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        countries_id: countries ID value
+    """
+
     countries_id: int = Path(
         description="Limit the results to a specific country by id",
         ge=1,
     )
 
     def where(self) -> str:
+        """Generates SQL condition for filtering to a single countries_id
+
+        Overrides the base QueryBaseModel `where` method
+
+        Returns:
+            string of WHERE clause
+        """
         return "id = :countries_id"
 
 
-class CountriesQueries(QueryBaseModel, Paging):
+## TODO
+class CountriesQueries(
+    Paging,
+    ParametersQuery,
+    ProviderQuery,
+):
     ...
 
 
@@ -44,10 +65,10 @@ class CountriesQueries(QueryBaseModel, Paging):
     description="Provides a country by country ID",
 )
 async def country_get(
-    country: CountryPathQuery = Depends(CountryPathQuery),
+    countries: Annotated[CountryPathQuery, Depends(CountryPathQuery)],
     db: DB = Depends(),
 ):
-    response = await fetch_countries(country, db)
+    response = await fetch_countries(countries, db)
     return response
 
 
@@ -58,7 +79,7 @@ async def country_get(
     description="Provides a list of countries",
 )
 async def countries_get(
-    countries: CountriesQueries = Depends(CountriesQueries.depends()),
+    countries: Annotated[CountriesQueries, Depends(CountriesQueries.depends())],
     db: DB = Depends(),
 ):
     response = await fetch_countries(countries, db)

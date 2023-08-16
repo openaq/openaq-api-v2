@@ -1,22 +1,12 @@
 from datetime import date, datetime
-from typing import List, Union
+from typing import List, Union, Any
 
-from pydantic import BaseModel, AnyUrl, Field, validator
-from pydantic.typing import Any
+from pydantic import ConfigDict, BaseModel, AnyUrl, Field, validator
 import orjson
 from starlette.responses import JSONResponse
 import logging
 
 logger = logging.getLogger("responses")
-
-
-def converter(meta, data, jq):
-    ret = jq.input(data).all()
-    ret_str = orjson.dumps(ret).decode()
-    ret_str = str.replace(ret_str, "+00:00", "Z")
-    out_data = orjson.loads(ret_str)
-    output = {"meta": meta.dict(), "results": out_data}
-    return JSONResponse(content=output)
 
 
 class Meta(BaseModel):
@@ -25,7 +15,7 @@ class Meta(BaseModel):
     website: str = "/"
     page: int = 1
     limit: int = 100
-    found: Union[int, str, None]
+    found: Union[int, str, None] = None
 
 
 class Date(BaseModel):
@@ -34,22 +24,24 @@ class Date(BaseModel):
 
 
 class Coordinates(BaseModel):
-    latitude: Union[float, None]
-    longitude: Union[float, None]
+    latitude: Union[float, None] = None
+    longitude: Union[float, None] = None
 
 
 class Source(BaseModel):
-    url: Union[str, None]
+    url: Union[str, None] = None
     name: str
-    id: Union[str, None]
-    readme: Union[str, None]
-    organization: Union[str, None]
-    lifecycle_stage: Union[str, None]
+    id: Union[str, None] = None
+    readme: Union[str, None] = None
+    organization: Union[str, None] = None
+    lifecycle_stage: Union[str, None] = None
 
 
 class Manufacturer(BaseModel):
-    model_name: str = Field(..., alias="modelName")
+    modelname: str = Field(..., alias="modelName")
     manufacturer_name: str = Field(..., alias="manufacturerName")
+
+    model_config = ConfigDict(protected_namespaces=())
 
 
 class Parameter(BaseModel):
@@ -63,7 +55,7 @@ class Parameter(BaseModel):
     last_updated: str = Field(..., alias="lastUpdated")
     parameter_id: int = Field(..., alias="parameterId")
     first_updated: str = Field(..., alias="firstUpdated")
-    manufacturers: Union[List[Manufacturer], None]
+    manufacturers: Union[List[Manufacturer], None] = None
 
 
 # Abstract class for all responses
@@ -78,19 +70,19 @@ class OpenAQResult(BaseModel):
 class AveragesRow(BaseModel):
     id: Union[List[int], int]
     name: Union[List[str], str]
-    hour: Union[datetime, None]
-    day: Union[date, None]
-    month: Union[date, None]
-    year: Union[date, None]
-    hod: Union[int, None]
-    dow: Union[int, None]
+    hour: Union[datetime, None] = None
+    day: Union[date, None] = None
+    month: Union[date, None] = None
+    year: Union[date, None] = None
+    hod: Union[int, None] = None
+    dow: Union[int, None] = None
     average: float
     name: Union[List[str], str]
     measurement_count: int  # TODO make camelCase
     parameter: str
     parameter_id: int = Field(..., alias="parameterId")
     display_name: str = Field(..., alias="displayName")
-    unit: Union[str, None]
+    unit: Union[str, None] = None
     first_datetime: datetime
     last_datetime: datetime
 
@@ -127,9 +119,7 @@ class CountriesRow(BaseModel):
     count: int
     cities: int
     sources: int
-
-    class Config:
-        allow_population_by_field_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class CountriesResponse(OpenAQResult):
@@ -161,9 +151,7 @@ class CityRow(BaseModel):
     first_updated: str = Field(..., alias="firstUpdated")
     last_updated: str = Field(..., alias="lastUpdated")
     parameters: List[str]
-
-    class Config:
-        allow_population_by_field_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class CitiesResponse(OpenAQResult):
@@ -174,7 +162,7 @@ class CitiesResponse(OpenAQResult):
 
 
 class AveragingPeriodV1(BaseModel):
-    value: Union[int, None]
+    value: Union[int, None] = None
     unit: str
 
 
@@ -189,8 +177,8 @@ class LatestMeasurementRow(BaseModel):
 
 class LatestRowV1(BaseModel):
     location: str
-    city: Union[str, None]
-    country: Union[str, None]
+    city: Union[str, None] = None
+    country: Union[str, None] = None
     coordinates: Coordinates
     measurements: List[LatestMeasurementRow]
 
@@ -210,10 +198,10 @@ class LatestMeasurement(BaseModel):
 
 
 class LatestRow(BaseModel):
-    location: Union[str, None]
-    city: Union[str, None]
-    country: Union[str, None]
-    coordinates: Union[Coordinates, None]
+    location: Union[str, None] = None
+    city: Union[str, None] = None
+    country: Union[str, None] = None
+    coordinates: Union[Coordinates, None] = None
     measurements: List[LatestMeasurement]
 
 
@@ -232,8 +220,8 @@ class CountsByMeasurementItem(BaseModel):
 class LocationsRowV1(BaseModel):
     id: int
     country: str
-    city: Union[str, None]
-    cities: Union[List[Union[str, None]], None]
+    city: Union[str, None] = None
+    cities: Union[List[Union[str, None]], None] = None
     location: str
     locations: List[str]
     source_name: str = Field(..., alias="sourceName")
@@ -261,29 +249,21 @@ def warn_on_null(v):
 
 class LocationsRow(BaseModel):
     id: int
-    city: Union[str, None]
-    name: Union[str, None]
-    entity: Union[str, None]
-    country: Union[str, None]
-    sources: Union[List[Source], None]
+    city: Union[str, None] = None
+    name: Union[str, None] = None
+    entity: Union[str, None] = None
+    country: Union[str, None] = None
+    sources: Union[List[Source], None] = None
     is_mobile: bool = Field(..., alias="isMobile")
     is_analysis: Union[bool, None] = Field(None, alias="isAnalysis")
     parameters: List[Parameter]
     sensor_type: Union[str, None] = Field(None, alias="sensorType")
-    coordinates: Union[Coordinates, None]
+    coordinates: Union[Coordinates, None] = None
     last_updated: str = Field(..., alias="lastUpdated")
     first_updated: str = Field(..., alias="firstUpdated")
     measurements: int
-    bounds: Union[List[float], None]
-    manufacturers: Union[List[Manufacturer], None]
-
-    @validator("is_nullable", check_fields=False)
-    def check_nullable(cls, v, values, **kwargs):
-        not_nullable = ["entity"]
-        offset = values["limit"] * (values["page"] - 1)
-        # if offset + values["limit"] > 100000:
-        #     raise ValueError("offset + limit must be < 100000")
-        return offset
+    bounds: Union[List[float], None] = None
+    manufacturers: Union[List[Manufacturer], None] = None
 
 
 class LocationsResponse(OpenAQResult):
@@ -307,8 +287,8 @@ class MeasurementsRowV1(BaseModel):
     date: Date
     unit: str
     coordinates: Coordinates
-    country: Union[str, None]
-    city: Union[str, None]
+    country: Union[str, None] = None
+    city: Union[str, None] = None
 
 
 class MeasurementsResponseV1(OpenAQResult):
@@ -325,12 +305,12 @@ class MeasurementsRow(BaseModel):
     value: float
     date: Date
     unit: str
-    coordinates: Union[Coordinates, None]
-    country: Union[str, None]
-    city: Union[str, None]
+    coordinates: Union[Coordinates, None] = None
+    country: Union[str, None] = None
+    city: Union[str, None] = None
     is_mobile: bool = Field(..., alias="isMobile")
     is_analysis: Union[bool, None] = Field(None, alias="isAnalysis")
-    entity: Union[str, None]
+    entity: Union[str, None] = None
     sensor_type: str = Field(..., alias="sensorType")
 
 
@@ -353,9 +333,7 @@ class ParametersRowV1(BaseModel):
     name: str
     description: str
     preferred_unit: str = Field(..., alias="preferredUnit")
-
-    class Config:
-        allow_population_by_field_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class ParametersResponseV1(OpenAQResult):
@@ -371,9 +349,7 @@ class ParametersRow(BaseModel):
     display_name: Union[str, None] = Field(None, alias="displayName")
     description: str
     preferred_unit: str = Field(..., alias="preferredUnit")
-
-    class Config:
-        allow_population_by_field_name = True
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class ParametersResponse(OpenAQResult):
@@ -388,10 +364,10 @@ class ParametersResponse(OpenAQResult):
 class ProjectsSource(BaseModel):
     id: str
     name: str
-    readme: Union[str, None]
-    data_avg_dur: Union[str, None]
-    organization: Union[str, None]
-    lifecycle_stage: Union[str, None]
+    readme: Union[str, None] = None
+    data_avg_dur: Union[str, None] = None
+    organization: Union[str, None] = None
+    lifecycle_stage: Union[str, None] = None
 
 
 class ProjectsRow(BaseModel):
@@ -400,13 +376,13 @@ class ProjectsRow(BaseModel):
     subtitle: str
     is_mobile: bool = Field(..., alias="isMobile")
     is_analysis: Union[bool, None] = Field(None, alias="isAnalysis")
-    entity: Union[str, None]
+    entity: Union[str, None] = None
     sensor_type: Union[str, None] = Field(None, alias="sensorType")
     locations: int
     location_ids: List[int] = Field(..., alias="locationIds")
     countries: List[str]
     parameters: List[Parameter]
-    bbox: Union[List[float], None]
+    bbox: Union[List[float], None] = None
     measurements: int
     first_updated: str = Field(..., alias="firstUpdated")
     last_updated: str = Field(..., alias="lastUpdated")
@@ -424,11 +400,11 @@ class SourcesRowV1(BaseModel):
     url: str
     adapter: str
     name: str
-    city: Union[str, None]
+    city: Union[str, None] = None
     country: str
-    description: Union[str, None]
+    description: Union[str, None] = None
     source_url: AnyUrl = Field(..., alias="sourceURL")
-    resolution: Union[str, None]
+    resolution: Union[str, None] = None
     contacts: List[str]
     active: bool
 
@@ -441,15 +417,15 @@ class SourcesResponseV1(OpenAQResult):
 
 
 class Datum(BaseModel):
-    url: Union[str, None]
-    data_avg_dur: Union[str, None]
-    organization: Union[str, None]
-    lifecycle_stage: Union[str, None]
+    url: Union[str, None] = None
+    data_avg_dur: Union[str, None] = None
+    organization: Union[str, None] = None
+    lifecycle_stage: Union[str, None] = None
 
 
 class SourcesRow(BaseModel):
-    data: Union[Datum, None]
-    readme: Union[str, None]
+    data: Union[Datum, None] = None
+    readme: Union[str, None] = None
     source_id: int = Field(..., alias="sourceId")
     locations: int
     source_name: str = Field(..., alias="sourceName")

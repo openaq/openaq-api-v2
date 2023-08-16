@@ -1,14 +1,11 @@
-from typing import List, Union
-from pydantic import BaseModel, Field
-from pydantic.typing import Any
+from typing import List, Union, Any
+from pydantic import ConfigDict, BaseModel, Field
 from humps import camelize
 from datetime import datetime
 
 
 class JsonBase(BaseModel):
-    class Config:
-        allow_population_by_field_name = True
-        alias_generator = camelize
+    model_config = ConfigDict(populate_by_name=True, alias_generator=camelize)
 
 
 class Meta(JsonBase):
@@ -16,7 +13,7 @@ class Meta(JsonBase):
     website: str = "/"
     page: int = 1
     limit: int = 100
-    found: Union[int, str, None]
+    found: Union[int, str, None] = None
 
 
 class OpenAQResult(JsonBase):
@@ -26,14 +23,15 @@ class OpenAQResult(JsonBase):
 
 #
 
+
 class DatetimeObject(JsonBase):
     utc: str
     local: str
 
 
 class Coordinates(JsonBase):
-    latitude: Union[float, None]
-    longitude: Union[float, None]
+    latitude: Union[float, None] = None
+    longitude: Union[float, None] = None
 
 
 # Base classes
@@ -45,8 +43,8 @@ class GeoJSON(JsonBase):
 class Period(JsonBase):
     label: str
     interval: str
-    datetime_from: Union[DatetimeObject, None]
-    datetime_to: Union[DatetimeObject, None]
+    datetime_from: Union[DatetimeObject, None] = None
+    datetime_to: Union[DatetimeObject, None] = None
 
 
 class Coverage(JsonBase):
@@ -56,29 +54,29 @@ class Coverage(JsonBase):
     observed_interval: str
     percent_complete: float  # percent of expected values
     percent_coverage: float  # percent of time
-    datetime_from: Union[DatetimeObject, None]
-    datetime_to: Union[DatetimeObject, None]
+    datetime_from: Union[DatetimeObject, None] = None
+    datetime_to: Union[DatetimeObject, None] = None
 
 
 class Factor(JsonBase):
     label: str
-    interval: Union[str, None]
-    order: Union[int, None]
+    interval: Union[str, None] = None
+    order: Union[int, None] = None
 
 
 class Summary(JsonBase):
-    min: Union[float, None]
-    q02: Union[float, None]
-    q25: Union[float, None]
-    median: Union[float, None]
-    q75: Union[float, None]
-    q98: Union[float, None]
-    max: Union[float, None]
-    sd: Union[float, None]
+    min: Union[float, None] = None
+    q02: Union[float, None] = None
+    q25: Union[float, None] = None
+    median: Union[float, None] = None
+    q75: Union[float, None] = None
+    q98: Union[float, None] = None
+    max: Union[float, None] = None
+    sd: Union[float, None] = None
 
 
 class CountryBase(JsonBase):
-    id: Union[int, None]
+    id: Union[int, None] = None
     code: str
     name: str
 
@@ -119,7 +117,7 @@ class ParameterBase(JsonBase):
     id: int
     name: str
     units: str
-    display_name: Union[str, None]
+    display_name: Union[str, None] = None
 
 
 class SensorBase(JsonBase):
@@ -132,7 +130,7 @@ class SensorBase(JsonBase):
 
 
 class Parameter(ParameterBase):
-    description: Union[str, None]
+    description: Union[str, None] = None
     locations_count: int
     measurements_count: int
 
@@ -156,7 +154,7 @@ class Entity(EntityBase):
 class Provider(ProviderBase):
     source_name: str
     export_prefix: str
-    license: Union[str, None]
+    license: Union[str, None] = None
     datetime_added: datetime
     datetime_first: datetime
     datetime_last: datetime
@@ -165,7 +163,7 @@ class Provider(ProviderBase):
     measurements_count: int
     countries_count: int
     parameters: List[ParameterBase]
-    bbox: Union[GeoJSON, None]
+    bbox: Union[GeoJSON, None] = None
 
 
 class Owner(OwnerBase):
@@ -191,8 +189,8 @@ class Sensor(SensorBase):
 
 class Location(JsonBase):
     id: int
-    name: Union[str, None]
-    locality: Union[str, None]
+    name: Union[str, None] = None
+    locality: Union[str, None] = None
     timezone: str
     country: CountryBase
     owner: EntityBase
@@ -202,8 +200,8 @@ class Location(JsonBase):
     instruments: List[InstrumentBase]
     sensors: List[SensorBase]
     coordinates: Coordinates
-    bounds: List[float] = Field(..., min_items=4, max_items=4)
-    distance: Union[float, None]
+    bounds: List[float] = Field(..., min_length=4, max_length=4)
+    distance: Union[float, None] = None
     datetime_first: DatetimeObject
     datetime_last: DatetimeObject
 
@@ -212,9 +210,9 @@ class Measurement(JsonBase):
     period: Period
     value: float
     parameter: ParameterBase
-    coordinates: Union[Coordinates, None]
-    summary: Union[Summary, None]
-    coverage: Union[Coverage, None]
+    coordinates: Union[Coordinates, None] = None
+    summary: Union[Summary, None] = None
+    coverage: Union[Coverage, None] = None
 
 
 # Similar to measurement but without timestamps

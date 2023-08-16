@@ -1,10 +1,17 @@
 import logging
 from fastapi import APIRouter, Depends, Query, Path
+from typing import Annotated
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.models.queries import (
     QueryBuilder,
     QueryBaseModel,
+    CountryIdQuery,
+    CountryIsoQuery,
     Paging,
+    BboxQuery,
+    RadiusQuery,
+    MonitorQuery,
+    ParametersQuery,
 )
 
 from openaq_fastapi.v3.models.responses import (
@@ -15,32 +22,47 @@ logger = logging.getLogger("providers")
 
 router = APIRouter(
     prefix="/v3",
-    tags=["v3"],
-    include_in_schema=False,
+    tags=["v3-alpha"],
+    include_in_schema=True,
 )
 
 
 class ProviderPathQuery(QueryBaseModel):
+    """Path query to filter results by providers ID
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        providers_id: providers ID value
+    """
+
     providers_id: int = Path(
         description="Limit the results to a specific provider by id",
         ge=1,
     )
 
     def where(self):
+        """Generates SQL condition for filtering to a single providers_id
+
+        Overrides the base QueryBaseModel `where` method
+
+        Returns:
+            string of WHERE clause
+        """
         return "id = :providers_id"
 
 
-class ProvidersQueries(QueryBaseModel, Paging):
+## TODO
+class ProvidersQueries(
+    Paging,
+    RadiusQuery,
+    BboxQuery,
+    CountryIdQuery,
+    CountryIsoQuery,
+    MonitorQuery,
+    ParametersQuery,
+):
     ...
-
-
-class ProviderLocationPathQuery(QueryBaseModel):
-    providers_id: int = Path(
-        description="Limit the results to a specific country",
-    )
-
-    def where(self) -> str:
-        return "(provider->'id')::int = :providers_id"
 
 
 @router.get(
@@ -50,10 +72,10 @@ class ProviderLocationPathQuery(QueryBaseModel):
     description="Provides a provider by provider ID",
 )
 async def provider_get(
-    provider: ProviderPathQuery = Depends(ProviderPathQuery.depends()),
+    providers: Annotated[ProviderPathQuery, Depends(ProviderPathQuery.depends())],
     db: DB = Depends(),
 ):
-    response = await fetch_providers(provider, db)
+    response = await fetch_providers(providers, db)
     return response
 
 
@@ -64,7 +86,7 @@ async def provider_get(
     description="Provides a list of providers",
 )
 async def providers_get(
-    provider: ProvidersQueries = Depends(ProvidersQueries.depends()),
+    provider: Annotated[ProvidersQueries, Depends(ProvidersQueries.depends())],
     db: DB = Depends(),
 ):
     response = await fetch_providers(provider, db)

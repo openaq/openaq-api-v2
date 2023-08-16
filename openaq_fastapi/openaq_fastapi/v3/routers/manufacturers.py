@@ -1,5 +1,6 @@
 import logging
 from fastapi import APIRouter, Depends, Path
+from typing import Annotated
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.models.responses import ManufacturersResponse
 
@@ -9,21 +10,36 @@ logger = logging.getLogger("manufacturers")
 
 router = APIRouter(
     prefix="/v3",
-    tags=["v3"],
-    include_in_schema=False,
+    tags=["v3-alpha"],
+    include_in_schema=True,
 )
 
 
 class ManufacturerPathQuery(QueryBaseModel):
+    """Path query to filter results by manufacturers ID
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        manufacturers_id: manufacturers ID value
+    """
+
     manufacturers_id: int = Path(
-        description="Limit the results to a specific manufacturers id", ge=1
+        ..., description="Limit the results to a specific manufacturers id", ge=1
     )
 
     def where(self) -> str:
+        """Generates SQL condition for filtering to a single manufacturers_id
+
+        Overrides the base QueryBaseModel `where` method
+
+        Returns:
+            string of WHERE clause
+        """
         return "id = :manufacturers_id"
 
 
-class ManufacturersQueries(QueryBaseModel, Paging):
+class ManufacturersQueries(Paging):
     ...
 
 
@@ -34,10 +50,12 @@ class ManufacturersQueries(QueryBaseModel, Paging):
     description="Provides a manufacturer by manufacturer ID",
 )
 async def manufacturer_get(
-    manufacturer: ManufacturerPathQuery = Depends(ManufacturerPathQuery.depends()),
+    manufacturers: Annotated[
+        ManufacturerPathQuery, Depends(ManufacturerPathQuery.depends())
+    ],
     db: DB = Depends(),
 ):
-    response = await fetch_manufacturers(manufacturer, db)
+    response = await fetch_manufacturers(manufacturers, db)
     return response
 
 
@@ -48,7 +66,9 @@ async def manufacturer_get(
     description="Provides a list of manufacturers",
 )
 async def manufacturers_get(
-    manufacturer: ManufacturersQueries = Depends(ManufacturersQueries.depends()),
+    manufacturer: Annotated[
+        ManufacturersQueries, Depends(ManufacturersQueries.depends())
+    ],
     db: DB = Depends(),
 ):
     response = await fetch_manufacturers(manufacturer, db)

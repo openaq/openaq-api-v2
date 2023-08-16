@@ -3,7 +3,7 @@ import os
 import pathlib
 import urllib
 from datetime import date, datetime
-from pydantic.typing import List, Union
+from typing import List, Union
 
 from fastapi import APIRouter, Depends, Path, Query, Response
 from fastapi.exceptions import HTTPException
@@ -27,12 +27,12 @@ class TileJSON(BaseModel):
     """
 
     tilejson: str = "2.2.0"
-    name: Union[str, None]
-    description: Union[str, None]
+    name: Union[str, None] = None
+    description: Union[str, None] = None
     version: str = "1.0.0"
-    attribution: Union[str, None]
-    template: Union[str, None]
-    legend: Union[str, None]
+    attribution: Union[str, None] = None
+    template: Union[str, None] = None
+    legend: Union[str, None] = None
     scheme: str = "xyz"
     tiles: List[str]
     grids: List[str] = []
@@ -48,9 +48,9 @@ router = APIRouter()
 
 
 class TileBase(OBaseModel):
-    z: int = (Path(..., ge=0, le=30, description="Mercator tiles's zoom level"),)
-    x: int = (Path(..., description="Mercator tiles's column"),)
-    y: int = (Path(..., description="Mercator tiles's row"),)
+    z: int = Path(..., ge=0, le=30, description="Mercator tiles's zoom level")
+    x: int = Path(..., description="Mercator tiles's column")
+    y: int = Path(..., description="Mercator tiles's row")
 
 
 class MobileTile(TileBase):
@@ -127,8 +127,11 @@ class MobileTile(TileBase):
     include_in_schema=False,
 )
 async def get_tile(
+    z: int = Path(..., ge=0, le=30, description="Mercator tiles's zoom level"),
+    x: int = Path(..., description="Mercator tiles's column"),
+    y: int = Path(..., description="Mercator tiles's row"),
     db: DB = Depends(),
-    t: MobileTile = Depends(MobileTile.depends()),
+    m: MobileTile = Depends(),
 ):
     query = f"""
         WITH
@@ -177,7 +180,7 @@ async def get_tile(
 )
 async def get_mobiletile(
     db: DB = Depends(),
-    t: MobileTile = Depends(MobileTile.depends()),
+    t: MobileTile = Depends(),
     dateFrom: Union[datetime, date] = Query(...),
     dateTo: Union[datetime, date] = Query(...),
 ):
@@ -290,7 +293,7 @@ async def get_mobiletile(
 )
 async def get_mobilegentile(
     db: DB = Depends(),
-    t: MobileTile = Depends(MobileTile.depends()),
+    t: MobileTile = Depends(),
 ):
     query = f"""
         WITH

@@ -1,22 +1,11 @@
 import logging
 
-from dateutil.tz import UTC
 from fastapi import APIRouter, Depends, Query
-from typing import Union, List
+from typing import Annotated, Union
 from enum import Enum
 from ..db import DB
-from ..models.queries import (
-    APIBase,
-    Country,
-    DateRange,
-    Measurands,
-    Project,
-    Spatial,
-    Temporal,
-    Sort,
-)
-from ..models.responses import AveragesResponse, OpenAQResult
-from pydantic import root_validator
+
+from ..models.responses import AveragesResponse
 
 from openaq_fastapi.v3.models.queries import (
     QueryBuilder,
@@ -42,20 +31,19 @@ class SpatialTypes(str, Enum):
 
 class SpatialTypeQuery(QueryBaseModel):
     spatial: Union[SpatialTypes, None] = Query(
-        "location",
-        description="Define how you want to aggregate in space"
+        "location", description="Define how you want to aggregate in space"
     )
 
 
-class LocationQuery(QueryBaseModel):
-    locations_id: int = Query(
-        70084,
-        description="Limit the results to a specific location by id",
-        ge=1,
-    )
+# class LocationQuery(QueryBaseModel):
+#     locations_id: int = Query(
+#         70084,
+#         description="Limit the results to a specific location by id",
+#         ge=1,
+#     )
 
-    def where(self) -> str:
-        return "sy.sensor_nodes_id = :locations_id"
+#     def where(self) -> str:
+#         return "sy.sensor_nodes_id = :locations_id"
 
 
 class ParametersQuery(QueryBaseModel):
@@ -72,7 +60,7 @@ class ParametersQuery(QueryBaseModel):
 class AveragesQueries(
     Paging,
     SpatialTypeQuery,
-    LocationQuery,
+    # LocationQuery,
     DateFromQuery,
     DateToQuery,
     ParametersQuery,
@@ -83,16 +71,15 @@ class AveragesQueries(
 
 @router.get(
     "/v2/averages",
-    include_in_schema=False,
     response_model=AveragesResponse,
     summary="Get averaged values",
     description="",
     tags=["v2"],
 )
-async def averages_v3_get(
+async def averages_v2_get(
+    av: Annotated[AveragesQueries, Depends(AveragesQueries.depends())],
     db: DB = Depends(),
-    av: AveragesQueries = Depends(AveragesQueries.depends()),
-):
+) -> AveragesResponse:
     query = QueryBuilder(av)
 
     if av.period_name in [None, "hour"]:
@@ -102,11 +89,11 @@ async def averages_v3_get(
         , sn.name
         , datetime as hour
         , datetime::date as day
-        , date_trunc('month', datetime) as month
-        , date_trunc('year', datetime) as year
+        , date_trunc('month', datetime)::date as month
+        , date_trunc('year', datetime)::date as year
         , to_char(datetime, 'HH24') as hod
         , to_char(datetime, 'ID') as dow
-        , sig_digits(h.value_avg, 2) as average
+        , sig_digits(h.value_avg, 2)::float as average
         , h.value_count as measurement_count
         , m.measurand as parameter
         , m.measurands_id as "parameterId"
@@ -146,7 +133,7 @@ async def averages_v3_get(
         , m.measurands_id as "parameterId"
         , m.display as "displayName"
         , m.units as unit
-        , AVG(h.value_avg) as average
+        , AVG(h.value_avg)::float as average
         , COUNT(1) as measurement_count
         , MIN(datetime) as first_datetime
         , MAX(datetime) as last_datetime

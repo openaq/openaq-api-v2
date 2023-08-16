@@ -1,8 +1,9 @@
 import logging
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Path
+from typing import Annotated
 from openaq_fastapi.models.responses import ProjectsResponse
-from pydantic.typing import Union, List
+from typing import Union, List
 
 from ..db import DB
 from ..models.queries import APIBase, Country, Measurands, Project
@@ -109,6 +110,14 @@ class Projects(Project, Measurands, APIBase, Country):
     description="Provides a project by project ID",
     tags=["v2"],
 )
+async def projects_get(
+    projects: Annotated[Projects, Depends(Projects)],
+    db: DB = Depends(),
+):
+    ...
+    # TODO implement projects/{project_id}
+
+
 @router.get(
     "/v2/projects",
     response_model=ProjectsResponse,
@@ -117,8 +126,8 @@ class Projects(Project, Measurands, APIBase, Country):
     tags=["v2"],
 )
 async def projects_get(
+    projects: Annotated[Projects, Depends(Projects)],
     db: DB = Depends(),
-    projects: Projects = Depends(Projects.depends()),
 ):
     q = f"""
         WITH bysensor AS (

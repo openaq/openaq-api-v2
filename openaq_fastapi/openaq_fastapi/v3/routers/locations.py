@@ -1,5 +1,6 @@
 import logging
 from fastapi import APIRouter, Depends, Path
+from typing import Annotated
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.models.responses import LocationsResponse
 
@@ -8,7 +9,8 @@ from openaq_fastapi.v3.models.queries import (
     QueryBaseModel,
     RadiusQuery,
     BboxQuery,
-    CountryQuery,
+    CountryIdQuery,
+    CountryIsoQuery,
     ProviderQuery,
     Paging,
     OwnerQuery,
@@ -20,17 +22,32 @@ logger = logging.getLogger("locations")
 
 router = APIRouter(
     prefix="/v3",
-    tags=["v3"],
-    include_in_schema=False,
+    tags=["v3-alpha"],
+    include_in_schema=True,
 )
 
 
-class LocationQuery(QueryBaseModel):
+class LocationPathQuery(QueryBaseModel):
+    """Path query to filter results by locations ID.
+
+    Inherits from QueryBaseModel.
+
+    Attributes:
+        locations_id: locations ID value.
+    """
+
     locations_id: int = Path(
         description="Limit the results to a specific location by id", ge=1
     )
 
     def where(self) -> str:
+        """Generates SQL condition for filtering to a single locations_id
+
+        Overrides the base QueryBaseModel `where` method
+
+        Returns:
+            string of WHERE clause
+        """
         return "id = :locations_id"
 
 
@@ -40,7 +57,8 @@ class LocationsQueries(
     BboxQuery,
     ProviderQuery,
     OwnerQuery,
-    CountryQuery,
+    CountryIdQuery,
+    CountryIsoQuery,
     MobileQuery,
     MonitorQuery,
 ):
@@ -54,10 +72,10 @@ class LocationsQueries(
     description="Provides a location by location ID",
 )
 async def location_get(
-    location: LocationQuery = Depends(LocationQuery.depends()),
+    locations: Annotated[LocationPathQuery, Depends(LocationPathQuery.depends())],
     db: DB = Depends(),
 ):
-    response = await fetch_locations(location, db)
+    response = await fetch_locations(locations, db)
     return response
 
 
@@ -68,7 +86,7 @@ async def location_get(
     description="Provides a list of locations",
 )
 async def locations_get(
-    locations: LocationsQueries = Depends(LocationsQueries.depends()),
+    locations: Annotated[LocationsQueries, Depends(LocationsQueries.depends())],
     db: DB = Depends(),
 ):
     response = await fetch_locations(locations, db)

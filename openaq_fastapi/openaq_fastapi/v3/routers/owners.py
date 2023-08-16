@@ -1,5 +1,5 @@
 import logging
-from typing import Union
+from typing import Union, Annotated
 from fastapi import APIRouter, Depends, Path
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.models.responses import OwnersResponse
@@ -10,22 +10,37 @@ logger = logging.getLogger("owners")
 
 router = APIRouter(
     prefix="/v3",
-    tags=["v3"],
-    include_in_schema=False,
+    tags=["v3-alpha"],
+    include_in_schema=True,
 )
 
 
 class OwnerPathQuery(QueryBaseModel):
+    """Path query to filter results by Owners ID.
+
+    Inherits from QueryBaseModel.
+
+    Attributes:
+        owners_id: owners ID value.
+    """
+
     owners_id: int = Path(
         description="Limit the results to a specific owner by id",
         ge=1,
     )
 
     def where(self) -> str:
+        """Generates SQL condition for filtering to a single owners_id
+
+        Overrides the base QueryBaseModel `where` method
+
+        Returns:
+            string of WHERE clause
+        """
         return "id = :owners_id"
 
 
-class OwnersQueries(QueryBaseModel, Paging):
+class OwnersQueries(Paging):
     ...
 
 
@@ -36,10 +51,10 @@ class OwnersQueries(QueryBaseModel, Paging):
     description="Provides a owner by owner ID",
 )
 async def owner_get(
-    owner: OwnerPathQuery = Depends(OwnerPathQuery.depends()),
+    owners: Annotated[OwnerPathQuery, Depends(OwnerPathQuery.depends())],
     db: DB = Depends(),
 ):
-    response = await fetch_owners(owner, db)
+    response = await fetch_owners(owners, db)
     return response
 
 
@@ -50,7 +65,7 @@ async def owner_get(
     description="Provides a list of owners",
 )
 async def owners_get(
-    owner: OwnersQueries = Depends(OwnersQueries.depends()),
+    owner: Annotated[OwnersQueries, Depends(OwnersQueries.depends())],
     db: DB = Depends(),
 ):
     response = await fetch_owners(owner, db)
