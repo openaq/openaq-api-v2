@@ -67,7 +67,7 @@ class LambdaApiStack(Stack):
             lambda_sec_group = None
         else:
             vpc = aws_ec2.Vpc.from_lookup(self, f"{id}-vpc", vpc_id=vpc_id)
-            lambda_sec_group = [
+            lambda_sec_group = 
 				aws_ec2.SecurityGroup(
 					self,
                     f"openaq-api-lambda-sec-group_{env_name}",
@@ -75,7 +75,6 @@ class LambdaApiStack(Stack):
 					vpc=vpc,
 					allow_all_outbound=True,
 				)
-				]
             redis_sec_group = aws_ec2.SecurityGroup(
                 self,
                 f"redis-sec-group_{env_name}",
