@@ -23,6 +23,8 @@ from aws_cdk import (
     aws_cloudfront_origins as origins,
     aws_cloudfront as cloudfront,
 )
+from pydantic_settings import BaseSettings
+
 
 import aws_cdk
 from aws_cdk.aws_apigatewayv2 import CfnStage
@@ -45,8 +47,8 @@ class LambdaApiStack(Stack):
         id: str,
         env: Environment,
         env_name: str,
-        lambda_env: Dict,
-        cloudfront_logs_lambda_env: Dict,
+        lambda_env: BaseSettings,
+        cloudfront_logs_lambda_env: BaseSettings,
         api_lambda_memory_size: int,
         api_lambda_timeout: int,
         vpc_id: Union[str, None],
@@ -108,7 +110,7 @@ class LambdaApiStack(Stack):
                 security_group_ids=[redis_sec_group.security_group_id],
             )
             redis_cluster.add_depends_on(redis_subnet_group)
-
+            lambda_env = lambda_env.model_dump()
             lambda_env[
                 "REDIS_HOST"
             ] = redis_cluster.attr_configuration_end_point_address
