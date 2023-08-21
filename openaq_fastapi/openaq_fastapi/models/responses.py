@@ -1,9 +1,7 @@
 from datetime import date, datetime
-from typing import List, Union, Any
+from typing import Any
 
-from pydantic import ConfigDict, BaseModel, AnyUrl, Field, validator
-import orjson
-from starlette.responses import JSONResponse
+from pydantic import ConfigDict, BaseModel, AnyUrl, Field
 import logging
 
 logger = logging.getLogger("responses")
@@ -15,7 +13,7 @@ class Meta(BaseModel):
     website: str = "/"
     page: int = 1
     limit: int = 100
-    found: Union[int, str, None] = None
+    found: int | str | None = None
 
 
 class Date(BaseModel):
@@ -24,17 +22,17 @@ class Date(BaseModel):
 
 
 class Coordinates(BaseModel):
-    latitude: Union[float, None] = None
-    longitude: Union[float, None] = None
+    latitude: float | None = None
+    longitude: float | None = None
 
 
 class Source(BaseModel):
-    url: Union[str, None] = None
+    url: str | None = None
     name: str
-    id: Union[str, None] = None
-    readme: Union[str, None] = None
-    organization: Union[str, None] = None
-    lifecycle_stage: Union[str, None] = None
+    id: str | None = None
+    readme: str | None = None
+    organization: str | None = None
+    lifecycle_stage: str | None = None
 
 
 class Manufacturer(BaseModel):
@@ -51,44 +49,44 @@ class Parameter(BaseModel):
     average: float
     last_value: float = Field(..., alias="lastValue")
     parameter: str
-    display_name: Union[str, None] = Field(None, alias="displayName")
+    display_name: str | None = Field(None, alias="displayName")
     last_updated: str = Field(..., alias="lastUpdated")
     parameter_id: int = Field(..., alias="parameterId")
     first_updated: str = Field(..., alias="firstUpdated")
-    manufacturers: Union[List[Manufacturer], None] = None
+    manufacturers: list[Manufacturer] | Manufacturer = None
 
 
 # Abstract class for all responses
 class OpenAQResult(BaseModel):
     meta: Meta = Meta()
-    results: List[Any] = []
+    results: list[Any] = []
 
 
 # /v2/averages
 
 
 class AveragesRow(BaseModel):
-    id: Union[List[int], int]
-    name: Union[List[str], str]
-    hour: Union[datetime, None] = None
-    day: Union[date, None] = None
-    month: Union[date, None] = None
-    year: Union[date, None] = None
-    hod: Union[int, None] = None
-    dow: Union[int, None] = None
+    id: list[int] | int
+    name: list[str] | str
+    hour: datetime | None = None
+    day: date | None = None
+    month: date | None = None
+    year: date | None = None
+    hod: int | None = None
+    dow: int | None = None
     average: float
-    name: Union[List[str], str]
+    name: list[str] | str
     measurement_count: int  # TODO make camelCase
     parameter: str
     parameter_id: int = Field(..., alias="parameterId")
     display_name: str = Field(..., alias="displayName")
-    unit: Union[str, None] = None
+    unit: str | None = None
     first_datetime: datetime
     last_datetime: datetime
 
 
 class AveragesResponse(OpenAQResult):
-    results: List[AveragesRow]
+    results: list[AveragesRow]
 
 
 # /v1/countries
@@ -103,7 +101,7 @@ class CountriesRowV1(BaseModel):
 
 
 class CountriesResponseV1(OpenAQResult):
-    results: List[CountriesRowV1]
+    results: list[CountriesRowV1]
 
 
 # /v2/countries
@@ -115,7 +113,7 @@ class CountriesRow(BaseModel):
     locations: int
     first_updated: str = Field(..., alias="firstUpdated")
     last_updated: str = Field(..., alias="lastUpdated")
-    parameters: List[str]
+    parameters: list[str]
     count: int
     cities: int
     sources: int
@@ -123,7 +121,7 @@ class CountriesRow(BaseModel):
 
 
 class CountriesResponse(OpenAQResult):
-    results: List[CountriesRow]
+    results: list[CountriesRow]
 
 
 # /v1/cities
@@ -137,7 +135,7 @@ class CityRowV1(BaseModel):
 
 
 class CitiesResponseV1(OpenAQResult):
-    results: List[CityRowV1]
+    results: list[CityRowV1]
 
 
 # /v2/cities
@@ -150,19 +148,19 @@ class CityRow(BaseModel):
     locations: int
     first_updated: str = Field(..., alias="firstUpdated")
     last_updated: str = Field(..., alias="lastUpdated")
-    parameters: List[str]
+    parameters: list[str]
     model_config = ConfigDict(populate_by_name=True)
 
 
 class CitiesResponse(OpenAQResult):
-    results: List[CityRow]
+    results: list[CityRow]
 
 
 # /v1/latest
 
 
 class AveragingPeriodV1(BaseModel):
-    value: Union[int, None] = None
+    value: int | None = None
     unit: str
 
 
@@ -177,14 +175,14 @@ class LatestMeasurementRow(BaseModel):
 
 class LatestRowV1(BaseModel):
     location: str
-    city: Union[str, None] = None
-    country: Union[str, None] = None
+    city: str | None = None
+    country: str | None = None
     coordinates: Coordinates
-    measurements: List[LatestMeasurementRow]
+    measurements: list[LatestMeasurementRow]
 
 
 class LatestResponseV1(OpenAQResult):
-    results: List[LatestRowV1]
+    results: list[LatestRowV1]
 
 
 # /v2/latest
@@ -198,15 +196,15 @@ class LatestMeasurement(BaseModel):
 
 
 class LatestRow(BaseModel):
-    location: Union[str, None] = None
-    city: Union[str, None] = None
-    country: Union[str, None] = None
-    coordinates: Union[Coordinates, None] = None
-    measurements: List[LatestMeasurement]
+    location: str | None = None
+    city: str | None = None
+    country: str | None = None
+    coordinates: Coordinates | None = None
+    measurements: list[LatestMeasurement]
 
 
 class LatestResponse(OpenAQResult):
-    results: List[LatestRow]
+    results: list[LatestRow]
 
 
 # /v1/locations
@@ -220,26 +218,26 @@ class CountsByMeasurementItem(BaseModel):
 class LocationsRowV1(BaseModel):
     id: int
     country: str
-    city: Union[str, None] = None
-    cities: Union[List[Union[str, None]], None] = None
+    city: str | None = None
+    cities: list[str | None] | None = None
     location: str
-    locations: List[str]
+    locations: list[str]
     source_name: str = Field(..., alias="sourceName")
-    source_names: List[str] = Field(..., alias="sourceNames")
+    source_names: list[str] = Field(..., alias="sourceNames")
     source_type: str = Field(..., alias="sourceType")
-    source_types: List[str] = Field(..., alias="sourceTypes")
+    source_types: list[str] = Field(..., alias="sourceTypes")
     coordinates: Coordinates
     first_updated: str = Field(..., alias="firstUpdated")
     last_updated: str = Field(..., alias="lastUpdated")
-    parameters: List[str]
-    counts_by_measurement: List[CountsByMeasurementItem] = Field(
+    parameters: list[str]
+    counts_by_measurement: list[CountsByMeasurementItem] = Field(
         ..., alias="countsByMeasurement"
     )
     count: int
 
 
 class LocationsResponseV1(OpenAQResult):
-    results: List[LocationsRowV1]
+    results: list[LocationsRowV1]
 
 
 # /v2/locations
@@ -249,32 +247,32 @@ def warn_on_null(v):
 
 class LocationsRow(BaseModel):
     id: int
-    city: Union[str, None] = None
-    name: Union[str, None] = None
-    entity: Union[str, None] = None
-    country: Union[str, None] = None
-    sources: Union[List[Source], None] = None
+    city: str | None = None
+    name: str | None = None
+    entity: str | None = None
+    country: str | None = None
+    sources: list[Source] | Source = None
     is_mobile: bool = Field(..., alias="isMobile")
-    is_analysis: Union[bool, None] = Field(None, alias="isAnalysis")
-    parameters: List[Parameter]
-    sensor_type: Union[str, None] = Field(None, alias="sensorType")
-    coordinates: Union[Coordinates, None] = None
+    is_analysis: bool | None = Field(None, alias="isAnalysis")
+    parameters: list[Parameter]
+    sensor_type: str | None = Field(None, alias="sensorType")
+    coordinates: Coordinates | None = None
     last_updated: str = Field(..., alias="lastUpdated")
     first_updated: str = Field(..., alias="firstUpdated")
     measurements: int
-    bounds: Union[List[float], None] = None
-    manufacturers: Union[List[Manufacturer], None] = None
+    bounds: list[float] | float = None
+    manufacturers: list[Manufacturer] | Manufacturer = None
 
 
 class LocationsResponse(OpenAQResult):
-    results: List[LocationsRow]
+    results: list[LocationsRow]
 
 
 # /v2/manufacturers
 
 
 class ManufacturersResponse(OpenAQResult):
-    results: List[str]
+    results: list[str]
 
 
 # /v1/measurements
@@ -287,12 +285,12 @@ class MeasurementsRowV1(BaseModel):
     date: Date
     unit: str
     coordinates: Coordinates
-    country: Union[str, None] = None
-    city: Union[str, None] = None
+    country: str | None = None
+    city: str | None = None
 
 
 class MeasurementsResponseV1(OpenAQResult):
-    results: List[MeasurementsRowV1]
+    results: list[MeasurementsRowV1]
 
 
 # /v2/measurements
@@ -305,24 +303,24 @@ class MeasurementsRow(BaseModel):
     value: float
     date: Date
     unit: str
-    coordinates: Union[Coordinates, None] = None
-    country: Union[str, None] = None
-    city: Union[str, None] = None
+    coordinates: Coordinates | None = None
+    country: str | None = None
+    city: str | None = None
     is_mobile: bool = Field(..., alias="isMobile")
-    is_analysis: Union[bool, None] = Field(None, alias="isAnalysis")
-    entity: Union[str, None] = None
+    is_analysis: bool | None = Field(None, alias="isAnalysis")
+    entity: str | None = None
     sensor_type: str = Field(..., alias="sensorType")
 
 
 class MeasurementsResponse(OpenAQResult):
-    results: List[MeasurementsRow]
+    results: list[MeasurementsRow]
 
 
 # /v2/models
 
 
 class ModelsResponse(OpenAQResult):
-    results: List[str]
+    results: list[str]
 
 
 # /v1/parameters
@@ -337,7 +335,7 @@ class ParametersRowV1(BaseModel):
 
 
 class ParametersResponseV1(OpenAQResult):
-    results: List[ParametersRowV1]
+    results: list[ParametersRowV1]
 
 
 # /v2/parameters
@@ -346,14 +344,14 @@ class ParametersResponseV1(OpenAQResult):
 class ParametersRow(BaseModel):
     id: int
     name: str
-    display_name: Union[str, None] = Field(None, alias="displayName")
+    display_name: str | None = Field(None, alias="displayName")
     description: str
     preferred_unit: str = Field(..., alias="preferredUnit")
     model_config = ConfigDict(populate_by_name=True)
 
 
 class ParametersResponse(OpenAQResult):
-    results: List[ParametersRow]
+    results: list[ParametersRow]
 
 
 # /v2/projects
@@ -364,10 +362,10 @@ class ParametersResponse(OpenAQResult):
 class ProjectsSource(BaseModel):
     id: str
     name: str
-    readme: Union[str, None] = None
-    data_avg_dur: Union[str, None] = None
-    organization: Union[str, None] = None
-    lifecycle_stage: Union[str, None] = None
+    readme: str | None = None
+    data_avg_dur: str | None = None
+    organization: str | None = None
+    lifecycle_stage: str | None = None
 
 
 class ProjectsRow(BaseModel):
@@ -375,22 +373,22 @@ class ProjectsRow(BaseModel):
     name: str
     subtitle: str
     is_mobile: bool = Field(..., alias="isMobile")
-    is_analysis: Union[bool, None] = Field(None, alias="isAnalysis")
-    entity: Union[str, None] = None
-    sensor_type: Union[str, None] = Field(None, alias="sensorType")
+    is_analysis: bool | None = Field(None, alias="isAnalysis")
+    entity: str | None = None
+    sensor_type: str | None = Field(None, alias="sensorType")
     locations: int
-    location_ids: List[int] = Field(..., alias="locationIds")
-    countries: List[str]
-    parameters: List[Parameter]
-    bbox: Union[List[float], None] = None
+    location_ids: list[int] = Field(..., alias="locationIds")
+    countries: list[str]
+    parameters: list[Parameter]
+    bbox: list[float] | None = None
     measurements: int
     first_updated: str = Field(..., alias="firstUpdated")
     last_updated: str = Field(..., alias="lastUpdated")
-    sources: List[ProjectsSource]
+    sources: list[ProjectsSource]
 
 
 class ProjectsResponse(OpenAQResult):
-    results: List[ProjectsRow]
+    results: list[ProjectsRow]
 
 
 # /v1/sources
@@ -400,40 +398,40 @@ class SourcesRowV1(BaseModel):
     url: str
     adapter: str
     name: str
-    city: Union[str, None] = None
+    city: str | None = None
     country: str
-    description: Union[str, None] = None
+    description: str | None = None
     source_url: AnyUrl = Field(..., alias="sourceURL")
-    resolution: Union[str, None] = None
-    contacts: List[str]
+    resolution: str | None = None
+    contacts: list[str]
     active: bool
 
 
 class SourcesResponseV1(OpenAQResult):
-    results: List[SourcesRowV1]
+    results: list[SourcesRowV1]
 
 
 # /v2/sources
 
 
 class Datum(BaseModel):
-    url: Union[str, None] = None
-    data_avg_dur: Union[str, None] = None
-    organization: Union[str, None] = None
-    lifecycle_stage: Union[str, None] = None
+    url: str | None = None
+    data_avg_dur: str | None = None
+    organization: str | None = None
+    lifecycle_stage: str | None = None
 
 
 class SourcesRow(BaseModel):
-    data: Union[Datum, None] = None
-    readme: Union[str, None] = None
+    data: Datum | None = None
+    readme: str | None = None
     source_id: int = Field(..., alias="sourceId")
     locations: int
     source_name: str = Field(..., alias="sourceName")
-    source_slug: Union[str, None] = Field(None, alias="sourceSlug")
+    source_slug: str | None = Field(None, alias="sourceSlug")
 
 
 class SourcesResponse(OpenAQResult):
-    results: List[SourcesRow]
+    results: list[SourcesRow]
 
 
 # /v2/summary
@@ -448,4 +446,4 @@ class SummaryRow(BaseModel):
 
 
 class SummaryResponse(OpenAQResult):
-    results: List[SummaryRow]
+    results: list[SummaryRow]

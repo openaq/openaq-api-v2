@@ -62,13 +62,13 @@ class ParameterTypeQuery(QueryBaseModel):
         parameter_type: a string representing the parameter type to filter
     """
 
-    parameter_type: Union[ParameterType, None] = Query(
+    parameter_type: ParameterType | None = Query(
         None,
         description="Limit the results to a specific parameters type",
         examples=["pollutant", "meteorological"],
     )
 
-    def where(self) -> Union[str, None]:
+    def where(self) -> str | None:
         """Generates SQL condition for filtering to a single parameters_id
 
         Overrides the base QueryBaseModel `where` method
@@ -89,7 +89,7 @@ class ParametersCountryIsoQuery(CountryIsoQuery):
     Inherits from CountryIsoQuery
     """
 
-    def where(self) -> Union[str, None]:
+    def where(self) -> str | None:
         """Generates SQL condition for filtering to country ISO code
 
         Overrides the base QueryBaseModel `where` method

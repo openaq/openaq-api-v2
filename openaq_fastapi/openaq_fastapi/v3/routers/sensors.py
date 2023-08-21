@@ -1,5 +1,5 @@
 import logging
-from typing import Union, Annotated
+from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Path
 from openaq_fastapi.db import DB
 from openaq_fastapi.v3.routers.measurements import fetch_measurements

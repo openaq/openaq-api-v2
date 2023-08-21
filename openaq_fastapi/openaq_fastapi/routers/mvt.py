@@ -3,7 +3,6 @@ import os
 import pathlib
 import urllib
 from datetime import date, datetime
-from typing import List, Union
 
 from fastapi import APIRouter, Depends, Path, Query, Response
 from fastapi.exceptions import HTTPException
@@ -27,19 +26,19 @@ class TileJSON(BaseModel):
     """
 
     tilejson: str = "2.2.0"
-    name: Union[str, None] = None
-    description: Union[str, None] = None
+    name: str | None = None
+    description: str | None = None
     version: str = "1.0.0"
-    attribution: Union[str, None] = None
-    template: Union[str, None] = None
-    legend: Union[str, None] = None
+    attribution: str | None = None
+    template: str | None = None
+    legend: str | None = None
     scheme: str = "xyz"
-    tiles: List[str]
-    grids: List[str] = []
-    data: List[str] = []
+    tiles: list[str]
+    grids: list[str] = []
+    data: list[str] = []
     minzoom: int = Field(0, ge=0, le=30)
     maxzoom: int = Field(30, ge=0, le=30)
-    bounds: List[float] = [-180, -90, 180, 90]
+    bounds: list[float] = [-180, -90, 180, 90]
 
 
 logger = logging.getLogger("mvt")
@@ -54,15 +53,13 @@ class TileBase(OBaseModel):
 
 
 class MobileTile(TileBase):
-    parameter: Union[int, None] = Query(None)
-    location: Union[List[int], None] = Query(
-        None, description="limit data to location id"
-    )
-    lastUpdatedFrom: Union[Union[datetime, date], None] = None
-    lastUpdatedTo: Union[Union[datetime, date], None] = None
-    isMobile: Union[bool, None] = None
-    project: Union[int, None] = None
-    isAnalysis: Union[bool, None] = None
+    parameter: int | None = Query(None)
+    location: list[int] | None = Query(None, description="limit data to location id")
+    lastUpdatedFrom: datetime | date | None = None
+    lastUpdatedTo: datetime | date | None = None
+    isMobile: bool | None = None
+    project: int | None = None
+    isAnalysis: bool | None = None
 
     def try_cast(self, value: str):
         try:
@@ -181,8 +178,8 @@ async def get_tile(
 async def get_mobiletile(
     db: DB = Depends(),
     t: MobileTile = Depends(),
-    dateFrom: Union[datetime, date] = Query(...),
-    dateTo: Union[datetime, date] = Query(...),
+    dateFrom: datetime | date = Query(...),
+    dateTo: datetime | date = Query(...),
 ):
     params = t.params()
     dffrom = ""

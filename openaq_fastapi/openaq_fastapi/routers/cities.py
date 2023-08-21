@@ -1,6 +1,6 @@
 import logging
 from enum import Enum
-from typing import Annotated, Union, List
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 from openaq_fastapi.models.responses import CitiesResponse, CitiesResponseV1
@@ -32,7 +32,7 @@ class CitiesV1(APIBase):
         "city", description="Order by a field e.g. ?order_by=city", examples=["city"]
     )
 
-    country: Union[List[str], None] = Query(
+    country: list[str] | None = Query(
         None,
         min_length=2,
         max_length=2,
@@ -57,7 +57,7 @@ class Cities(City, Country, APIBase):
     order_by: CitiesOrder = Query(
         "city", description="Order by a field e.g. ?order_by=city", examples=["city"]
     )
-    entity: Union[str, None] = None
+    entity: str | None = None
 
     def where(self):
         wheres = []

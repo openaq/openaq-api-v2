@@ -3,7 +3,7 @@ import logging
 import traceback
 from pathlib import Path
 import time
-from typing import Any, List
+from typing import Any
 
 import orjson
 from fastapi import FastAPI, Request
@@ -160,13 +160,13 @@ app.add_middleware(LoggingMiddleware)
 
 
 class OpenAQValidationResponseDetail(BaseModel):
-    loc: List[str] = None
-    msg: str = None
-    type: str = None
+    loc: list[str] | None = None
+    msg: str | None = None
+    type: str | None = None
 
 
 class OpenAQValidationResponse(BaseModel):
-    detail: List[OpenAQValidationResponseDetail] = None
+    detail: list[OpenAQValidationResponseDetail] | None = None
 
 
 @app.exception_handler(RequestValidationError)

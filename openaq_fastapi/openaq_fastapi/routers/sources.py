@@ -1,5 +1,5 @@
 import logging
-from typing import Annotated, Union
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query
 from fastapi.responses import HTMLResponse
@@ -105,7 +105,7 @@ class SourcesV1Order(str, Enum):
 
 
 class SourcesV1(APIBase):
-    name: Union[str, None] = None
+    name: str | None = None
     order_by: SourcesV1Order = Query("name")
 
     def where(self):

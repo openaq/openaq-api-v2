@@ -2,7 +2,7 @@ import logging
 from fastapi import APIRouter, Depends, Path, Query
 from openaq_fastapi.db import DB
 from datetime import date, datetime
-from typing import Union, Annotated
+from typing import Annotated
 from openaq_fastapi.v3.models.responses import TrendsResponse
 
 logger = logging.getLogger("trends")

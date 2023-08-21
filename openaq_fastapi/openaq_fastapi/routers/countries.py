@@ -1,6 +1,6 @@
 import logging
-from typing import Annotated, Union, List
-from fastapi import APIRouter, Depends, Query, Path
+from typing import Annotated
+from fastapi import APIRouter, Depends, Query
 from enum import Enum
 from ..db import DB
 from ..models.queries import APIBase, Country, CountryByPath

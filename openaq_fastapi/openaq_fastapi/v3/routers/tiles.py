@@ -1,13 +1,13 @@
 import logging
 import urllib
-from typing import List, Union, Annotated
+from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, Request, Response
 from pydantic import BaseModel, Field
 from openaq_fastapi.db import DB
 
 from openaq_fastapi.v3.models.queries import (
-    QueryBaseModel,
     CommaSeparatedList,
+    QueryBaseModel,
     ParametersQuery,
     MonitorQuery,
     MobileQuery,
@@ -24,31 +24,31 @@ router = APIRouter(
 
 
 class TileProvidersQuery(QueryBaseModel):
-    providers_id: Union[CommaSeparatedList[int], None] = Query(
+    providers_id: CommaSeparatedList[int] | None = Query(
         description="Limit the results to a specific provider or providers"
     )
 
-    def where(self) -> Union[str, None]:
+    def where(self) -> str | None:
         if self.has("providers_id"):
             return "providers_id = ANY (:providers_id)"
 
 
 class TileOwnersQuery(QueryBaseModel):
-    owners_id: Union[CommaSeparatedList[int], None] = Query(
+    owners_id: CommaSeparatedList[int] | None = Query(
         description="Limit the results to a specific owner or owners"
     )
 
-    def where(self) -> Union[str, None]:
+    def where(self) -> str | None:
         if self.has("owners_id"):
             return "owners_id = ANY (:owners_id)"
 
 
 class ActiveQuery(QueryBaseModel):
-    active: Union[bool, None] = Query(
+    active: bool | None = Query(
         description="Limits to locations with recent measurements (<48 hours)"
     )
 
-    def where(self) -> Union[str, None]:
+    def where(self) -> str | None:
         if self.has("active"):
             return "active = :active"
 
@@ -57,7 +57,7 @@ class ThresholdsQuery(QueryBaseModel):
     period: int = Query(description="")
     threshold: int = Query(description="")
 
-    def where(self) -> Union[str, None]:
+    def where(self) -> str | None:
         if self.has("period") and self.has("threshold"):
             return "threshold = :threshold AND period = :period"
 
@@ -91,13 +91,13 @@ class MobileTile(TileBase):
     parameters_id: int = Query(
         description="Limit the results to a specific location by id", ge=1
     )
-    providers: Union[List[int], None] = Query(
+    providers: list[int] | None = Query(
         description="Limit the results to a specific provider by id"
     )
-    is_monitor: Union[List[int], None] = Query(
+    is_monitor: list[int] | None = Query(
         description="Limit the results to one or more sensor types"
     )
-    is_active: Union[bool, None] = Query(
+    is_active: bool | None = Query(
         description="Limit the results to locations active within the last 48 hours"
     )
 
@@ -363,19 +363,19 @@ class TileJSON(BaseModel):
     """
 
     tilejson: str = "2.2.0"
-    name: Union[str, None] = None
-    description: Union[str, None] = None
+    name: str | None = None
+    description: str | None = None
     version: str = "1.0.0"
-    attribution: Union[str, None] = None
-    template: Union[str, None] = None
-    legend: Union[str, None] = None
+    attribution: str | None = None
+    template: str | None = None
+    legend: str | None = None
     scheme: str = "xyz"
-    tiles: List[str]
-    grids: List[str] = []
-    data: List[str] = []
+    tiles: list[str]
+    grids: list[str] = []
+    data: list[str] = []
     minzoom: int = Field(0, ge=0, le=30)
     maxzoom: int = Field(30, ge=0, le=30)
-    bounds: List[float] = [-180, -90, 180, 90]
+    bounds: list[float] = [-180, -90, 180, 90]
 
 
 @router.get(

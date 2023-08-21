@@ -1,5 +1,5 @@
 import logging
-from typing import List, Annotated, Union
+from typing import Annotated
 
 import jq
 from fastapi import APIRouter, Depends, Query, Path
@@ -57,13 +57,13 @@ class Locations(
         "lastUpdated",
         description="Order by a field",
     )
-    sort: Union[Sort, None] = Query(
+    sort: Sort | None = Query(
         "desc", description="Sort Direction e.g. sort=desc", examples=["desc"]
     )
-    isMobile: Union[bool, None] = Query(
+    isMobile: bool | None = Query(
         None, description="Location is mobile e.g. ?isMobile=true", examples=["true"]
     )
-    isAnalysis: Union[bool, None] = Query(
+    isAnalysis: bool | None = Query(
         None,
         description=(
             "Data is the product of a previous "
@@ -72,30 +72,30 @@ class Locations(
         ),
         examples=["true"],
     )
-    sourceName: Union[List[str], None] = Query(
+    sourceName: list[str] | None = Query(
         None,
         description="Name of the data source e.g. ?sourceName=Houston%20Mobile",
         examples=["Houston%20Mobile"],
     )
-    entity: Union[EntityTypes, None] = Query(
+    entity: EntityTypes | None = Query(
         None,
         description="Source entity type. e.g. ?entity=government",
         examples=["government"],
     )
-    sensorType: Union[SensorTypes, None] = Query(
+    sensorType: SensorTypes | None = Query(
         None,
         description="Type of Sensor e.g. ?sensorType=reference%20grade",
         examples=["reference%20grade"],
     )
-    modelName: Union[List[str], None] = Query(
+    modelName: list[str] | None = Query(
         None, description="Model Name of Sensor e.g. ?modelName=AE33", examples=["AE33"]
     )
-    manufacturerName: Union[List[str], None] = Query(
+    manufacturerName: list[str] | None = Query(
         None,
         description="Manufacturer of Sensor e.g. ?manufacturer=Ecotech",
         examples=["Ecotech"],
     )
-    dumpRaw: Union[bool, None] = False
+    dumpRaw: bool | None = False
 
     def order(self):
         stm = self.order_by

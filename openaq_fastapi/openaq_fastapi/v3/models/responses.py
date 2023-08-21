@@ -1,4 +1,4 @@
-from typing import List, Union, Any
+from typing import Any
 from pydantic import ConfigDict, BaseModel, Field
 from humps import camelize
 from datetime import datetime
@@ -13,12 +13,12 @@ class Meta(JsonBase):
     website: str = "/"
     page: int = 1
     limit: int = 100
-    found: Union[int, str, None] = None
+    found: int | str | None = None
 
 
 class OpenAQResult(JsonBase):
     meta: Meta = Meta()
-    results: List[Any] = []
+    results: list[Any] = []
 
 
 #
@@ -30,21 +30,21 @@ class DatetimeObject(JsonBase):
 
 
 class Coordinates(JsonBase):
-    latitude: Union[float, None] = None
-    longitude: Union[float, None] = None
+    latitude: float | None = None
+    longitude: float | None = None
 
 
 # Base classes
 class GeoJSON(JsonBase):
     type: str
-    coordinates: List[Any] = []
+    coordinates: list[Any] = []
 
 
 class Period(JsonBase):
     label: str
     interval: str
-    datetime_from: Union[DatetimeObject, None] = None
-    datetime_to: Union[DatetimeObject, None] = None
+    datetime_from: DatetimeObject | None = None
+    datetime_to: DatetimeObject | None = None
 
 
 class Coverage(JsonBase):
@@ -54,29 +54,29 @@ class Coverage(JsonBase):
     observed_interval: str
     percent_complete: float  # percent of expected values
     percent_coverage: float  # percent of time
-    datetime_from: Union[DatetimeObject, None] = None
-    datetime_to: Union[DatetimeObject, None] = None
+    datetime_from: DatetimeObject | None = None
+    datetime_to: DatetimeObject | None = None
 
 
 class Factor(JsonBase):
     label: str
-    interval: Union[str, None] = None
-    order: Union[int, None] = None
+    interval: str | None = None
+    order: int | None = None
 
 
 class Summary(JsonBase):
-    min: Union[float, None] = None
-    q02: Union[float, None] = None
-    q25: Union[float, None] = None
-    median: Union[float, None] = None
-    q75: Union[float, None] = None
-    q98: Union[float, None] = None
-    max: Union[float, None] = None
-    sd: Union[float, None] = None
+    min: float | None = None
+    q02: float | None = None
+    q25: float | None = None
+    median: float | None = None
+    q75: float | None = None
+    q98: float | None = None
+    max: float | None = None
+    sd: float | None = None
 
 
 class CountryBase(JsonBase):
-    id: Union[int, None] = None
+    id: int | None = None
     code: str
     name: str
 
@@ -117,7 +117,7 @@ class ParameterBase(JsonBase):
     id: int
     name: str
     units: str
-    display_name: Union[str, None] = None
+    display_name: str | None = None
 
 
 class SensorBase(JsonBase):
@@ -130,7 +130,7 @@ class SensorBase(JsonBase):
 
 
 class Parameter(ParameterBase):
-    description: Union[str, None] = None
+    description: str | None = None
     locations_count: int
     measurements_count: int
 
@@ -141,7 +141,7 @@ class Country(CountryBase):
     name: str
     datetime_first: datetime
     datetime_last: datetime
-    parameters: List[ParameterBase]
+    parameters: list[ParameterBase]
     locations_count: int
     measurements_count: int
     providers_count: int
@@ -154,7 +154,7 @@ class Entity(EntityBase):
 class Provider(ProviderBase):
     source_name: str
     export_prefix: str
-    license: Union[str, None] = None
+    license: str | None = None
     datetime_added: datetime
     datetime_first: datetime
     datetime_last: datetime
@@ -162,8 +162,8 @@ class Provider(ProviderBase):
     locations_count: int
     measurements_count: int
     countries_count: int
-    parameters: List[ParameterBase]
-    bbox: Union[GeoJSON, None] = None
+    parameters: list[ParameterBase]
+    bbox: GeoJSON | None = None
 
 
 class Owner(OwnerBase):
@@ -189,19 +189,19 @@ class Sensor(SensorBase):
 
 class Location(JsonBase):
     id: int
-    name: Union[str, None] = None
-    locality: Union[str, None] = None
+    name: str | None = None
+    locality: str | None = None
     timezone: str
     country: CountryBase
     owner: EntityBase
     provider: ProviderBase
     is_mobile: bool
     is_monitor: bool
-    instruments: List[InstrumentBase]
-    sensors: List[SensorBase]
+    instruments: list[InstrumentBase]
+    sensors: list[SensorBase]
     coordinates: Coordinates
-    bounds: List[float] = Field(..., min_length=4, max_length=4)
-    distance: Union[float, None] = None
+    bounds: list[float] = Field(..., min_length=4, max_length=4)
+    distance: float | None = None
     datetime_first: DatetimeObject
     datetime_last: DatetimeObject
 
@@ -210,9 +210,9 @@ class Measurement(JsonBase):
     period: Period
     value: float
     parameter: ParameterBase
-    coordinates: Union[Coordinates, None] = None
-    summary: Union[Summary, None] = None
-    coverage: Union[Coverage, None] = None
+    coordinates: Coordinates | None = None
+    summary: Summary | None = None
+    coverage: Coverage | None = None
 
 
 # Similar to measurement but without timestamps
@@ -220,7 +220,7 @@ class Trend(JsonBase):
     factor: Factor
     value: float
     parameter: ParameterBase
-    # coordinates: Union[Coordinates, None]
+    # coordinates: Coordinates | None
     summary: Summary
     coverage: Coverage
 
@@ -229,36 +229,36 @@ class Trend(JsonBase):
 
 
 class LocationsResponse(OpenAQResult):
-    results: List[Location]
+    results: list[Location]
 
 
 class MeasurementsResponse(OpenAQResult):
-    results: List[Measurement]
+    results: list[Measurement]
 
 
 class TrendsResponse(OpenAQResult):
-    results: List[Trend]
+    results: list[Trend]
 
 
 class CountriesResponse(OpenAQResult):
-    results: List[Country]
+    results: list[Country]
 
 
 class ParametersResponse(OpenAQResult):
-    results: List[Parameter]
+    results: list[Parameter]
 
 
 class SensorsResponse(OpenAQResult):
-    results: List[Sensor]
+    results: list[Sensor]
 
 
 class ProvidersResponse(OpenAQResult):
-    results: List[Provider]
+    results: list[Provider]
 
 
 class ManufacturersResponse(OpenAQResult):
-    results: List[Manufacturer]
+    results: list[Manufacturer]
 
 
 class OwnersResponse(OpenAQResult):
-    results: List[Owner]
+    results: list[Owner]

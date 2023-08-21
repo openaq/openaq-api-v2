@@ -2,11 +2,10 @@ from datetime import timedelta
 import logging
 import time
 from os import environ
-from typing import Union
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
-from starlette.types import ASGIApp, Receive, Send, Message, Scope
+from starlette.types import ASGIApp
 from .settings import settings
 
 from fastapi.responses import JSONResponse
@@ -26,7 +25,7 @@ logger = logging.getLogger("middleware")
 class CacheControlMiddleware(BaseHTTPMiddleware):
     """MiddleWare to add CacheControl in response headers."""
 
-    def __init__(self, app: ASGIApp, cachecontrol: Union[str, None] = None) -> None:
+    def __init__(self, app: ASGIApp, cachecontrol: str | None = None) -> None:
         """Init Middleware."""
         super().__init__(app)
         self.cachecontrol = cachecontrol

@@ -1,4 +1,4 @@
-FROM public.ecr.aws/sam/build-python3.9:latest
+FROM public.ecr.aws/sam/build-python3.10:latest
 
 WORKDIR /var/task
 

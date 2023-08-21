@@ -1,5 +1,5 @@
 import logging
-from typing import List, Union, Annotated
+from typing import Annotated
 from fastapi import APIRouter, Depends, Path, Query
 from pydantic import root_validator
 from openaq_fastapi.db import DB

@@ -1,7 +1,7 @@
 import logging
 
 from fastapi import APIRouter, Depends, Query
-from typing import Annotated, Union
+from typing import Annotated
 from enum import Enum
 from ..db import DB
 
@@ -30,7 +30,7 @@ class SpatialTypes(str, Enum):
 
 
 class SpatialTypeQuery(QueryBaseModel):
-    spatial: Union[SpatialTypes, None] = Query(
+    spatial: SpatialTypes | None = Query(
         "location", description="Define how you want to aggregate in space"
     )
 
@@ -47,12 +47,12 @@ class SpatialTypeQuery(QueryBaseModel):
 
 
 class ParametersQuery(QueryBaseModel):
-    parameters_id: Union[int, None] = Query(
+    parameters_id: int | None = Query(
         135,
         description="What measurand would you like?",
     )
 
-    def where(self) -> Union[str, None]:
+    def where(self) -> str | None:
         if self.has("parameters_id"):
             return "m.measurands_id = :parameters_id"
 
