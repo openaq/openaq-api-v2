@@ -110,11 +110,8 @@ class LambdaApiStack(Stack):
                 security_group_ids=[redis_sec_group.security_group_id],
             )
             redis_cluster.add_depends_on(redis_subnet_group)
-            lambda_env = lambda_env.model_dump()
-            lambda_env[
-                "REDIS_HOST"
-            ] = redis_cluster.attr_configuration_end_point_address
-            lambda_env["REDIS_PORT"] = redis_cluster.attr_configuration_end_point_port
+            lambda_env.REDIS_HOST = redis_cluster.attr_configuration_end_point_address
+            lambda_env.REDIS_PORT = redis_cluster.attr_configuration_end_point_port
 
         lambda_env = stringify_settings(lambda_env)
 

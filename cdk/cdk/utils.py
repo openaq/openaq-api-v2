@@ -13,7 +13,7 @@ def dictstr(item):
 
 
 def stringify_settings(data: dict):
-    return dict(map(dictstr, data.items()))
+    return dict(map(dictstr, data.model_dump().items()))
 
 
 def create_dependencies_layer(
