@@ -136,7 +136,7 @@ class LambdaApiStack(Stack):
             allow_public_subnet=True,
             memory_size=api_lambda_memory_size,
             environment=lambda_env,
-            security_groups=lambda_sec_group,
+            security_groups=[lambda_sec_group],
             timeout=Duration.seconds(api_lambda_timeout),
             layers=[
                 create_dependencies_layer(
