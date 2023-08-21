@@ -24,7 +24,7 @@ from openaq_fastapi.v3.models.queries import (
     RadiusQuery,
     truncate_float,
 )
-from openaq_fastapi.v3.routers.locations import LocationQuery, LocationsQueries
+from openaq_fastapi.v3.routers.locations import LocationPathQuery, LocationsQueries
 
 
 class TestTruncateFloat:
@@ -439,16 +439,16 @@ class TestQueryBuilder:
         assert query_builder.pagination() == "\nLIMIT :limit OFFSET :offset"
 
 
-class TestLocationQuery:
-    def test_location_query(self):
-        location_queries = LocationQuery(locations_id=42)
+class TestLocationPathQuery:
+    def test_location_path_query(self):
+        location_queries = LocationPathQuery(locations_id=42)
         where = render(location_queries.where(), **location_queries.model_dump())
         assert where[0] == f"id = $1"
         assert where[1] == [42]
 
     def test_id(self):
         with pytest.raises(fastapi.exceptions.HTTPException):
-            LocationQuery(locations_id=0)
+            LocationPathQuery(locations_id=0)
 
 
 class TestLocationsQueries:
