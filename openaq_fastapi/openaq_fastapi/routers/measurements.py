@@ -1,7 +1,7 @@
 from enum import Enum
 import logging
 import os
-from typing import Annotated, Union
+from typing import Annotated
 import jq
 
 import orjson as json
@@ -100,24 +100,24 @@ class Measurements(
 ):
     order_by: MeasOrder = Query("datetime")
     sort: Sort = Query("desc")
-    isMobile: Union[bool, None] = Query(
+    isMobile: bool | None = Query(
         None, description="Location is mobile e.g. ?isMobile=true", examples=["true"]
     )
-    isAnalysis: Union[bool, None] = Query(
+    isAnalysis: bool | None = Query(
         None,
         description="Data is the product of a previous analysis/aggregation and not raw measurements e.g. ?isAnalysis=false",
         examples=["true"],
     )
-    project: Union[int, None] = Query(None)
-    entity: Union[EntityTypes, None] = Query(None)
-    sensorType: Union[SensorTypes, None] = Query(
+    project: int | None = Query(None)
+    entity: EntityTypes | None = Query(None)
+    sensorType: SensorTypes | None = Query(
         None,
         description="Filter by sensor type (i,e. reference grade, low-cost sensor) e.g. ?sensorType=reference%20grade",
         examples=["reference%20grade"],
     )
-    value_from: Union[float, None] = Query(None, description="", example="")
-    value_to: Union[float, None] = Query(None, description="", example="")
-    include_fields: Union[str, None] = Query(
+    value_from: float | None = Query(None, description="", example="")
+    value_to: float | None = Query(None, description="", example="")
+    include_fields: str | None = Query(
         None,
         description="Additional fields to include in response e.g. ?include_fields=sourceName",
         examples=["sourceName"],
@@ -201,7 +201,7 @@ class Measurements(
 async def measurements_get(
     m: Annotated[Measurements, Depends(Measurements)],
     db: DB = Depends(),
-    format: Union[str, None] = None,
+    format: str | None = None,
 ):
     where = m.where()
     params = m.params()
@@ -258,7 +258,7 @@ async def measurements_get(
 async def measurements_get_v1(
     m: Annotated[Measurements, Depends(Measurements)],
     db: DB = Depends(),
-    format: Union[str, None] = None,
+    format: str | None = None,
 ):
     m.entity = "government"
     params = m.params()

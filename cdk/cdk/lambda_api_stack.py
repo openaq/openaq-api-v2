@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Union
 
 
 from aws_cdk import (
@@ -127,7 +127,7 @@ class LambdaApiStack(Stack):
                 ],
             ),
             handler="openaq_fastapi.main.handler",
-            runtime=aws_lambda.Runtime.PYTHON_3_9,
+            runtime=aws_lambda.Runtime.PYTHON_3_10,
             architecture=aws_lambda.Architecture.X86_64,
             vpc=vpc,
             allow_public_subnet=True,
@@ -267,7 +267,7 @@ class LambdaApiStack(Stack):
                     ],
                 ),
                 handler="cloudfront_logs.main.handler",
-                runtime=aws_lambda.Runtime.PYTHON_3_9,
+                runtime=aws_lambda.Runtime.PYTHON_3_10,
                 allow_public_subnet=True,
                 memory_size=cf_logs_lambda_memory_size,
                 environment=stringify_settings(cloudfront_logs_lambda_env),

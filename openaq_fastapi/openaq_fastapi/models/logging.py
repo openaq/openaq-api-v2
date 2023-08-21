@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import Union
 
 from pydantic import ConfigDict, BaseModel, Field, FieldValidationInfo, field_validator
 from fastapi import status, Request
@@ -24,7 +23,7 @@ class BaseLog(BaseModel):
     """
 
     type: LogType
-    detail: Union[str, None] = None
+    detail: str | None = None
 
     def model_dump_json(self, **kwargs):
         kwargs["by_alias"] = True
@@ -50,15 +49,15 @@ class InfrastructureErrorLog(BaseLog):
 class HTTPLog(BaseLog):
     http_code: int
     request: Request = Field(..., exclude=True)
-    path: Union[str, None] = None
-    params: Union[str, None] = None
-    params_obj: Union[dict, None] = None
-    params_keys: Union[list, None] = None
-    ip: Union[str, None] = None
-    api_key: Union[str, None] = None
-    timing: Union[float, None] = None
-    rate_limiter: Union[str, None] = None
-    counter: Union[int, None] = None
+    path: str | None = None
+    params: str | None = None
+    params_obj: dict | None = None
+    params_keys: list | None = None
+    ip: str | None = None
+    api_key: str | None = None
+    timing: float | None = None
+    rate_limiter: str | None = None
+    counter: int | None = None
 
     @field_validator("api_key")
     def set_api_key(cls, v, info: FieldValidationInfo) -> dict:

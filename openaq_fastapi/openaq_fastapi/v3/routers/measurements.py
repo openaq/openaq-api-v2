@@ -1,12 +1,9 @@
 from fastapi import APIRouter, Depends, Path
 from openaq_fastapi.db import DB
-from typing import List, Union, Annotated
+from typing import Annotated
 from fastapi import Query
 from openaq_fastapi.v3.models.responses import (
     MeasurementsResponse,
-    JsonBase,
-    DatetimeObject,
-    OpenAQResult,
 )
 from openaq_fastapi.v3.models.queries import (
     CommaSeparatedList,
@@ -35,9 +32,9 @@ class LocationPathQuery(QueryBaseModel):
 
 
 class MeasurementsParametersQuery(QueryBaseModel):
-    parameters_id: Union[CommaSeparatedList[int], None] = Query(None, description="")
+    parameters_id: CommaSeparatedList[int] | None = Query(None, description="")
 
-    def where(self) -> Union[str, None]:
+    def where(self) -> str | None:
         if self.has("parameters_id"):
             return "m.measurands_id = ANY (:parameters_id)"
 

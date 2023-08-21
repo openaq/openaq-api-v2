@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, Query, Path
 from typing import Annotated
 from openaq_fastapi.models.responses import ProjectsResponse
-from typing import Union, List
+
 
 from ..db import DB
 from ..models.queries import APIBase, Country, Measurands, Project
@@ -24,11 +24,11 @@ class ProjectsOrder(str, Enum):
 
 class Projects(Project, Measurands, APIBase, Country):
     order_by: ProjectsOrder = Query("lastUpdated")
-    isMobile: Union[bool, None] = None
-    isAnalysis: Union[bool, None] = None
-    entity: Union[str, None] = None
-    sensorType: Union[str, None] = None
-    sourceName: Union[List[str], None] = None
+    isMobile: bool | None = None
+    isAnalysis: bool | None = None
+    entity: str | None = None
+    sensorType: str | None = None
+    sourceName: list[str] | None = None
 
     def where(self):
         wheres = []

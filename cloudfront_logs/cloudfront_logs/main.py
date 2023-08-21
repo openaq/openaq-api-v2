@@ -3,7 +3,6 @@ adapted from https://aws.amazon.com/blogs/mt/sending-cloudfront-standard-logs-to
 """
 
 from io import BytesIO
-from typing import Dict
 from gzip import GzipFile
 from datetime import datetime
 import logging
@@ -35,7 +34,7 @@ log_group_name = f"openaq-api-{settings.ENV}-cf-access-log"
 log_stream_name = f"openaq-api-{settings.ENV}-cf-access-log-stream"
 
 
-def put_log(records: Dict, *sequence_token):
+def put_log(records: dict, *sequence_token):
     records = [
         {"timestamp": int(k), "message": json.dumps(v)} for k, v in records.items()
     ]
