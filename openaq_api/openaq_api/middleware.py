@@ -137,6 +137,8 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
             return False
         if "/v2/locations/tiles" in route:
             return False
+        if "/v3/locations/tiles" in route:
+            return False
         if "/assets" in route:
             return False
         if ".css" in route:
