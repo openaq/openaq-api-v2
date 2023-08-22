@@ -4,7 +4,7 @@ from aws_cdk import (
     Tags,
 )
 
-from cdk.lambda_api_stack import LambdaApiStack
+from stacks.lambda_api_stack import LambdaApiStack
 
 from settings import settings
 
@@ -13,11 +13,12 @@ from settings import settings
 # a better package structure in the future.
 import os
 import sys
-p = os.path.abspath('../openaq_fastapi')
-sys.path.insert(1, p)
-from openaq_fastapi.settings import settings as lambda_env
 
-p = os.path.abspath('../cloudfront_logs')
+p = os.path.abspath("../openaq_api")
+sys.path.insert(1, p)
+from openaq_api.settings import settings as lambda_env
+
+p = os.path.abspath("../cloudfront_logs")
 sys.path.insert(1, p)
 from cloudfront_logs.settings import settings as cloudfront_logs_lambda_env
 
