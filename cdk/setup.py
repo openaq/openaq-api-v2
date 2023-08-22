@@ -14,9 +14,7 @@ aws_cdk_reqs = [
 ]
 
 install_requires = ["docker"]
-install_requires.append(
-    [f"aws_cdk.{x}=={aws_cdk_version}" for x in aws_cdk_reqs]
-)
+install_requires.append([f"aws_cdk.{x}=={aws_cdk_version}" for x in aws_cdk_reqs])
 
 setuptools.setup(
     name="openaq-fastapi",
@@ -25,8 +23,8 @@ setuptools.setup(
     long_description="hi",
     long_description_content_type="text/markdown",
     author="author",
-    # package_dir={"": "../openaq_fastapi"},
-    # packages=setuptools.find_packages(where="openaq_fastapi"),
+    # package_dir={"": "../openaq_api"},
+    # packages=setuptools.find_packages(where="openaq_api"),
     install_requires=install_requires,
     python_requires=">=3.6",
     classifiers=[

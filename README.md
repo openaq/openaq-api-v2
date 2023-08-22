@@ -1,4 +1,4 @@
-# OpenAQ API Version 2
+# OpenAQ API
 [![Slack Chat](https://img.shields.io/badge/Chat-Slack-ff69b4.svg "Join us. Anyone is welcome!")](https://join.slack.com/t/openaq/shared_invite/zt-yzqlgsva-v6McumTjy2BZnegIK9XCVw)
 
 ![Deploy](https://github.com/openaq/openaq-api-v2/actions/workflows/deploy-prod.yml/badge.svg)
@@ -11,23 +11,15 @@ The API is accessible at [api.openaq.org](https://api.openaq.org) and documentat
 
 ### Platform Overview
 
-[openaq-fetch](https://github.com/openaq/openaq-fetch) and [openaq-fetch-lcs](https://github.com/openaq/openaq-fetch-lcs) take care of fetching new data and writing to [S3](https://openaq-fetches.s3.amazonaws.com/index.html). Lambda functions defined in [ingest/](openaq_fastapi/openaq_fastapi/ingest/) then load data into the database, defined in [openaq-db](https://github.com/openaq/openaq-db).
+[openaq-fetch](https://github.com/openaq/openaq-fetch) and [openaq-fetch-lcs](https://github.com/openaq/openaq-fetch-lcs) take care of fetching new data and writing to [S3](https://openaq-fetches.s3.amazonaws.com/index.html). Lambda functions defined in [ingest/](openaq_api/openaq_api/ingest/) then load data into the database, defined in [openaq-db](https://github.com/openaq/openaq-db).
 
 ## Getting started
-This repository holds the code for the OpenAQ API.
 
-This API is based on Python 3 and includes an AWS CDK project to help in deployment.
+The API code is all in [openaq_api](openaq_api/)
 
-The API code is all in [openaq_fastapi](openaq_fastapi/)
-
-All code related to deployment is located in [cdk](cdk/)
-
-Further documentation can be found in each respective directory.
+Deployment is managed with Amazon Web Services (AWS) Cloud Development Kit (CDK).
 
 ### Dependencies
-
-Install prerequisites:
-- [Docker](https://www.docker.com/)
 
 ## Local Development Environment
 There are a few ways to run the API locally
@@ -36,7 +28,7 @@ There are a few ways to run the API locally
 Settings can be loaded using `.env` files and multiple files can be kept and used. The easiest way to manage multiple environment files is to add an extension describing your environment. For example, if I wanted to keep a production, staging and local environment I would save them as `.env.production`, `.env.staging` and `.env.local` each with their own settings.
 
 ### uvicorn
-The easiest way to run the API locally is to use uvicorn. Make sure that you have your settings (`.env`) file setup. Once that is done you can run the following from the `openaq_fastapi/openaq_fastapi` directory. Variables from the `.env` files can be overrode by setting them inline.
+The easiest way to run the API locally is to use uvicorn. Make sure that you have your settings (`.env`) file setup. Once that is done you can run the following from the `openaq_api/openaq_api` directory. Variables from the `.env` files can be overrode by setting them inline.
 ```
 # Run using the default .env file
 uvicorn main:app --reload
@@ -52,41 +44,9 @@ And you can always override variables by setting them inline. This is handy for 
 ENV=staging LOG_LEVEL=debug uvicorn main:app --reload
 ```
 
-### Historic method
-A Docker Compose Development Environment is included that includes both the API and the Database to help run locally.
-
-In order to use the Docker environment, you must pull in the openaq-db submodule:
-```
-git submodule update --init --recursive
-```
-
-Using Docker Compose Directly
-```
-cd .devcontainer
-docker-compose build
-docker-compose up
-```
-
-The API and Database will start up. The API will be exposed at http://0.0.0.0:8888 on your local machine.
-
-Alternatively, you can use VSCode with the Remote - Containers extension, you can start the development environment by clicking on the green box in the lower right hand corner of VSCode and select "Remote-Containers: Reopen in Container" from the menu that drops down. It will take a while the first time to pull down and build the docker images. The API will be exposed at http://0.0.0.0:8888 on your local machine.
-
-### Getting Sample data
-
-You can enter a terminal on the API Docker instance from another terminal by running:
-```
-docker-compose exec api /bin/bash
-```
-
-From either the VSCode terminal or the terminal as above on the API container, you can load a sample days worth of data using the Fetch data loader and the included sample data from 12/31/2020 by running the following on the API container. This will load the data and run the post-processing scripts that are normally run on a cron in production.
-
-```
-./sample/load_sample_data.sh
-```
-**Note**: This process can take up to 20 minutes, be patient.
-
 ## Setting up your environment
-**Note: this isn't needed for setting up a local environment**
+
+### Local development environment
 
 To set up your environment, create a .env file that includes the following variables
 
@@ -113,6 +73,10 @@ OPENAQ_FETCH_BUCKET=openaq-fetches
 OPENAQ_ETL_BUCKET=openaq-fetches
 ```
 
+### AWS Cloud Deployment Environment
+
+Additional environmnet variables are required for a full deployment to the AWS Cloud. 
+
 ## Rate limiting
 
 In the production environment rate limiting is handled in two places, AWS WAF and at the application level with [Starlette Middleware](https://www.starlette.io/middleware/). The application rate limiting is configurable via environment variables. The rate limiting middleware requires access to an instance of [redis](https://redis.io/). For local development [docker](https://www.docker.com/) can be a convenient method to set up a local redis instance. With docker, use the following commend:
@@ -137,12 +101,3 @@ N.B. - With AWS WAF rate limiting also occurs at the cloudfront stage. The appli
 
 ## Contributing
 There are a lot of ways to contribute to this project, more details can be found in the [contributing guide](CONTRIBUTING.md).
-
-## Projects using the API
-
-- openaq-browser [site](http://dolugen.github.io/openaq-browser) | [code](https://github.com/dolugen/openaq-browser) - A simple browser to provide a graphical interface to the data.
-- openaq [code](https://github.com/nickolasclarke/openaq) - An isomorphic Javascript wrapper for the API
-- py-openaq [code](https://github.com/dhhagan/py-openaq) - A Python wrapper for the API
-- ropenaq [code](https://github.com/ropenscilabs/ropenaq) - An R package for the API
-
-For more projects that are using OpenAQ API, checkout the [OpenAQ.org Community](https://openaq.org/#/community) page.

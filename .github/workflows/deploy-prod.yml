@@ -34,9 +34,11 @@ env:
   VPC_ID: ${{ secrets.VPC_ID }}
 
   RATE_LIMITING: True
-  RATE_AMOUNT: 2000
-  RATE_AMOUNT_KEY: 2000
-  RATE_TIME: 5
+  RATE_AMOUNT: 10
+  RATE_AMOUNT_KEY: 400
+  RATE_TIME: 1
+  USER_AGENT: ${{ secrets.USER_AGENT }}
+  ORIGIN: ${{ secrets.ORIGIN }}
 
   EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
 
@@ -67,11 +69,11 @@ jobs:
           
       - name: Install CDK
         run: |
-          npm install -g aws-cdk@2.25.0
+          npm install -g aws-cdk@2.92.0
 
       - uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.10'
 
       - name: Deploy stack
         working-directory: ./cdk
@@ -93,10 +95,10 @@ jobs:
           
       - uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.10'
 
       - name: build schema
-        working-directory: ./openaq_fastapi
+        working-directory: ./openaq_api
         run: |
             pip install -r requirements.txt
             npm install -g rdme@latest

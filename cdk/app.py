@@ -4,8 +4,7 @@ from aws_cdk import (
     Tags,
 )
 
-from cdk.lambda_api_stack import LambdaApiStack
-from cdk.lambda_rollup_stack import LambdaRollupStack
+from stacks.lambda_api_stack import LambdaApiStack
 
 from settings import settings
 
@@ -14,11 +13,12 @@ from settings import settings
 # a better package structure in the future.
 import os
 import sys
-p = os.path.abspath('../openaq_fastapi')
-sys.path.insert(1, p)
-from openaq_fastapi.settings import settings as lambda_env
 
-p = os.path.abspath('../cloudfront_logs')
+p = os.path.abspath("../openaq_api")
+sys.path.insert(1, p)
+from openaq_api.settings import settings as lambda_env
+
+p = os.path.abspath("../cloudfront_logs")
 sys.path.insert(1, p)
 from cloudfront_logs.settings import settings as cloudfront_logs_lambda_env
 
@@ -48,19 +48,5 @@ api = LambdaApiStack(
 Tags.of(api).add("project", settings.PROJECT)
 Tags.of(api).add("product", "api")
 Tags.of(api).add("env", settings.ENV)
-
-rollup = LambdaRollupStack(
-    app,
-    f"openaq-rollup-{settings.ENV}",
-    env_name=settings.ENV,
-    lambda_env=lambda_env,
-    lambda_timeout=settings.ROLLUP_LAMBDA_TIMEOUT,
-    lambda_memory_size=settings.ROLLUP_LAMBDA_MEMORY_SIZE,
-    rate_minutes=5,
-)
-
-Tags.of(rollup).add("project", settings.PROJECT)
-Tags.of(rollup).add("product", "api")
-Tags.of(rollup).add("env", settings.ENV)
 
 app.synth()
