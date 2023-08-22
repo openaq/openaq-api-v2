@@ -331,20 +331,26 @@ class QueryBaseModel(BaseModel):
 # values (v2) we have to calculate the offset ourselves
 # see the db.py method
 class Paging(QueryBaseModel):
-    limit: int = Query(
-        100,
-        gt=0,
-        le=1000,
-        description="""Change the number of results returned.
+    limit: Annotated[
+        int,
+        Query(
+            100,
+            gt=0,
+            le=1000,
+            description="""Change the number of results returned.
         e.g. limit=100 will return up to 100 results""",
-        examples=["100"],
-    )
-    page: int = Query(
-        1,
-        gt=0,
-        description="Paginate through results. e.g. page=1 will return first page of results",
-        examples=["1"],
-    )
+            examples=["100"],
+        ),
+    ]
+    page: Annotated[
+        int,
+        Query(
+            1,
+            gt=0,
+            description="Paginate through results. e.g. page=1 will return first page of results",
+            examples=["1"],
+        ),
+    ]
 
     def pagination(self) -> str:
         return "LIMIT :limit OFFSET :offset"
@@ -360,7 +366,9 @@ class ParametersQuery(QueryBaseModel):
             for filtering results to a parameter or parameeters
     """
 
-    parameters_id: CommaSeparatedList[int] | None = Query(None, description="")
+    parameters_id: Annotated[
+        CommaSeparatedList[int] | None, Query(None, description="")
+    ]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -380,9 +388,10 @@ class MobileQuery(QueryBaseModel):
             locations
     """
 
-    mobile: bool | None = Query(
-        None, description="Is the location considered a mobile location?"
-    )
+    mobile: Annotated[
+        bool | None,
+        Query(None, description="Is the location considered a mobile location?"),
+    ]
 
     def where(self) -> str | None:
         """ """
@@ -401,9 +410,10 @@ class MonitorQuery(QueryBaseModel):
             exclude reference monitors
     """
 
-    monitor: bool | None = Query(
-        None, description="Is the location considered a reference monitor?"
-    )
+    monitor: Annotated[
+        bool | None,
+        Query(None, description="Is the location considered a reference monitor?"),
+    ]
 
     def where(self) -> str | None:
         """ """
@@ -421,11 +431,14 @@ class ProviderQuery(QueryBaseModel):
             for filtering results to a provider or providers
     """
 
-    providers_id: CommaSeparatedList[int] | None = Query(
-        None,
-        description="Limit the results to a specific provider or multiple providers  with a single provider ID or a comma delimited list of IDs",
-        examples=["1", "1,2,3"],
-    )
+    providers_id: Annotated[
+        CommaSeparatedList[int] | None,
+        Query(
+            None,
+            description="Limit the results to a specific provider or multiple providers  with a single provider ID or a comma delimited list of IDs",
+            examples=["1", "1,2,3"],
+        ),
+    ]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -445,10 +458,13 @@ class OwnerQuery(QueryBaseModel):
             owner_contacts_id for filtering results to a provider or providers
     """
 
-    owner_contacts_id: CommaSeparatedList[int] | None = Query(
-        None,
-        description="Limit the results to a specific owner by owner ID with a single owner ID or comma delimited list of IDs",
-    )
+    owner_contacts_id: Annotated[
+        CommaSeparatedList[int] | None,
+        Query(
+            None,
+            description="Limit the results to a specific owner by owner ID with a single owner ID or comma delimited list of IDs",
+        ),
+    ]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -468,11 +484,14 @@ class CountryIdQuery(QueryBaseModel):
         filtering results to a country or countries
     """
 
-    countries_id: CommaSeparatedList[int] | None = Query(
-        None,
-        description="Limit the results to a specific country or countries by country ID as a single country ID or a comma delimited list of IDs",
-        examples=["1", "1,2,3"],
-    )
+    countries_id: Annotated[
+        CommaSeparatedList[int] | None,
+        Query(
+            None,
+            description="Limit the results to a specific country or countries by country ID as a single country ID or a comma delimited list of IDs",
+            examples=["1", "1,2,3"],
+        ),
+    ]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -491,11 +510,14 @@ class CountryIsoQuery(QueryBaseModel):
         iso: ISO 3166-1 alpha-2 code for filtering to a single country ISO.
     """
 
-    iso: str | None = Query(
-        None,
-        description="Limit the results to a specific country using ISO 3166-1 alpha-2 code",
-        examples=["US"],
-    )
+    iso: Annotated[
+        str | None,
+        Query(
+            None,
+            description="Limit the results to a specific country using ISO 3166-1 alpha-2 code",
+            examples=["US"],
+        ),
+    ]
 
     @model_validator(mode="before")
     @classmethod
@@ -528,11 +550,14 @@ class DateFromQuery(QueryBaseModel):
         date range.
     """
 
-    date_from: datetime | date | None = Query(
-        None,
-        description="From when?",
-        examples=["2022-10-01T11:19:38-06:00", "2022-10-01"],
-    )
+    date_from: Annotated[
+        datetime | date | None,
+        Query(
+            None,
+            description="From when?",
+            examples=["2022-10-01T11:19:38-06:00", "2022-10-01"],
+        ),
+    ]
 
     def where(self) -> str:
         """Generates SQL condition for filtering to datetime.
@@ -566,11 +591,14 @@ class DateToQuery(QueryBaseModel):
         date range.
     """
 
-    date_to: datetime | date | None = Query(
-        None,
-        description="To when?",
-        examples=["2022-10-01T11:19:38-06:00", "2022-10-01"],
-    )
+    date_to: Annotated[
+        datetime | date | None,
+        Query(
+            None,
+            description="To when?",
+            examples=["2022-10-01T11:19:38-06:00", "2022-10-01"],
+        ),
+    ]
 
     def where(self) -> str:
         """Generates SQL condition for filtering to datetime.
@@ -613,9 +641,10 @@ class PeriodNameQuery(QueryBaseModel):
         period_name: value of period to aggregate measurement values.
     """
 
-    period_name: PeriodNames | None = Query(
-        "hour", description="Period to aggregate. Month, day, hour"
-    )
+    period_name: Annotated[
+        PeriodNames | None,
+        Query("hour", description="Period to aggregate. Month, day, hour"),
+    ]
 
 
 class RadiusQuery(QueryBaseModel):
@@ -629,16 +658,22 @@ class RadiusQuery(QueryBaseModel):
             `coordinates`.
     """
 
-    coordinates: str | None = Query(
-        None,
-        description="WGS 84 Coordinate pair in form latitude,longitude. Supports up to 4 decimal points of precision, additional decimal precision will be truncated in the query e.g. 38.9074,-77.0373",
-        examples=["38.907,-77.037"],
-    )
-    radius: Annotated[int, Interval(le=25000, gt=0)] | None = Query(
-        None,
-        description="Search radius from coordinates as center in meters. Maximum of 25,000 (25km) defaults to 1000 (1km) e.g. radius=1000",
-        examples=["1000"],
-    )
+    coordinates: Annotated[
+        str | None,
+        Query(
+            None,
+            description="WGS 84 Coordinate pair in form latitude,longitude. Supports up to 4 decimal points of precision, additional decimal precision will be truncated in the query e.g. 38.9074,-77.0373",
+            examples=["38.907,-77.037"],
+        ),
+    ]
+    radius: Annotated[
+        Annotated[int, Interval(le=25000, gt=0)] | None,
+        Query(
+            None,
+            description="Search radius from coordinates as center in meters. Maximum of 25,000 (25km) defaults to 1000 (1km) e.g. radius=1000",
+            examples=["1000"],
+        ),
+    ]
 
     @computed_field(return_type=float | None)
     @property
@@ -743,12 +778,15 @@ class BboxQuery(QueryBaseModel):
         bbox:
     """
 
-    bbox: str | None = Query(
-        None,
-        pattern=r"-?\d{1,3}\.?\d*,-?\d{1,2}\.?\d*,-?\d{1,3}\.?\d*,-?\d{1,2}\.?\d*",
-        description="geospatial bounding box of Min X, min Y, max X, max Y in WGS 84 coordinates. Up to 4 decimal points of precision, addtional decimal precision will be truncated to 4 decimal points precision e.g. -77.037,38.907,-77.0,39.910",
-        examples=["-77.1200,38.7916,-76.9094,38.9955"],
-    )
+    bbox: Annotated[
+        str | None,
+        Query(
+            None,
+            pattern=r"-?\d{1,3}\.?\d*,-?\d{1,2}\.?\d*,-?\d{1,3}\.?\d*,-?\d{1,2}\.?\d*",
+            description="geospatial bounding box of Min X, min Y, max X, max Y in WGS 84 coordinates. Up to 4 decimal points of precision, addtional decimal precision will be truncated to 4 decimal points precision e.g. -77.037,38.907,-77.0,39.910",
+            examples=["-77.1200,38.7916,-76.9094,38.9955"],
+        ),
+    ]
 
     @field_validator("bbox")
     def validate_bbox_in_range(cls, v):
