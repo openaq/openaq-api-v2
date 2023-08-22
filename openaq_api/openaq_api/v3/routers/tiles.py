@@ -25,7 +25,7 @@ router = APIRouter(
 
 class TileProvidersQuery(QueryBaseModel):
     providers_id: CommaSeparatedList[int] | None = Query(
-        description="Limit the results to a specific provider or providers"
+        None, description="Limit the results to a specific provider or providers"
     )
 
     def where(self) -> str | None:
@@ -35,7 +35,7 @@ class TileProvidersQuery(QueryBaseModel):
 
 class TileOwnersQuery(QueryBaseModel):
     owners_id: CommaSeparatedList[int] | None = Query(
-        description="Limit the results to a specific owner or owners"
+        None, description="Limit the results to a specific owner or owners"
     )
 
     def where(self) -> str | None:
@@ -45,7 +45,7 @@ class TileOwnersQuery(QueryBaseModel):
 
 class ActiveQuery(QueryBaseModel):
     active: bool | None = Query(
-        description="Limits to locations with recent measurements (<48 hours)"
+        None, description="Limits to locations with recent measurements (<48 hours)"
     )
 
     def where(self) -> str | None:
