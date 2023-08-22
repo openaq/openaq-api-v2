@@ -161,9 +161,11 @@ class CommaSeparatedList(list, metaclass=TypeParametersMemoizer):
     def validate(cls, v: Any):
         adapter = cls._get_type_adapter()
         if isinstance(v, str):
-            v = map(str.strip, v.split(","))
+            v = list(map(str.strip, v.split(",")))
         elif isinstance(v, list) and all(isinstance(x, str) for x in v):
-            v = map(str.strip, itertools.chain.from_iterable(x.split(",") for x in v))
+            v = list(
+                map(str.strip, itertools.chain.from_iterable(x.split(",") for x in v))
+            )
         return adapter.validate_python(v)
 
     @classmethod
