@@ -25,7 +25,7 @@ router = APIRouter(
 
 class TileProvidersQuery(QueryBaseModel):
     providers_id: CommaSeparatedList[int] | None = Query(
-        None, description="Limit the results to a specific provider or providers"
+        description="Limit the results to a specific provider or providers"
     )
 
     def where(self) -> str | None:
@@ -35,7 +35,7 @@ class TileProvidersQuery(QueryBaseModel):
 
 class TileOwnersQuery(QueryBaseModel):
     owners_id: CommaSeparatedList[int] | None = Query(
-        None, description="Limit the results to a specific owner or owners"
+        description="Limit the results to a specific owner or owners"
     )
 
     def where(self) -> str | None:
@@ -45,7 +45,7 @@ class TileOwnersQuery(QueryBaseModel):
 
 class ActiveQuery(QueryBaseModel):
     active: bool | None = Query(
-        None, description="Limits to locations with recent measurements (<48 hours)"
+        description="Limits to locations with recent measurements (<48 hours)"
     )
 
     def where(self) -> str | None:
@@ -119,7 +119,7 @@ class MobileTile(TileBase):
     response_class=Response,
 )
 async def get_tile(
-    tile: Annotated[Tile, Depends(Tile)],
+    tile: Annotated[Tile, Depends(Tile.depends())],
     db: DB = Depends(),
 ):
     vt = await fetch_tiles(tile, db)
@@ -135,7 +135,7 @@ async def get_tile(
     response_class=Response,
 )
 async def get_threshold_tile(
-    threshold_tile: Annotated[ThresholdTile, Depends(ThresholdTile)],
+    threshold_tile: Annotated[ThresholdTile, Depends(ThresholdTile.depends())],
     db: DB = Depends(),
 ):
     vt = await fetch_threshold_tiles(threshold_tile, db)
@@ -281,7 +281,7 @@ async def fetch_threshold_tiles(query, db):
     response_class=Response,
 )
 async def get_mobile_gen_tiles(
-    tile: Annotated[Tile, Depends(Tile)],
+    tile: Annotated[Tile, Depends(Tile.depends())],
     db: DB = Depends(),
 ):
     ...
@@ -300,7 +300,7 @@ async def fetch_mobile_gen_tiles(where, db):
     response_class=Response,
 )
 async def get_mobile_path_tiles(
-    tile: Annotated[Tile, Depends(Tile)],
+    tile: Annotated[Tile, Depends(Tile.depends())],
     db: DB = Depends(),
 ):
     ...
@@ -319,7 +319,7 @@ async def fetch_mobile_path_tiles(where, db):
     response_class=Response,
 )
 async def get_mobiletiles(
-    mt: Annotated[MobileTile, Depends(MobileTile)],
+    mt: Annotated[MobileTile, Depends(MobileTile.depends())],
     db: DB = Depends(),
 ):
     ...
