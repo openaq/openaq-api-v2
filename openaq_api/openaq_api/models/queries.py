@@ -191,7 +191,7 @@ def id_or_name_validator(name, v, info: FieldValidationInfo):
 
 
 class Project(OBaseModel):
-    project_id: int | None = Query(None)
+    project_id: int | None = Path(...)
     project: list[int | str] | None = Query(None, gt=0, le=maxint)
 
     @field_validator("project")
