@@ -53,10 +53,7 @@ def parameter_dependency_from_model(name: str, model_class):
     names = []
     annotations: dict[str, type] = {}
     defaults = []
-    print("\n\n\n\n\n")
-    print("dependency")
     for field_model in model_class.model_fields.values():
-        print(field_model.alias)
         if field_model.alias not in ["self"]:
             if field_model.alias not in ignore_in_docs:
                 names.append(field_model.alias)
@@ -147,7 +144,7 @@ class Country(OBaseModel):
 
 
 class CountryByPath(BaseModel):
-    country_id: int | None = None
+    country_id: int | None = Path(...)
 
     @field_validator("country_id")
     def validate_country_id(cls, v):
@@ -157,9 +154,9 @@ class CountryByPath(BaseModel):
 
 
 class SourceName(OBaseModel):
-    sourceName: list[str] | None = None
-    sourceId: list[int] | None = None
-    sourceSlug: list[str] | None = None
+    sourceName: list[str] | None = Query(None)
+    sourceId: list[int] | None = Query(None)
+    sourceSlug: list[str] | None = Query(None)
 
 
 class EntityTypes(str, Enum):
@@ -204,7 +201,7 @@ class Project(OBaseModel):
 
 class Location(OBaseModel):
     location_id: int | None = Query(None, gt=0, le=maxint)
-    location: list[int | str] | None = Query(None)  # , gt=0, le=maxint)
+    location: list[int | str] | None = Query(None, gt=0, le=maxint)
 
     @field_validator("location")
     def validate_location(cls, v, info: FieldValidationInfo):

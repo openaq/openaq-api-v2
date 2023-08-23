@@ -317,7 +317,7 @@ async def locations_get(
     tags=["v2"],
 )
 async def get_v2_latest_by_id(
-    locations: Annotated[LocationQuery, Depends(LocationQuery)],
+    locations: Annotated[LocationQuery, Depends(LocationQuery.depends())],
     db: DB = Depends(),
 ):
     qparams = locations.params()
@@ -383,7 +383,7 @@ async def latest_get(
     tags=["v1"],
 )
 async def get_v1_latest_by_id(
-    locations: LocationQuery = Depends(LocationQuery),
+    locations: LocationQuery = Depends(LocationQuery.depends()),
     db: DB = Depends(),
 ):
     qparams = locations.params()
@@ -432,7 +432,7 @@ SELECT l.id
     tags=["v1"],
 )
 async def latest_v1_get(
-    locations: Annotated[Locations, Depends(Locations)],
+    locations: Annotated[Locations, Depends(Locations.depends())],
     db: DB = Depends(),
 ):
     locations.entity = "government"
@@ -483,7 +483,7 @@ SELECT l.id
     tags=["v1"],
 )
 async def get_v1_locations_by_id(
-    locations: Annotated[LocationQuery, Depends(LocationQuery)],
+    locations: Annotated[LocationQuery, Depends(LocationQuery.depends())],
     db: DB = Depends(),
 ):
     qparams = locations.params()
@@ -552,7 +552,7 @@ SELECT l.*
     tags=["v1"],
 )
 async def locationsv1_get(
-    locations: Annotated[Locations, Depends(Locations)],
+    locations: Annotated[Locations, Depends(Locations.depends())],
     db: DB = Depends(),
 ):
     locations.entity = "government"

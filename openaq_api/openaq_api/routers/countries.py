@@ -118,7 +118,7 @@ class CountriesPath(CountryByPath, APIBase):
     tags=["v2"],
 )
 async def countries_by_path(
-    countries: Annotated[CountriesPath, Depends(CountriesPath)],
+    countries: Annotated[CountriesPath, Depends(CountriesPath.depends())],
     db: DB = Depends(),
 ):
     q = f"""
@@ -156,7 +156,7 @@ async def countries_by_path(
         """
 
     params = countries.params()
-    params["country_id"] = country_id
+    params["country_id"] = countries.country_id
     output = await db.fetchPage(q, params)
 
     return output

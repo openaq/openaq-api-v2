@@ -111,7 +111,7 @@ class Projects(Project, Measurands, APIBase, Country):
     tags=["v2"],
 )
 async def projects_get(
-    projects: Annotated[Projects, Depends(Projects)],
+    projects: Annotated[Projects, Depends(Project.depends())],
     db: DB = Depends(),
 ):
     ...
@@ -126,7 +126,7 @@ async def projects_get(
     tags=["v2"],
 )
 async def projects_get(
-    projects: Annotated[Projects, Depends(Projects)],
+    projects: Annotated[Projects, Depends(Projects.depends())],
     db: DB = Depends(),
 ):
     q = f"""

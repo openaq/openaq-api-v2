@@ -256,7 +256,7 @@ async def measurements_get(
     tags=["v1"],
 )
 async def measurements_get_v1(
-    m: Annotated[Measurements, Depends(Measurements)],
+    m: Annotated[Measurements, Depends(Measurements.depends())],
     db: DB = Depends(),
     format: str | None = None,
 ):

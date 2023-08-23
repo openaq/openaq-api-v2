@@ -56,7 +56,7 @@ class Sources(SourceName, APIBase):
     tags=["v2"],
 )
 async def sources_get(
-    sources: Annotated[Sources, Depends(Sources)],
+    sources: Annotated[Sources, Depends(Sources.depends())],
     db: DB = Depends(),
 ):
     qparams = sources.params()
