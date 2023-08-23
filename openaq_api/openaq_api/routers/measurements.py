@@ -199,9 +199,9 @@ class Measurements(
     tags=["v2"],
 )
 async def measurements_get(
-    m: Annotated[Measurements, Depends(Measurements)],
+    m: Annotated[Measurements, Depends(Measurements.depends())],
     db: DB = Depends(),
-    format: str | None = None,
+    format: str | None = Query(None),
 ):
     where = m.where()
     params = m.params()
@@ -256,7 +256,7 @@ async def measurements_get(
     tags=["v1"],
 )
 async def measurements_get_v1(
-    m: Annotated[Measurements, Depends(Measurements)],
+    m: Annotated[Measurements, Depends(Measurements.depends())],
     db: DB = Depends(),
     format: str | None = None,
 ):

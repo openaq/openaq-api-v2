@@ -34,7 +34,7 @@ class Parameters(APIBase):
     tags=["v2"],
 )
 async def parameters_get(
-    parameters: Annotated[Parameters, Depends(Parameters)],
+    parameters: Annotated[Parameters, Depends(Parameters.depends())],
     db: DB = Depends(),
 ):
     q = f"""
@@ -75,6 +75,7 @@ async def parameters_getv1(
         , display as "displayName"
         , coalesce(description, display) as description
         , units as "preferredUnit"
+        , COUNT(1) OVER() as found
     FROM measurands
     ORDER BY "{parameters.order_by}" {parameters.sort}
     LIMIT :limit
