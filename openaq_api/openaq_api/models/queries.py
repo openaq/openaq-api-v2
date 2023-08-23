@@ -201,7 +201,7 @@ class Project(OBaseModel):
 
 class Location(OBaseModel):
     location_id: int | None = Query(None, gt=0, le=maxint)
-    location: list[int | str] | None = Query(None, gt=0, le=maxint)
+    location: list[str] | None = Query(None)
 
     @field_validator("location")
     def validate_location(cls, v, info: FieldValidationInfo):
@@ -275,30 +275,15 @@ class Measurands(OBaseModel):
         description="(optional) A parameter ID to filter measurement results. e.g. parameter_id=2 (i.e. PM2.5) will limit measurement results to only PM2.5 measurements",
         examples=["2"],
     )
-    parameter: list[int | str] | None = Query(
+    parameter: list[str] | None = Query(
         None,
-        gt=0,
-        le=maxint,
         description="(optional) A parameter name or ID by which to filter measurement results. e.g. parameter=pm25 or parameter=pm25&parameter=pm10",
         examples=["pm25"],
     )
-    measurand: list[str] | None = Query(None, description="")
     unit: list[str] | None = Query(
         None,
         description="",
     )
-
-    @field_validator("measurand")
-    def check_measurand(cls, v, info: FieldValidationInfo):
-        if v is None:
-            return info.data.get("parameter")
-        return v
-
-    @field_validator("parameter")
-    def validate_parameter(cls, v, info: FieldValidationInfo):
-        if v is None:
-            v = info.data.get("measurand")
-        return id_or_name_validator("project", v, info)
 
 
 class Paging(OBaseModel):

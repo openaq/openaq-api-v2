@@ -145,22 +145,15 @@ class Measurements(
                     else:
                         clause = f"(:location::{type})[1]"
 
-                    wheres.append(f" {col}={clause}")
-
+                elif f == "parameter_id":
+                    wheres.append(f" m.measurands_id=:parameter_id")
                 elif f == "parameter":
-                    if all(isinstance(x, int) for x in v):
-                        type = "int[]"
-                        col = "m.measurands_id"
-                    else:
-                        type = "text[]"
-                        col = "m.measurand"
-
                     if len(v) > 1:
-                        clause = f"ANY(:parameter::{type})"
+                        clause = f"ANY(:parameter)"
                     else:
-                        clause = f"(:parameter::{type})[1]"
+                        clause = f"(:parameter::text[])[1]"
 
-                    wheres.append(f" {col}={clause}")
+                    wheres.append(f" m.measurand={clause}")
 
                 elif f == "unit":
                     wheres.append("units = ANY(:unit) ")
