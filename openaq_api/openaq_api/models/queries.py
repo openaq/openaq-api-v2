@@ -3,14 +3,16 @@ import logging
 from datetime import date, datetime, timedelta
 from enum import Enum
 from types import FunctionType
+from typing import Union
 import fastapi
 
 import humps
 from dateutil.parser import parse
 from dateutil.tz import UTC
-from fastapi import Query
+from fastapi import Path, Query
 from pydantic import (
     FieldValidationInfo,
+    computed_field,
     field_validator,
     model_validator,
     ConfigDict,
@@ -51,7 +53,10 @@ def parameter_dependency_from_model(name: str, model_class):
     names = []
     annotations: dict[str, type] = {}
     defaults = []
+    print("\n\n\n\n\n")
+    print("dependency")
     for field_model in model_class.model_fields.values():
+        print(field_model.alias)
         if field_model.alias not in ["self"]:
             if field_model.alias not in ignore_in_docs:
                 names.append(field_model.alias)
@@ -60,7 +65,11 @@ def parameter_dependency_from_model(name: str, model_class):
                     defaults.append(Path(description=field_model.description))
                 if isinstance(field_model, fastapi.params.Query):
                     defaults.append(
-                        Query(field_model.default, description=field_model.description)
+                        Query(
+                            field_model.default,
+                            description=field_model.description,
+                            examples=field_model.examples,
+                        )
                     )
 
     code = inspect.cleandoc(
@@ -120,8 +129,6 @@ class Country(OBaseModel):
     )
     country: list[str] | None = Query(
         None,
-        min_length=2,
-        max_length=2,
         description="Limit results by a certain country using two letter country code. e.g. ?country=US or ?country=US&country=MX",
         examples=["US"],
     )
@@ -134,9 +141,6 @@ class Country(OBaseModel):
 
     @field_validator("country")
     def validate_country(cls, v, info: FieldValidationInfo):
-        cid = info.data.get("country_id")
-        if cid is not None:
-            v = [str(cid)]
         if v is not None:
             return [str.upper(val) for val in v]
         return None
@@ -190,7 +194,7 @@ def id_or_name_validator(name, v, info: FieldValidationInfo):
 
 
 class Project(OBaseModel):
-    project_id: int | None = None
+    project_id: int | None = Query(None)
     project: list[int | str] | None = Query(None, gt=0, le=maxint)
 
     @field_validator("project")
@@ -200,7 +204,7 @@ class Project(OBaseModel):
 
 class Location(OBaseModel):
     location_id: int | None = Query(None, gt=0, le=maxint)
-    location: list[int | str] | None = Query(None, gt=0, le=maxint)
+    location: list[int | str] | None = Query(None)  # , gt=0, le=maxint)
 
     @field_validator("location")
     def validate_location(cls, v, info: FieldValidationInfo):
@@ -208,7 +212,7 @@ class Location(OBaseModel):
 
 
 class LocationPath(BaseModel):
-    location_id: int | None = None
+    location_id: int | None = Path(...)
 
     @field_validator("location_id")
     def validate_location_id(cls, v):
@@ -218,7 +222,7 @@ class LocationPath(BaseModel):
 
 
 class HasGeo(OBaseModel):
-    has_geo: bool | None = None
+    has_geo: bool | None = Query(None)
 
 
 class Geo(OBaseModel):
@@ -228,13 +232,28 @@ class Geo(OBaseModel):
         description="Coordinate pair in form lat,lng. Up to 8 decimal points of precision e.g. 38.907,-77.037",
         examples=["38.907,-77.037"],
     )
-    lat: confloat(ge=-90, le=90) | None = None
-    lon: confloat(ge=-180, le=180) | None = None
+
     radius: conint(gt=0, le=25000) = Query(
         1000,
         description="Search radius from coordinates as center in meters. Maximum of 25,000 (25km) defaults to 1000 (1km) e.g. radius=10000",
         examples=["10000"],
     )
+
+    @computed_field(return_type=float | None)
+    @property
+    def lat(self) -> float | None:
+        """Splits `coordinates` into a float representing WGS84 latitude."""
+        if self.coordinates:
+            lat, _ = self.coordinates.split(",")
+            return float(lat)
+
+    @computed_field(return_type=float | None)
+    @property
+    def lon(self) -> float | None:
+        """Splits `coordinates` into a float representing WGS84 longitude."""
+        if self.coordinates:
+            _, lon = self.coordinates.split(",")
+            return float(lon)
 
     @model_validator(mode="before")
     @classmethod
@@ -377,16 +396,20 @@ def fix_datetime(
 
 
 class DateRange(OBaseModel):
-    date_from: datetime | date | str | int | None = fix_datetime("2000-01-01")
-    date_to: datetime | date | str | int | None = fix_datetime(datetime.utcnow())
-    date_from_adj: datetime | date | str | int | None = None
-    date_to_adj: datetime | date | str | int | None = None
+    date_from: datetime | date | str | int | None = Query(
+        fix_datetime("2000-01-01"),
+        description="From when?",
+        examples=["2022-10-01T11:19:38-06:00", "2022-10-01"],
+    )
+    date_to: datetime | date | str | int | None = Query(
+        fix_datetime(datetime.utcnow()),
+        description="to when?",
+        examples=["2022-10-01T11:19:38-06:00", "2022-10-01"],
+    )
 
     @field_validator(
         "date_from",
         "date_to",
-        "date_from_adj",
-        "date_to_adj",
     )
     def check_dates(cls, v):
         return fix_datetime(v)

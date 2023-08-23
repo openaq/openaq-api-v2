@@ -95,7 +95,7 @@ class Locations(
         description="Manufacturer of Sensor e.g. ?manufacturer=Ecotech",
         examples=["Ecotech"],
     )
-    dumpRaw: bool | None = False
+    dumpRaw: bool | None = Query(False)
 
     def order(self):
         stm = self.order_by
@@ -130,6 +130,8 @@ class Locations(
                         wheres.append(" l.name = ANY(:location) ")
                 elif f == "country":
                     wheres.append(" country->>'code' = ANY(:country) ")
+                elif f == "country_id":
+                    wheres.append(" (country->>'id')::int = :country_id ")
                 elif f == "city":
                     wheres.append(" city = ANY(:city) ")
                 elif f == "parameter_id":
@@ -204,7 +206,7 @@ class Locations(
 
 
 class LocationQuery(LocationPath, APIBase):
-    location_id: int = (Path(..., description="The ID of the location"),)
+    location_id: int = Path(..., description="The ID of the location")
 
     def where(self) -> str:
         return "l.id = :location_id"
@@ -218,7 +220,7 @@ class LocationQuery(LocationPath, APIBase):
     tags=["v2"],
 )
 async def get_v2_location_by_id(
-    locations: Annotated[LocationQuery, Depends(LocationQuery)],
+    locations: Annotated[LocationQuery, Depends(LocationQuery.depends())],
     db: DB = Depends(),
 ):
     qparams = locations.params()
@@ -264,7 +266,7 @@ async def get_v2_location_by_id(
     tags=["v2"],
 )
 async def locations_get(
-    locations: Annotated[Locations, Depends(Locations)],
+    locations: Annotated[Locations, Depends(Locations.depends())],
     db: DB = Depends(),
 ):
     qparams = locations.params()
