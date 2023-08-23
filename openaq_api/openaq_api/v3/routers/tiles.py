@@ -45,7 +45,7 @@ class TileOwnersQuery(QueryBaseModel):
 
 class ActiveQuery(QueryBaseModel):
     active: bool | None = Query(
-        description="Limits to locations with recent measurements (<48 hours)"
+        None, description="Limits to locations with recent measurements (<48 hours)"
     )
 
     def where(self) -> str | None:
