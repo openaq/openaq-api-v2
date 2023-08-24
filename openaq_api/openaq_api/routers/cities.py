@@ -57,7 +57,7 @@ class Cities(City, Country, APIBase):
     order_by: CitiesOrder = Query(
         "city", description="Order by a field e.g. ?order_by=city", examples=["city"]
     )
-    entity: str | None = None
+    entity: str | None = Query(None)
 
     def where(self):
         wheres = []
@@ -72,7 +72,7 @@ class Cities(City, Country, APIBase):
                 elif f == "country":
                     wheres.append(
                         """
-                        code = ANY(:country)
+                        country = ANY(:country)
                         """
                     )
         if len(wheres) > 0:

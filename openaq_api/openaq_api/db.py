@@ -131,10 +131,9 @@ class DB:
         return None
 
     async def fetchPage(self, query, kwargs) -> OpenAQResult:
-        if "limit" in kwargs.keys():
-            page = kwargs.get("page", 1)
-            limit = kwargs.get("limit")
-            kwargs["offset"] = abs((page - 1) * limit)
+        page = kwargs.get("page", 1)
+        limit = kwargs.get("limit", 1000)
+        kwargs["offset"] = abs((page - 1) * limit)
 
         data = await self.fetch(query, kwargs)
         if len(data) > 0:
