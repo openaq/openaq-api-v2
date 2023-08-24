@@ -132,35 +132,30 @@ class Measurements(
             )
         for f, v in self:
             if v is not None:
-                if f == "location":
-                    if all(isinstance(x, int) for x in v):
-                        type = "int[]"
-                        col = "sn.id"
+                if f == "location_id":
+                    col = "sn.id"
+                    if len(v) > 1:
+                        clause = f"ANY(:location_id)"
                     else:
-                        type = "text[]"
-                        col = "sn.name"
-
+                        clause = f"(:location_id::int[])[1]"
+                    wheres.append(f" {col}={clause}")
+                if f == "location":
+                    type = "text[]"
+                    col = "sn.name"
                     if len(v) > 1:
                         clause = f"ANY(:location::{type})"
                     else:
                         clause = f"(:location::{type})[1]"
-
                     wheres.append(f" {col}={clause}")
-
+                elif f == "parameter_id":
+                    wheres.append(f" m.measurands_id=:parameter_id")
                 elif f == "parameter":
-                    if all(isinstance(x, int) for x in v):
-                        type = "int[]"
-                        col = "m.measurands_id"
-                    else:
-                        type = "text[]"
-                        col = "m.measurand"
-
                     if len(v) > 1:
-                        clause = f"ANY(:parameter::{type})"
+                        clause = f"ANY(:parameter)"
                     else:
-                        clause = f"(:parameter::{type})[1]"
+                        clause = f"(:parameter::text[])[1]"
 
-                    wheres.append(f" {col}={clause}")
+                    wheres.append(f" m.measurand={clause}")
 
                 elif f == "unit":
                     wheres.append("units = ANY(:unit) ")
