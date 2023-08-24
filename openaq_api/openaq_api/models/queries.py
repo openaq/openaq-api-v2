@@ -130,12 +130,6 @@ class Country(OBaseModel):
         examples=["US"],
     )
 
-    @field_validator("country_id")
-    def validate_country_id(cls, v):
-        if v is not None and not isinstance(v, int):
-            raise ValueError("country_id must be an integer")
-        return v
-
     @field_validator("country")
     def validate_country(cls, v, info: FieldValidationInfo):
         if v is not None:
@@ -143,14 +137,8 @@ class Country(OBaseModel):
         return None
 
 
-class CountryByPath(BaseModel):
-    country_id: int | None = Path(...)
-
-    @field_validator("country_id")
-    def validate_country_id(cls, v):
-        if v is not None and not isinstance(v, int):
-            raise ValueError("country_id must be an integer")
-        return v
+class CountryByPath(OBaseModel):
+    country_id: int = Path(...)
 
 
 class SourceName(OBaseModel):
@@ -190,9 +178,13 @@ def id_or_name_validator(name, v, info: FieldValidationInfo):
     return ret
 
 
+class ProjectByPath(OBaseModel):
+    project_id: int = Path(...)
+
+
 class Project(OBaseModel):
-    project_id: int | None = Path(...)
-    project: list[int | str] | None = Query(None, gt=0, le=maxint)
+    project_id: int | None = Query(None)
+    project: list[str] | None = Query(None)
 
     @field_validator("project")
     def validate_project(cls, v, info: FieldValidationInfo):
@@ -200,12 +192,8 @@ class Project(OBaseModel):
 
 
 class Location(OBaseModel):
-    location_id: int | None = Query(None, gt=0, le=maxint)
+    location_id: list[int] | None = Query(None)
     location: list[str] | None = Query(None)
-
-    @field_validator("location")
-    def validate_location(cls, v, info: FieldValidationInfo):
-        return id_or_name_validator("location", v, info)
 
 
 class LocationPath(BaseModel):
