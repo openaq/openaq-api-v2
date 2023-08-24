@@ -6,7 +6,7 @@ from openaq_api.models.responses import ProjectsResponse
 
 
 from ..db import DB
-from ..models.queries import APIBase, Country, Measurands, Project
+from ..models.queries import APIBase, Country, Measurands, Project, ProjectByPath
 from enum import Enum
 
 logger = logging.getLogger("projects")
@@ -111,7 +111,7 @@ class Projects(Project, Measurands, APIBase, Country):
     tags=["v2"],
 )
 async def projects_get(
-    projects: Annotated[Projects, Depends(Project.depends())],
+    projects: Annotated[ProjectByPath, Depends(ProjectByPath.depends())],
     db: DB = Depends(),
 ):
     ...
