@@ -1,16 +1,17 @@
 import logging
 import urllib
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, Query, Path, Request, Response
-from pydantic import BaseModel, Field
-from openaq_api.db import DB
 
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
+from pydantic import BaseModel, Field
+
+from openaq_api.db import DB
 from openaq_api.v3.models.queries import (
     CommaSeparatedList,
-    QueryBaseModel,
-    ParametersQuery,
-    MonitorQuery,
     MobileQuery,
+    MonitorQuery,
+    ParametersQuery,
+    QueryBaseModel,
     QueryBuilder,
 )
 

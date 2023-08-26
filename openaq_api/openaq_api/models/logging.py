@@ -1,14 +1,8 @@
 from enum import Enum
 
-from pydantic import (
-    ConfigDict,
-    BaseModel,
-    Field,
-    computed_field,
-)
-from fastapi import status, Request
-
+from fastapi import Request, status
 from humps import camelize
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 
 class LogType(Enum):

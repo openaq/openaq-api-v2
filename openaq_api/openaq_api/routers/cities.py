@@ -3,8 +3,9 @@ from enum import Enum
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
+
 from openaq_api.models.responses import CitiesResponse, CitiesResponseV1
-import jq
+
 from ..db import DB
 from ..models.queries import APIBase, City, Country
 

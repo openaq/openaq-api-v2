@@ -1,8 +1,8 @@
+import logging
 from datetime import date, datetime
 from typing import Any
 
-from pydantic import ConfigDict, BaseModel, AnyUrl, Field
-import logging
+from pydantic import AnyUrl, BaseModel, ConfigDict, Field
 
 logger = logging.getLogger("responses")
 

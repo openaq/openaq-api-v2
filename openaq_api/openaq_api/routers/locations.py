@@ -1,30 +1,27 @@
 import logging
+from enum import Enum
 from typing import Annotated
 
-import jq
-from fastapi import APIRouter, Depends, Query, Path
-from enum import Enum
+from fastapi import APIRouter, Depends, Path, Query
 
-from ..models.responses import (
-    LatestResponse,
-    LatestResponseV1,
-    LocationsResponse,
-    LocationsResponseV1,
-)
 from ..db import DB
 from ..models.queries import (
     APIBase,
     City,
     Country,
+    EntityTypes,
     Geo,
-    # HasGeo,
     Location,
     LocationPath,
     Measurands,
-    Sort,
-    EntityTypes,
     SensorTypes,
-    maxint,
+    Sort,
+)
+from ..models.responses import (
+    LatestResponse,
+    LatestResponseV1,
+    LocationsResponse,
+    LocationsResponseV1,
 )
 
 logger = logging.getLogger("locations")

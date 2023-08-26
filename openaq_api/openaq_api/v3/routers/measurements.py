@@ -1,19 +1,18 @@
-from fastapi import APIRouter, Depends, Path
-from openaq_api.db import DB
 from typing import Annotated
-from fastapi import Query
-from openaq_api.v3.models.responses import (
-    MeasurementsResponse,
-)
+
+from fastapi import APIRouter, Depends, Path, Query
+
+from openaq_api.db import DB
 from openaq_api.v3.models.queries import (
     CommaSeparatedList,
-    QueryBaseModel,
-    QueryBuilder,
-    Paging,
     DateFromQuery,
     DateToQuery,
+    Paging,
     PeriodNameQuery,
+    QueryBaseModel,
+    QueryBuilder,
 )
+from openaq_api.v3.models.responses import MeasurementsResponse
 
 router = APIRouter(
     prefix="/v3",

@@ -1,10 +1,9 @@
 import logging
 
 from fastapi import APIRouter, Depends
+
 from ..db import DB
-from ..models.responses import (
-    SummaryResponse,
-)
+from ..models.responses import SummaryResponse
 
 logger = logging.getLogger("summary")
 logger.setLevel(logging.DEBUG)
