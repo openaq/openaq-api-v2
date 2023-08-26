@@ -1,23 +1,20 @@
+import json
 import logging
 import os
 import pathlib
 from datetime import datetime, timezone
 from email.message import EmailMessage
-import json
-from typing import Annotated
 
 import boto3
-from fastapi import APIRouter, Depends, HTTPException, Request, status, Form
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from passlib.hash import pbkdf2_sha256
-from fastapi.responses import RedirectResponse
-
-from ..models.logging import InfoLog
-
 
 from ..db import DB
 from ..forms.register import RegisterForm, UserExistsException
 from ..models.auth import User
+from ..models.logging import InfoLog
 from ..settings import settings
 
 logger = logging.getLogger("auth")

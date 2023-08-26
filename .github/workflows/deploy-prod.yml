@@ -57,7 +57,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY_PROD }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
           node-version: "18"
 
@@ -80,7 +80,6 @@ jobs:
         run: |
           pip install -r requirements.txt
           cdk deploy openaq-api-prod --require-approval never 
-        # only deploy api until ingest and rollup are separated
 
   update-docs:
     needs: deploy
@@ -89,9 +88,9 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v3
         with:
-          node-version: "16"
+          node-version: "18"
           
       - uses: actions/setup-python@v3
         with:
@@ -103,4 +102,5 @@ jobs:
             pip install -r requirements.txt
             npm install -g rdme@latest
             python generate_schema.py
-            rdme openapi openapi.json --version=v3.1 --key=${{ secrets.README_KEY }} --id=${{ secrets.README_API_DEFINITION_ID }}
+            VERSION=
+            rdme openapi openapi.json --version=$VERSION --key=${{ secrets.README_KEY }} --id=${{ secrets.README_API_DEFINITION_ID }}

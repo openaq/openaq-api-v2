@@ -1,9 +1,10 @@
 import logging
 
 from fastapi import APIRouter, Depends
-from openaq_api.models.responses import ManufacturersResponse, ModelsResponse
-from ..db import DB
 
+from openaq_api.models.responses import ManufacturersResponse, ModelsResponse
+
+from ..db import DB
 
 logger = logging.getLogger("manufacturers")
 logger.setLevel(logging.DEBUG)

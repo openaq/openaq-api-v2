@@ -1,21 +1,21 @@
 import logging
-from fastapi import APIRouter, Depends, Path, Query
-from openaq_api.db import DB
-from datetime import date, datetime
 from typing import Annotated
+
+from fastapi import APIRouter, Depends, Path
+
+from openaq_api.db import DB
 from openaq_api.v3.models.responses import TrendsResponse
 
 logger = logging.getLogger("trends")
 
 from openaq_api.v3.models.queries import (
-    QueryBaseModel,
-    QueryBuilder,
     DateFromQuery,
     DateToQuery,
-    PeriodNameQuery,
     Paging,
+    PeriodNameQuery,
+    QueryBaseModel,
+    QueryBuilder,
 )
-
 
 router = APIRouter(
     prefix="/v3",

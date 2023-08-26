@@ -1,22 +1,23 @@
 import logging
-from fastapi import APIRouter, Depends, Path
 from typing import Annotated
-from openaq_api.db import DB
-from openaq_api.v3.models.responses import LocationsResponse
 
+from fastapi import APIRouter, Depends, Path
+
+from openaq_api.db import DB
 from openaq_api.v3.models.queries import (
-    QueryBuilder,
-    QueryBaseModel,
-    RadiusQuery,
     BboxQuery,
     CountryIdQuery,
     CountryIsoQuery,
-    ProviderQuery,
-    Paging,
-    OwnerQuery,
     MobileQuery,
     MonitorQuery,
+    OwnerQuery,
+    Paging,
+    ProviderQuery,
+    QueryBaseModel,
+    QueryBuilder,
+    RadiusQuery,
 )
+from openaq_api.v3.models.responses import LocationsResponse
 
 logger = logging.getLogger("locations")
 

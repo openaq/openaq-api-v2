@@ -1,19 +1,17 @@
 import logging
 from typing import Annotated
-from fastapi import APIRouter, Depends, Path, Query
-from pydantic import root_validator
-from openaq_api.db import DB
-from openaq_api.v3.models.responses import (
-    CountriesResponse,
-)
 
+from fastapi import APIRouter, Depends, Path
+
+from openaq_api.db import DB
 from openaq_api.v3.models.queries import (
-    QueryBaseModel,
     Paging,
-    QueryBuilder,
-    ProviderQuery,
     ParametersQuery,
+    ProviderQuery,
+    QueryBaseModel,
+    QueryBuilder,
 )
+from openaq_api.v3.models.responses import CountriesResponse
 
 logger = logging.getLogger("countries")
 

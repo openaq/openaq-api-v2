@@ -1,22 +1,20 @@
 import logging
+from enum import Enum
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
-from typing import Annotated
-from enum import Enum
-from ..db import DB
-
-from ..models.responses import AveragesResponse
 
 from openaq_api.v3.models.queries import (
-    QueryBuilder,
-    QueryBaseModel,
-    Paging,
     DateFromQuery,
     DateToQuery,
-    PeriodNames,
+    Paging,
     PeriodNameQuery,
+    QueryBaseModel,
+    QueryBuilder,
 )
 
+from ..db import DB
+from ..models.responses import AveragesResponse
 
 logger = logging.getLogger("averages")
 

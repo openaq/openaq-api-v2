@@ -1,36 +1,35 @@
 import datetime
 import logging
-import traceback
-from pathlib import Path
 import time
+import traceback
+from os import environ
+from pathlib import Path
 from typing import Any
-from fastapi.responses import PlainTextResponse
 
 import orjson
 from fastapi import FastAPI, Request
-from fastapi.staticfiles import StaticFiles
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-
+from fastapi.responses import PlainTextResponse
+from fastapi.staticfiles import StaticFiles
 from mangum import Mangum
 from pydantic import BaseModel, ValidationError
 from starlette.responses import JSONResponse, RedirectResponse
 
 from openaq_api.db import db_pool
-
+from openaq_api.middleware import (
+    CacheControlMiddleware,
+    LoggingMiddleware,
+    RateLimiterMiddleWare,
+)
 from openaq_api.models.logging import (
     InfrastructureErrorLog,
     ModelValidationError,
     UnprocessableEntityLog,
     WarnLog,
 )
-
-from openaq_api.middleware import (
-    CacheControlMiddleware,
-    LoggingMiddleware,
-    RateLimiterMiddleWare,
-)
+from openaq_api.routers.auth import router as auth_router
 from openaq_api.routers.averages import router as averages_router
 from openaq_api.routers.cities import router as cities_router
 from openaq_api.routers.countries import router as countries_router
@@ -42,24 +41,19 @@ from openaq_api.routers.parameters import router as parameters_router
 from openaq_api.routers.projects import router as projects_router
 from openaq_api.routers.sources import router as sources_router
 from openaq_api.routers.summary import router as summary_router
-from openaq_api.routers.auth import router as auth_router
+from openaq_api.settings import settings
 
 # V3 routers
 from openaq_api.v3.routers import (
+    countries,
     locations,
     measurements,
-    trends,
     parameters,
-    countries,
-    tiles,
     providers,
     sensors,
+    tiles,
+    trends,
 )
-
-
-from openaq_api.settings import settings
-from os import environ
-
 
 logging.basicConfig(
     format="[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
