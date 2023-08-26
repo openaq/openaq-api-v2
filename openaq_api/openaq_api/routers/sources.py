@@ -1,17 +1,14 @@
 import logging
+from enum import Enum
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query
 from fastapi.responses import HTMLResponse
 from markdown import markdown
 from starlette.exceptions import HTTPException
-from enum import Enum
-from ..db import DB
-from ..models.queries import (
-    APIBase,
-    SourceName,
-)
 
+from ..db import DB
+from ..models.queries import APIBase, SourceName
 from ..models.responses import SourcesResponse, SourcesResponseV1
 
 logger = logging.getLogger("sources")

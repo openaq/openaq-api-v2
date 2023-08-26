@@ -1,19 +1,20 @@
-from enum import Enum
 import logging
-from typing import Union, Annotated
-from fastapi import APIRouter, Depends, Query, Path
-from openaq_api.db import DB
-from openaq_api.v3.models.responses import ParametersResponse
+from enum import Enum
+from typing import Annotated
 
+from fastapi import APIRouter, Depends, Path, Query
+
+from openaq_api.db import DB
 from openaq_api.v3.models.queries import (
-    QueryBuilder,
-    QueryBaseModel,
+    BboxQuery,
     CountryIdQuery,
     CountryIsoQuery,
-    BboxQuery,
-    RadiusQuery,
     Paging,
+    QueryBaseModel,
+    QueryBuilder,
+    RadiusQuery,
 )
+from openaq_api.v3.models.responses import ParametersResponse
 
 logger = logging.getLogger("parameters")
 

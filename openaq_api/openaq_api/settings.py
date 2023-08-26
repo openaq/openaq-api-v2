@@ -1,7 +1,7 @@
 from os import environ
 from pathlib import Path
 
-from pydantic import ConfigDict, computed_field, field_validator
+from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 

@@ -1,13 +1,13 @@
 import logging
-
-from fastapi import APIRouter, Depends, Query, Path
+from enum import Enum
 from typing import Annotated
-from openaq_api.models.responses import ProjectsResponse
 
+from fastapi import APIRouter, Depends, Query
+
+from openaq_api.models.responses import ProjectsResponse
 
 from ..db import DB
 from ..models.queries import APIBase, Country, Measurands, Project, ProjectByPath
-from enum import Enum
 
 logger = logging.getLogger("projects")
 

@@ -3,22 +3,20 @@ import logging
 from datetime import date, datetime, timedelta
 from enum import Enum
 from types import FunctionType
-from typing import Union
-import fastapi
 
+import fastapi
 import humps
 from dateutil.parser import parse
 from dateutil.tz import UTC
 from fastapi import Path, Query
 from pydantic import (
+    BaseModel,
+    ConfigDict,
     FieldValidationInfo,
     computed_field,
+    conint,
     field_validator,
     model_validator,
-    ConfigDict,
-    BaseModel,
-    confloat,
-    conint,
 )
 
 logger = logging.getLogger("queries")

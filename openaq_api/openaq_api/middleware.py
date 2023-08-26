@@ -1,16 +1,14 @@
-from datetime import timedelta
 import logging
 import time
+from datetime import timedelta
 from os import environ
 
+from fastapi import Response, status
+from fastapi.responses import JSONResponse
+from redis import Redis
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.types import ASGIApp
-from .settings import settings
-
-from fastapi.responses import JSONResponse
-from fastapi import Response, status
-from redis import Redis
 
 from openaq_api.models.logging import (
     HTTPLog,
@@ -18,6 +16,8 @@ from openaq_api.models.logging import (
     TooManyRequestsLog,
     UnauthorizedLog,
 )
+
+from .settings import settings
 
 logger = logging.getLogger("middleware")
 

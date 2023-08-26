@@ -1,8 +1,8 @@
+import logging
 from datetime import date, datetime
 from typing import Any
 
-from pydantic import ConfigDict, BaseModel, AnyUrl, Field
-import logging
+from pydantic import AnyUrl, BaseModel, ConfigDict, Field
 
 logger = logging.getLogger("responses")
 
@@ -329,7 +329,8 @@ class ModelsResponse(OpenAQResult):
 class ParametersRowV1(BaseModel):
     id: int
     name: str
-    description: str
+    display_name: str | None = Field(None, alias="displayName")
+    description: str | None = Field(None)
     preferred_unit: str = Field(..., alias="preferredUnit")
     model_config = ConfigDict(populate_by_name=True)
 

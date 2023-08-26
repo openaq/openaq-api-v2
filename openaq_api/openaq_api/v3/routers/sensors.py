@@ -1,19 +1,12 @@
 import logging
 from typing import Annotated
-from fastapi import APIRouter, Depends, Query, Path
+
+from fastapi import APIRouter, Depends, Path
+
 from openaq_api.db import DB
+from openaq_api.v3.models.queries import QueryBaseModel, QueryBuilder
+from openaq_api.v3.models.responses import SensorsResponse
 from openaq_api.v3.routers.measurements import fetch_measurements
-
-from openaq_api.v3.models.responses import (
-    SensorsResponse,
-    MeasurementsResponse,
-)
-
-from openaq_api.v3.models.queries import (
-    Paging,
-    QueryBaseModel,
-    QueryBuilder,
-)
 
 logger = logging.getLogger("sensors")
 
