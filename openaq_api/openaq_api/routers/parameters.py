@@ -1,17 +1,12 @@
 import logging
-
-from fastapi import APIRouter, Depends, Query
 from typing import Annotated, Literal
 
-from ..db import DB
-from ..models.queries import (
-    APIBase,
-    SourceName,
-)
+from fastapi import APIRouter, Depends, Query
 
-from openaq_api.models.responses import (
-    ParametersResponse,
-)
+from openaq_api.models.responses import ParametersResponse, ParametersResponseV1
+
+from ..db import DB
+from ..models.queries import APIBase
 
 logger = logging.getLogger("parameters")
 
@@ -59,13 +54,13 @@ async def parameters_get(
 
 @router.get(
     "/v1/parameters",
-    response_model=ParametersResponse,
+    response_model=ParametersResponseV1,
     summary="Get parameters",
     description="Provides a list of parameters supported by the platform",
     tags=["v1"],
 )
 async def parameters_getv1(
-    parameters: Annotated[ParametersV1, Depends(ParametersV1)],
+    parameters: Annotated[ParametersV1, Depends(ParametersV1.depends())],
     db: DB = Depends(),
 ):
     q = f"""
@@ -83,5 +78,4 @@ async def parameters_getv1(
     """
 
     output = await db.fetchPage(q, parameters.params())
-
     return output

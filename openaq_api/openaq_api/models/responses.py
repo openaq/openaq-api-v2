@@ -329,7 +329,8 @@ class ModelsResponse(OpenAQResult):
 class ParametersRowV1(BaseModel):
     id: int
     name: str
-    description: str
+    display_name: str | None = Field(None, alias="displayName")
+    description: str | None = Field(None)
     preferred_unit: str = Field(..., alias="preferredUnit")
     model_config = ConfigDict(populate_by_name=True)
 
