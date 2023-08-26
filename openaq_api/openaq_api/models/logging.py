@@ -1,6 +1,11 @@
 from enum import Enum
 
-from pydantic import ConfigDict, BaseModel, Field, FieldValidationInfo, field_validator
+from pydantic import (
+    ConfigDict,
+    BaseModel,
+    Field,
+    computed_field,
+)
 from fastapi import status, Request
 
 from humps import camelize
@@ -18,8 +23,9 @@ class LogType(Enum):
 
 
 class BaseLog(BaseModel):
-    """
-    abstract base class for logging
+    """Abstract base class for logging.
+
+    Inherits from Pydantic BaseModel
     """
 
     type: LogType
@@ -47,74 +53,118 @@ class InfrastructureErrorLog(BaseLog):
 
 
 class HTTPLog(BaseLog):
-    http_code: int
+    """A base class for logging HTTP requests
+
+    inherits from BaseLog
+
+    Attributes:
+        request:
+        http_code:
+        timing:
+        rate_limiter:
+        counter:
+        ip:
+        api_key:
+        user-agent:
+        path:
+        params:
+        params_obj:
+        params_keys:
+
+    """
+
     request: Request = Field(..., exclude=True)
-    path: str | None = None
-    params: str | None = None
-    params_obj: dict | None = None
-    params_keys: list | None = None
-    ip: str | None = None
-    api_key: str | None = None
+    http_code: int
     timing: float | None = None
     rate_limiter: str | None = None
     counter: int | None = None
 
-    @field_validator("api_key")
-    def set_api_key(cls, v, info: FieldValidationInfo) -> dict:
-        request = info.data["request"]
-        api_key = request.headers.get("X-API-Key", None)
-        return v or api_key
+    @computed_field(return_type=str)
+    @property
+    def ip(self) -> str:
+        """str: returns IP address from request client"""
+        return self.request.client.host
 
-    @field_validator("ip")
-    def set_ip(cls, v, info: FieldValidationInfo) -> dict:
-        request = info.data["request"]
-        ip = request.client.host
-        return v or ip
+    @computed_field(return_type=str)
+    @property
+    def api_key(self) -> str:
+        """str: returns API Key from request headers"""
+        return self.request.headers.get("X-API-Key", None)
 
-    @field_validator("path")
-    def set_path(cls, v, info: FieldValidationInfo) -> dict:
-        request = info.data["request"]
-        path = request.url.path
-        return v or path
+    @computed_field(return_type=str)
+    @property
+    def user_agent(self) -> str:
+        """str: returns User-Agent from request headers"""
+        return self.request.headers.get("User-Agent", None)
 
-    @field_validator("params")
-    def set_params(cls, v, info: FieldValidationInfo) -> dict:
-        request = info.data["request"]
-        params = request.url.query
-        return v or params
+    @computed_field(return_type=str)
+    @property
+    def path(self) -> str:
+        """str: returns URL path from request"""
+        return self.request.url.path
 
-    @field_validator("params_obj")
-    def set_params_obj(cls, v, info: FieldValidationInfo) -> dict:
-        params = info.data.get("params", "")
-        if "=" in params:
-            return v or dict(x.split("=", 1) for x in params.split("&") if "=" in x)
-        else:
-            return None
+    @computed_field(return_type=str)
+    @property
+    def params(self) -> str:
+        """str: returns URL query params from request"""
+        return self.request.url.query
 
-    @field_validator("params_keys")
-    def set_params_keys(cls, v, info: FieldValidationInfo) -> dict:
-        params = info.data.get("params_obj", {})
-        return [] if params is None else list(params.keys())
+    @computed_field(return_type=dict)
+    @property
+    def params_obj(self) -> dict:
+        """dict: returns URL query params as key values from request"""
+        return dict(x.split("=", 1) for x in self.params.split("&") if "=" in x)
+
+    @computed_field(return_type=list)
+    @property
+    def params_keys(self) -> list:
+        """list: returns URL query params keys as list/array from request"""
+        return [] if self.params_obj is None else list(self.params_obj.keys())
 
 
 class ErrorLog(HTTPLog):
+    """Log for HTTP 500.
+
+    Inherits from HTTPLog
+    """
+
     http_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
 class UnprocessableEntityLog(HTTPLog):
+    """Log for HTTP 422.
+
+    Inherits from HTTPLog
+    """
+
     http_code: int = status.HTTP_422_UNPROCESSABLE_ENTITY
     type: LogType = LogType.UNPROCESSABLE_ENTITY
 
 
 class TooManyRequestsLog(HTTPLog):
+    """Log for HTTP 429.
+
+    Inherits from HTTPLog
+    """
+
     http_code: int = status.HTTP_429_TOO_MANY_REQUESTS
     type: LogType = LogType.TOO_MANY_REQUESTS
 
 
 class UnauthorizedLog(HTTPLog):
+    """Log for HTTP 401.
+
+    Inherits from HTTPLog
+    """
+
     http_code: int = status.HTTP_401_UNAUTHORIZED
     type: LogType = LogType.UNAUTHORIZED
 
 
 class ModelValidationError(ErrorLog):
+    """Log for model validations
+
+    Inherits from ErrorLog
+    """
+
     type: LogType = LogType.VALIDATION_ERROR
