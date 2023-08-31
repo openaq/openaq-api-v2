@@ -11,6 +11,7 @@ from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from mangum import Mangum
@@ -152,6 +153,7 @@ app.include_router(auth_router)
 
 app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
 app.add_middleware(LoggingMiddleware)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
 class OpenAQValidationResponseDetail(BaseModel):
