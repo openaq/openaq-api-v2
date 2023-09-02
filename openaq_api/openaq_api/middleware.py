@@ -123,7 +123,7 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         if count and int(count) > 0:
             self.counter = self.redis_client.decrby(key, 1)
             return False
-        if count < 0:
+        if int(count) < 0:
             self.redis_client.delete(key)
         return True
 
