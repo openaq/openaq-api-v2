@@ -5,7 +5,7 @@ from os import environ
 
 from fastapi import Response, status
 from fastapi.responses import JSONResponse
-from redis import Redis
+from redis.asyncio.cluster import RedisCluster
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.types import ASGIApp
@@ -103,7 +103,7 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
     def __init__(
         self,
         app: ASGIApp,
-        redis_client: Redis,
+        redis_client: RedisCluster,
         rate_amount: int,  # number of requests allowed without api key
         rate_amount_key: int,  # number of requests allowed with api key
         rate_time: timedelta,  # timedelta of rate limit expiration
@@ -111,24 +111,25 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         """Init Middleware."""
         super().__init__(app)
         self.redis_client = redis_client
-        self.rate_amount = rate_amount
-        self.rate_amount_key = rate_amount_key
+        self.rate_amount = rate_amount  # 100
+        self.rate_amount_key = rate_amount_key  # 400
         self.rate_time = rate_time
         self.counter = 0
 
-    def request_is_limited(self, key: str, limit: int):
-        if self.redis_client.setnx(key, limit):
-            self.redis_client.expire(key, int(self.rate_time.total_seconds()))
-        count = self.redis_client.get(key)
+    async def request_is_limited(self, key: str, limit: int):
+        if await self.redis_client.set(key, limit, nx=True):
+            await self.redis_client.expire(key, int(self.rate_time.total_seconds()))
+        count = await self.redis_client.get(key)
         if count and int(count) > 0:
-            self.counter = self.redis_client.decrby(key, 1)
+            self.counter = await self.redis_client.decrby(key, 1)
             return False
-        if count < 0:
-            self.redis_client.delete(key)
+        if int(count) < 0:
+            logger.error(f"rate limiter hit a value below zero: {count} for key: {key}")
+            await self.redis_client.delete(key)
         return True
 
-    def check_valid_key(self, key: str):
-        if self.redis_client.sismember("keys", key):
+    async def check_valid_key(self, key: str):
+        if await self.redis_client.sismember("keys", key):
             return True
         return False
 
@@ -166,7 +167,8 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
                 )
             key = auth
             limit = self.rate_amount_key
-        if self.limited_path(route) and self.request_is_limited(key, limit):
+        limited = await self.request_is_limited(key, limit)
+        if self.limited_path(route) and limited:
             logging.info(
                 TooManyRequestsLog(
                     request=request,
