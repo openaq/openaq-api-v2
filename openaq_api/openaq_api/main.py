@@ -105,17 +105,15 @@ app = FastAPI(
 
 redis_client = None  # initialize for generalize_schema.py
 
-
 if settings.RATE_LIMITING:
     logger.debug("Connecting to redis")
-    import redis
+    from redis.asyncio.cluster import RedisCluster
 
     try:
-        redis_client = redis.RedisCluster(
+        redis_client = RedisCluster(
             host=settings.REDIS_HOST,
             port=settings.REDIS_PORT,
             decode_responses=True,
-            skip_full_coverage_check=True,
             socket_timeout=5,
         )
         app.state.redis_client = redis_client
@@ -224,6 +222,11 @@ async def shutdown_event():
         await app.state.pool.close()
         delattr(app.state, "pool")
         logger.debug("Connection closed")
+    if hasattr(app.state, "redis_client") and settings.RATE_LIMITING:
+        logger.debug("Closing redis connection")
+        await app.state.redis_client.close()
+        delattr(app.state, "redis_client")
+        logger.debug("redis connection closed")
 
 
 @app.get("/ping", include_in_schema=False)
