@@ -2,7 +2,7 @@ import logging
 import time
 from datetime import timedelta
 from os import environ
-
+import json
 from fastapi import Response, status
 from fastapi.responses import JSONResponse
 from redis.asyncio.cluster import RedisCluster
@@ -62,8 +62,8 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         process_time = time.time() - start_time
         timing = round(process_time * 1000, 2)
-        if hasattr(request.app.state, "rate_limiter"):
-            rate_limiter = request.app.state.rate_limiter
+        if hasattr(request.state, "rate_limiter"):
+            rate_limiter = request.state.rate_limiter
         else:
             rate_limiter = None
 
@@ -114,18 +114,16 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         self.rate_amount = rate_amount  # 100
         self.rate_amount_key = rate_amount_key  # 400
         self.rate_time = rate_time
-        self.counter = 0
 
-    async def request_is_limited(self, key: str, limit: int):
+    async def request_is_limited(self, key: str, limit: int, request: Request):
         if await self.redis_client.set(key, limit, nx=True):
             await self.redis_client.expire(key, int(self.rate_time.total_seconds()))
         count = await self.redis_client.get(key)
         if count and int(count) > 0:
-            self.counter = await self.redis_client.decrby(key, 1)
+            request.state.counter = await self.redis_client.decrby(key, 1)
             return False
         if int(count) < 0:
             logger.error(f"rate limiter hit a value below zero: {count} for key: {key}")
-            await self.redis_client.delete(key)
         return True
 
     async def check_valid_key(self, key: str):
@@ -167,12 +165,13 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
                 )
             key = auth
             limit = self.rate_amount_key
-        limited = await self.request_is_limited(key, limit)
+        request.state.counter = 0
+        limited = await self.request_is_limited(key, limit, request)
         if self.limited_path(route) and limited:
             logging.info(
                 TooManyRequestsLog(
                     request=request,
-                    rate_limiter=f"{key}/{limit}/{self.counter}",
+                    rate_limiter=f"{key}/{limit}/{request.state.counter}",
                 ).model_dump_json()
             )
             return JSONResponse(
@@ -180,7 +179,6 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
                 content={"message": "Too many requests"},
             )
 
-        request.app.state.rate_limiter = f"{key}/{limit}/{self.counter}"
+        request.state.rate_limiter = f"{key}/{limit}/{request.state.counter}"
         response = await call_next(request)
-
         return response
