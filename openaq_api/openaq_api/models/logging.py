@@ -46,6 +46,14 @@ class InfrastructureErrorLog(BaseLog):
     type: LogType = LogType.INFRASTRUCTURE_ERROR
 
 
+class AuthLog(BaseLog):
+    type: LogType = LogType.INFO
+
+
+class SESEmailLog(BaseLog):
+    type: LogType = LogType.INFO
+
+
 class HTTPLog(BaseLog):
     """A base class for logging HTTP requests
 
