@@ -20,7 +20,7 @@ dnspython==2.3.0
 email-validator==2.0.0.post2
 exceptiongroup==1.0.4
 fastapi==0.100.0
-greenlet==1.1.2
+greenlet==2.0.2
 h11==0.12.0
 httpcore==0.14.7
 httpx==0.22.0
@@ -29,7 +29,7 @@ importlib-metadata==4.11.4
 iniconfig==1.1.1
 Jinja2==3.1.2
 jmespath==1.0.1
-jq==1.2.2
+jq==1.5.0
 libcst==1.0.1
 mangum==0.15.0
 Markdown==3.3.7
@@ -38,11 +38,10 @@ MarkupSafe==2.1.1
 mdurl==0.1.2
 msgpack==1.0.3
 mypy-extensions==1.0.0
-orjson==3.8.5
+orjson==3.9.7
 packaging==21.3
 passlib==1.7.4
 pluggy==1.0.0
-psycopg2-binary==2.9.3
 pydantic==2.0.2
 pydantic-settings==2.0.1
 pydantic_core==2.1.2
