@@ -36,10 +36,8 @@ class Source(BaseModel):
 
 
 class Manufacturer(BaseModel):
-    modelname: str = Field(..., alias="modelName")
+    modelName: str = Field(..., alias="modelName")
     manufacturer_name: str = Field(..., alias="manufacturerName")
-
-    model_config = ConfigDict(protected_namespaces=())
 
 
 class Parameter(BaseModel):
@@ -261,6 +259,8 @@ class LocationsRow(BaseModel):
     measurements: int
     bounds: list[float] | float = None
     manufacturers: list[Manufacturer] | Manufacturer = None
+
+    model_config = ConfigDict(protected_namespaces=())
 
 
 class LocationsResponse(OpenAQResult):
