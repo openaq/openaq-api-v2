@@ -8,7 +8,7 @@ from openaq_api.v3.models.queries import (
     DateFromQuery,
     DateToQuery,
     Paging,
-    PeriodNameQuery,
+    TemporalQuery,
     QueryBaseModel,
     QueryBuilder,
 )
@@ -33,20 +33,20 @@ class SpatialTypeQuery(QueryBaseModel):
     )
 
 
-# class LocationQuery(QueryBaseModel):
-#     locations_id: int = Query(
-#         70084,
-#         description="Limit the results to a specific location by id",
-#         ge=1,
-#     )
+class LocationQuery(QueryBaseModel):
+    locations_id: int = Query(
+        70084,
+        description="Limit the results to a specific location by id",
+        ge=1,
+    )
 
-#     def where(self) -> str:
-#         return "sy.sensor_nodes_id = :locations_id"
+    def where(self) -> str:
+        return "sy.sensor_nodes_id = :locations_id"
 
 
 class ParametersQuery(QueryBaseModel):
     parameters_id: int | None = Query(
-        135,
+        None,
         description="What measurand would you like?",
     )
 
@@ -58,11 +58,11 @@ class ParametersQuery(QueryBaseModel):
 class AveragesQueries(
     Paging,
     SpatialTypeQuery,
-    # LocationQuery,
+    LocationQuery,
     DateFromQuery,
     DateToQuery,
     ParametersQuery,
-    PeriodNameQuery,
+    TemporalQuery,
 ):
     ...
 
@@ -80,7 +80,7 @@ async def averages_v2_get(
 ) -> AveragesResponse:
     query = QueryBuilder(av)
 
-    if av.period_name in [None, "hour"]:
+    if av.temporal in [None, "hour"]:
         # Query for hourly data
         sql = f"""
         SELECT sn.id
@@ -110,17 +110,17 @@ async def averages_v2_get(
         """
     else:
         # Query for the aggregate data
-        if av.period_name == "day":
+        if av.temporal == "day":
             factor = "datetime::date as day"
-        elif av.period_name == "month":
+        elif av.temporal == "month":
             factor = "date_trunc('month', datetime - '1sec'::interval) as month"
-        elif av.period_name == "year":
+        elif av.temporal == "year":
             factor = "date_trunc('year', datetime - '1sec'::interval) as year"
-        elif av.period_name == "hod":
+        elif av.temporal == "hod":
             factor = "to_char(datetime - '1sec'::interval, 'HH24') as hod"
-        elif av.period_name == "dow":
+        elif av.temporal == "dow":
             factor = "to_char(datetime - '1sec'::interval, 'ID') as dow"
-        elif av.period_name == "moy":
+        elif av.temporal == "moy":
             factor = "to_char(datetime - '1sec'::interval, 'MM') as moy"
 
         sql = f"""

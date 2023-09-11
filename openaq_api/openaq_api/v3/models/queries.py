@@ -618,6 +618,20 @@ class PeriodNameQuery(QueryBaseModel):
     )
 
 
+class TemporalQuery(QueryBaseModel):
+    """Pydantic query model for the `period_name` query parameter.
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        period_name: value of period to aggregate measurement values.
+    """
+
+    temporal: PeriodNames | None = Query(
+        "hour", description="Period to aggregate. month, day, hour"
+    )
+
+
 class RadiusQuery(QueryBaseModel):
     """Pydantic query model for the `period_name` query parameter.
 
