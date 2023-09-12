@@ -15,7 +15,6 @@ router = APIRouter(
     include_in_schema=True,
 )
 
-
 class ManufacturerPathQuery(QueryBaseModel):
     """Path query to filter results by manufacturers ID
 
@@ -79,6 +78,27 @@ async def manufacturers_get(
 async def fetch_manufacturers(query, db):
     query_builder = QueryBuilder(query)
     sql = f"""
+    SELECT instruments_id
+    , manufacturer_entities_id
+    , label
+    , description
+    , is_monitor
+    {query_builder.fields() or ''} 
+    {query_builder.total()}
+    FROM instruments 
+    {query_builder.where()}
+    {query_builder.pagination()}
     """
     response = await db.fetchPage(sql, query_builder.params())
     return response
+
+#  SELECT i.instruments_id
+#     , i.manufacturer_entities_id as id
+#     , i.label as name
+#     , i.description
+#     , i.is_monitor as isMonitor
+#     {query_builder.fields() or ''} 
+#     {query_builder.total()}
+#     FROM instruments i
+#     {query_builder.where()}
+#     {query_builder.pagination()}

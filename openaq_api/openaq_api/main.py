@@ -48,6 +48,7 @@ from openaq_api.settings import settings
 from openaq_api.v3.routers import (
     countries,
     locations,
+    manufacturers,
     measurements,
     parameters,
     providers,
@@ -247,6 +248,7 @@ app.include_router(locations.router)
 app.include_router(parameters.router)
 app.include_router(tiles.router)
 app.include_router(countries.router)
+app.include_router(manufacturers.router)
 app.include_router(measurements.router)
 app.include_router(trends.router)
 app.include_router(providers.router)
