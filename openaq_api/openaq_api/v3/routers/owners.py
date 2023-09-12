@@ -1,10 +1,12 @@
+# owners.py:
+
 import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path
 
 from openaq_api.db import DB
-from openaq_api.v3.models.queries import Paging, QueryBaseModel, QueryBuilder
+from openaq_api.v3.models.queries import Paging, ParametersQuery, ProviderQuery, QueryBaseModel, QueryBuilder
 from openaq_api.v3.models.responses import OwnersResponse
 
 logger = logging.getLogger("owners")
@@ -15,16 +17,15 @@ router = APIRouter(
     include_in_schema=True,
 )
 
-
 class OwnerPathQuery(QueryBaseModel):
     """Path query to filter results by Owners ID.
-
+    
     Inherits from QueryBaseModel.
 
     Attributes:
         owners_id: owners ID value.
     """
-
+    
     owners_id: int = Path(
         description="Limit the results to a specific owner by id",
         ge=1,
@@ -38,12 +39,11 @@ class OwnerPathQuery(QueryBaseModel):
         Returns:
             string of WHERE clause
         """
-        return "id = :owners_id"
+        return "entities_id = :owners_id"
 
 
-class OwnersQueries(Paging):
+class OwnersQueries(Paging, ParametersQuery, ProviderQuery):
     ...
-
 
 @router.get(
     "/owners/{owners_id}",
@@ -58,7 +58,6 @@ async def owner_get(
     response = await fetch_owners(owners, db)
     return response
 
-
 @router.get(
     "/owners",
     response_model=OwnersResponse,
@@ -72,10 +71,18 @@ async def owners_get(
     response = await fetch_owners(owner, db)
     return response
 
-
 async def fetch_owners(query, db):
     query_builder = QueryBuilder(query)
     sql = f"""
+    SELECT entities_id
+    , entity_type
+    , full_name
+    , added_on
+    {query_builder.total()}
+    FROM entities
+    {query_builder.where()}
+    {query_builder.pagination()}
     """
+    print(sql)
     response = await db.fetchPage(sql, query_builder.params())
     return response
