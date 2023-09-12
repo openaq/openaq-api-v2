@@ -80,15 +80,24 @@ async def owners_get(
 async def fetch_owners(query, db):
     query_builder = QueryBuilder(query)
     sql = f"""
-    SELECT entities_id
-    , entity_type
-    , full_name
-    , added_on
-    {query_builder.total()}
-    FROM entities
-    {query_builder.where()}
-    {query_builder.pagination()}
+    SELECT e.entities_id as id
+    , e.full_name as name
+    , e.added_on
+    , COUNT(sn.owner_entities_id) AS locations_count
+    FROM (
+        SELECT entities_id, full_name, added_on
+        FROM entities
+        WHERE entity_type NOT IN ('Person', 'Organization')
+    ) AS e
+    LEFT JOIN sensor_nodes sn ON e.entities_id = sn.owner_entities_id
+    GROUP BY e.entities_id, name, e.added_on
+    ORDER BY e.entities_id;
     """
     print(sql)
     response = await db.fetchPage(sql, query_builder.params())
     return response
+
+ # {query_builder.total()}
+    # FROM entities
+    # {query_builder.where()}
+    # {query_builder.pagination()}

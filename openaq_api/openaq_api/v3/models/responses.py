@@ -87,10 +87,15 @@ class EntityBase(JsonBase):
     name: str
 
 
+# class OwnerBase(JsonBase):
+#     id: int
+#     name: str
+
 class OwnerBase(JsonBase):
     id: int
     name: str
-
+    added_on: str
+    locations_count: int | None = None
 
 class ProviderBase(JsonBase):
     id: int
