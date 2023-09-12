@@ -76,11 +76,12 @@ async def manufacturers_get(
 
 
 async def fetch_manufacturers(query, db):
+    # describe manufacturer eg clarity (makes multiple instruments)
     query_builder = QueryBuilder(query)
     sql = f"""
     SELECT instruments_id
-    , manufacturer_entities_id
-    , label
+    , manufacturer_entities_id as id
+    , label as name
     , description
     , is_monitor
     {query_builder.fields() or ''} 

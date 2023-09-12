@@ -97,17 +97,17 @@ class ProviderBase(JsonBase):
     name: str
 
 
-class ManufacturerBase(JsonBase):
-    id: int
-    name: str
-    entity: EntityBase
+# class ManufacturerBase(JsonBase):
+#     id: int
+#     name: str
+#     entity: EntityBase
 
 class ManufacturerBase(JsonBase):
-    id: int = Field(alias='manufacturer_entities_id') 
-    name: str = Field(alias='label')  
+    id: int #= Field(alias='manufacturer_entities_id') 
+    name: str #= Field(alias='label')  
     description: str
-    is_monitor: bool
-    instruments_id: int = Field(alias='instruments_id')
+    is_monitor: bool = Field(alias='isMonitor')
+    instruments_id: int = Field(alias='instrumentsId')
 
 # class ManufacturerBase(JsonBase):
 #     id: int  
