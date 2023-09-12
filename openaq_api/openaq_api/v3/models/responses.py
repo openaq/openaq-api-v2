@@ -86,15 +86,9 @@ class EntityBase(JsonBase):
     id: int
     name: str
 
-
-# class OwnerBase(JsonBase):
-#     id: int
-#     name: str
-
 class OwnerBase(JsonBase):
     id: int
     name: str
-    # added_on: DatetimeObject = Field(alias='addedOn')
     locations_count: int = Field(alias='locationsCount')
     
 class ProviderBase(JsonBase):
@@ -173,7 +167,7 @@ class Provider(ProviderBase):
 
 
 class Owner(OwnerBase):
-    entity: EntityBase | None = None
+    ...
 
 
 class Instrument(InstrumentBase):

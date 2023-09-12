@@ -1,5 +1,3 @@
-# owners.py:
-
 import logging
 from typing import Annotated
 
@@ -48,7 +46,7 @@ class OwnerPathQuery(QueryBaseModel):
         return "entities_id = :owners_id"
 
 
-class OwnersQueries(Paging, ParametersQuery, ProviderQuery):
+class OwnersQueries(Paging):
     ...
 
 @router.get(
@@ -83,33 +81,13 @@ async def fetch_owners(query, db):
     SELECT e.entities_id AS id
     , e.full_name AS name
     , COUNT(sn.owner_entities_id) AS locations_count
-    FROM (
-        SELECT entities_id, full_name
-        FROM entities
-        WHERE entity_type NOT IN ('Person', 'Organization')
-    ) AS e
-    LEFT JOIN sensor_nodes sn ON e.entities_id = sn.owner_entities_id
+    FROM entities e
+    JOIN sensor_nodes sn ON e.entities_id = sn.owner_entities_id
     {query_builder.where()}
     GROUP BY e.entities_id, name
-    ORDER BY e.entities_id;
+    ORDER BY e.entities_id
+    {query_builder.pagination()};
     """
     print(sql)
     response = await db.fetchPage(sql, query_builder.params())
     return response
-
-# SELECT e.entities_id as id
-#     , e.full_name as name
-#     , e.added_on
-#     , COUNT(sn.owner_entities_id) AS locations_count
-#     {query_builder.total()}
-#     {query_builder.fields() or ''}
-#     FROM (
-#         SELECT entities_id, full_name, added_on
-#         FROM entities
-#         WHERE entity_type NOT IN ('Person', 'Organization')
-#     ) AS e
-#     LEFT JOIN sensor_nodes sn ON e.entities_id = sn.owner_entities_id
-#     {query_builder.where()}
-#     GROUP BY e.entities_id, name, e.added_on
-#     ORDER BY e.entities_id
-#     {query_builder.pagination()};
