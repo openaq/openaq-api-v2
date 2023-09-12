@@ -86,6 +86,5 @@ async def fetch_owners(query, db):
     ORDER BY e.entities_id
     {query_builder.pagination()};
     """
-    print(sql)
     response = await db.fetchPage(sql, query_builder.params())
     return response
