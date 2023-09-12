@@ -37,6 +37,7 @@ from openaq_api.routers.countries import router as countries_router
 from openaq_api.routers.locations import router as locations_router
 from openaq_api.routers.manufacturers import router as manufacturers_router
 from openaq_api.routers.measurements import router as measurements_router
+from openaq_api.routers.owners import router as owners_router
 from openaq_api.routers.mvt import router as mvt_router
 from openaq_api.routers.parameters import router as parameters_router
 from openaq_api.routers.projects import router as projects_router
@@ -49,6 +50,7 @@ from openaq_api.v3.routers import (
     countries,
     locations,
     measurements,
+    owners,
     parameters,
     providers,
     sensors,
@@ -248,6 +250,7 @@ app.include_router(parameters.router)
 app.include_router(tiles.router)
 app.include_router(countries.router)
 app.include_router(measurements.router)
+app.include_router(owners.router)
 app.include_router(trends.router)
 app.include_router(providers.router)
 app.include_router(sensors.router)
@@ -260,6 +263,7 @@ app.include_router(locations_router)
 app.include_router(manufacturers_router)
 app.include_router(measurements_router)
 app.include_router(mvt_router)
+app.include_router(owners_router)
 app.include_router(parameters_router)
 app.include_router(projects_router)
 app.include_router(sources_router)

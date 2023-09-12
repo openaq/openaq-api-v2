@@ -6,7 +6,13 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Path
 
 from openaq_api.db import DB
-from openaq_api.v3.models.queries import Paging, ParametersQuery, ProviderQuery, QueryBaseModel, QueryBuilder
+from openaq_api.v3.models.queries import (
+    Paging, 
+    ParametersQuery, 
+    ProviderQuery, 
+    QueryBaseModel, 
+    QueryBuilder
+)
 from openaq_api.v3.models.responses import OwnersResponse
 
 logger = logging.getLogger("owners")
