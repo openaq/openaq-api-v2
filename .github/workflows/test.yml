@@ -19,7 +19,7 @@ env:
   DATABASE_PORT: 42
 
 jobs:
-  deploy:
+  test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
