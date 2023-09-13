@@ -1,5 +1,5 @@
 import logging
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query
@@ -29,7 +29,7 @@ logger = logging.getLogger("locations")
 router = APIRouter(include_in_schema=True)
 
 
-class LocationsOrder(str, Enum):
+class LocationsOrder(StrEnum):
     city = "city"
     country = "country"
     location = "location"

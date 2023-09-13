@@ -1,5 +1,5 @@
 import logging
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query
@@ -16,7 +16,7 @@ logger = logging.getLogger("sources")
 router = APIRouter()
 
 
-class SourcesOrder(str, Enum):
+class SourcesOrder(StrEnum):
     sourceName = "sourceName"
     firstUpdated = "firstUpdated"
     lastUpdated = "lastUpdated"
@@ -97,7 +97,7 @@ async def sources_get(
     return output
 
 
-class SourcesV1Order(str, Enum):
+class SourcesV1Order(StrEnum):
     name = "name"
 
 

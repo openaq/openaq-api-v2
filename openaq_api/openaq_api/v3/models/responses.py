@@ -86,12 +86,11 @@ class EntityBase(JsonBase):
     id: int
     name: str
 
-
 class OwnerBase(JsonBase):
     id: int
     name: str
-
-
+    locations_count: int = Field(alias='locationsCount')
+    
 class ProviderBase(JsonBase):
     id: int
     name: str
@@ -168,7 +167,7 @@ class Provider(ProviderBase):
 
 
 class Owner(OwnerBase):
-    entity: EntityBase
+    ...
 
 
 class Instrument(InstrumentBase):

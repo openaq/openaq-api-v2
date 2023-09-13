@@ -5,7 +5,7 @@ import operator
 import types
 import weakref
 from datetime import date, datetime
-from enum import Enum
+from enum import StrEnum
 from types import FunctionType
 from typing import Annotated, Any
 
@@ -594,7 +594,7 @@ class DateToQuery(QueryBaseModel):
             return "datetime <= (:date_to::timestamp AT TIME ZONE timezone)"
 
 
-class PeriodNames(str, Enum):
+class PeriodNames(StrEnum):
     hour = "hour"
     day = "day"
     month = "month"
@@ -615,6 +615,20 @@ class PeriodNameQuery(QueryBaseModel):
 
     period_name: PeriodNames | None = Query(
         "hour", description="Period to aggregate. Month, day, hour"
+    )
+
+
+class TemporalQuery(QueryBaseModel):
+    """Pydantic query model for the `period_name` query parameter.
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        period_name: value of period to aggregate measurement values.
+    """
+
+    temporal: PeriodNames | None = Query(
+        "hour", description="Period to aggregate. month, day, hour"
     )
 
 

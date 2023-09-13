@@ -115,6 +115,10 @@ class LambdaApiStack(Stack):
 
         lambda_env = stringify_settings(lambda_env)
 
+        security_groups = None
+        if lambda_sec_group:
+            security_groups = [lambda_sec_group]
+
         openaq_api = aws_lambda.Function(
             self,
             f"openaq-api-{env_name}-lambda",
@@ -127,13 +131,13 @@ class LambdaApiStack(Stack):
                 ],
             ),
             handler="openaq_api.main.handler",
-            runtime=aws_lambda.Runtime.PYTHON_3_10,
+            runtime=aws_lambda.Runtime.PYTHON_3_11,
             architecture=aws_lambda.Architecture.X86_64,
             vpc=vpc,
             allow_public_subnet=True,
             memory_size=api_lambda_memory_size,
             environment=lambda_env,
-            security_groups=[lambda_sec_group],
+            security_groups=security_groups,
             timeout=Duration.seconds(api_lambda_timeout),
             layers=[
                 create_dependencies_layer(
@@ -209,7 +213,7 @@ class LambdaApiStack(Stack):
                 max_ttl=Duration.days(7),
                 cookie_behavior=cloudfront.CacheCookieBehavior.none(),
                 header_behavior=cloudfront.CacheHeaderBehavior.allow_list(
-                    "Origin", "x-api-key", "API-User-Agent"
+                    "X-API-Key", "User-Agent"
                 ),
                 query_string_behavior=cloudfront.CacheQueryStringBehavior.all(),
                 enable_accept_encoding_gzip=True,
@@ -226,7 +230,7 @@ class LambdaApiStack(Stack):
                 object_ownership=aws_s3.ObjectOwnership.OBJECT_WRITER,
                 lifecycle_rules=[
                     aws_s3.LifecycleRule(
-                        id=f"openaq-api-dist-log-lifecycle-rule-{env_name}",
+                        id=f"openaq-api-d ist-log-lifecycle-rule-{env_name}",
                         enabled=True,
                         expiration=aws_cdk.Duration.days(7),
                     )
@@ -267,7 +271,7 @@ class LambdaApiStack(Stack):
                     ],
                 ),
                 handler="cloudfront_logs.main.handler",
-                runtime=aws_lambda.Runtime.PYTHON_3_10,
+                runtime=aws_lambda.Runtime.PYTHON_3_11,
                 allow_public_subnet=True,
                 memory_size=cf_logs_lambda_memory_size,
                 environment=stringify_settings(cloudfront_logs_lambda_env),
@@ -302,7 +306,7 @@ class LambdaApiStack(Stack):
                 f"OpenAQAPIOriginRequestPolicy-{env_name}",
                 origin_request_policy_name=f"OpenAQAPIOriginRequestPolicy_{env_name}",
                 header_behavior=cloudfront.OriginRequestHeaderBehavior.allow_list(
-                    "x-api-key"
+                    "X-API-Key", "User-Agent"
                 ),
                 query_string_behavior=cloudfront.OriginRequestQueryStringBehavior.all(),
             )
