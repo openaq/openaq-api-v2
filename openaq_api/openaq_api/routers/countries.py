@@ -1,5 +1,5 @@
 import logging
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
@@ -14,7 +14,7 @@ logger = logging.getLogger("countries")
 router = APIRouter()
 
 
-class CountriesOrder(str, Enum):
+class CountriesOrder(StrEnum):
     code = "code"
     name = "name"
     locations = "locations"
@@ -26,7 +26,7 @@ class CountriesOrder(str, Enum):
     sources = "sources"
 
 
-class CountriesOrderV1(str, Enum):
+class CountriesOrderV1(StrEnum):
     code = "code"
     count = "count"
     locations = "locations"

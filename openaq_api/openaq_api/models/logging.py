@@ -1,11 +1,11 @@
-from enum import Enum
+from enum import StrEnum
 
 from fastapi import Request, status
 from humps import camelize
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 
-class LogType(Enum):
+class LogType(StrEnum):
     SUCCESS = "SUCCESS"
     VALIDATION_ERROR = "VALIDATION_ERROR"
     INFRASTRUCTURE_ERROR = "INFRASTRUCTURE_ERROR"

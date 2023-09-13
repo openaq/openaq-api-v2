@@ -1,7 +1,7 @@
 import csv
 import io
 import logging
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated
 
 from dateutil.tz import UTC
@@ -86,7 +86,7 @@ def meas_csv(rows, includefields):
     return output.getvalue()
 
 
-class MeasOrder(str, Enum):
+class MeasOrder(StrEnum):
     city = "city"
     country = "country"
     location = "location"

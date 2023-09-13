@@ -1,5 +1,5 @@
 import logging
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query
@@ -49,7 +49,7 @@ class ParameterPathQuery(QueryBaseModel):
         return "id = :parameters_id"
 
 
-class ParameterType(str, Enum):
+class ParameterType(StrEnum):
     pollutant = "pollutant"
     meteorological = "meteorological"
 

@@ -1,5 +1,5 @@
 import logging
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
@@ -21,7 +21,7 @@ logger = logging.getLogger("averages")
 router = APIRouter()
 
 
-class SpatialTypes(str, Enum):
+class SpatialTypes(StrEnum):
     country = "country"
     location = "location"
     total = "total"
