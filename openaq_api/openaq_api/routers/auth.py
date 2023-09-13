@@ -14,7 +14,7 @@ from passlib.hash import pbkdf2_sha256
 from ..db import DB
 from ..forms.register import RegisterForm, UserExistsException
 from ..models.auth import User
-from ..models.logging import InfoLog
+from ..models.logging import AuthLog, InfoLog, SESEmailLog
 from ..settings import settings
 
 logger = logging.getLogger("auth")
@@ -24,9 +24,7 @@ templates = Jinja2Templates(
     directory=os.path.join(str(pathlib.Path(__file__).parent.parent), "templates")
 )
 
-
 router = APIRouter(include_in_schema=False)
-
 
 credentials_exception = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -41,7 +39,7 @@ incorrect_username_exception = HTTPException(
 )
 
 
-def send_verification_email(verifiation_code: str, full_name: str, email: str):
+def send_verification_email(verification_code: str, full_name: str, email: str):
     ses_client = boto3.client("ses")
     TEXT_EMAIL_CONTENT = f"""
     Thank you for signing up for an OpenAQ API Key
@@ -57,7 +55,7 @@ def send_verification_email(verifiation_code: str, full_name: str, email: str):
                 <td bgcolor="#FFFFFF" style="padding:30px;">
                     <h1 style='text-align:center'>Thank you for signing up for an OpenAQ API Key</h1>
                     <p>Click the following link to verify your email:</p>
-                    <a href="https://api.openaq.org/verify/{verifiation_code}">https://api.openaq.org/verify/{verifiation_code}</a>
+                    <a href="https://api.openaq.org/verify/{verification_code}">https://api.openaq.org/verify/{verifiation_code}</a>
                 </td>
             </tr>
             </table>
@@ -74,6 +72,18 @@ def send_verification_email(verifiation_code: str, full_name: str, email: str):
         Source=settings.EMAIL_SENDER,
         Destinations=[f"{full_name} <{email}>"],
         RawMessage={"Data": msg.as_string()},
+    )
+    logger.info(
+        SESEmailLog(
+            detail=json.dumps(
+                {
+                    "email": email,
+                    "name": full_name,
+                    "verificationCode": verification_code,
+                    "reponse": response,
+                }
+            )
+        ).model_dump_json()
     )
     return response
 
@@ -110,6 +120,18 @@ def send_api_key_email(token: str, full_name: str, email: str):
         Destinations=[f"{full_name} <{email}>"],
         RawMessage={"Data": msg.as_string()},
     )
+    logger.info(
+        SESEmailLog(
+            detail=json.dumps(
+                {
+                    "email": email,
+                    "name": full_name,
+                    "token": token,
+                    "reponse": response,
+                }
+            )
+        ).model_dump_json()
+    )
     return response
 
 
@@ -137,16 +159,49 @@ async def verify(request: Request, verification_code: str, db: DB = Depends()):
     if len(row) == 0:
         # verification code not found
         message = "Not a valid verification code"
+        logger.info(
+            AuthLog(
+                detail=json.dumps(
+                    {
+                        "host": request.client.host,
+                        "message": message,
+                        "verificationCode": verification_code,
+                    }
+                )
+            ).model_dump_json()
+        )
         return templates.TemplateResponse(
             "verify/index.html",
             {"request": request, "error": True, "error_message": message},
         )
     if row[1]:
         # user has already verified their email
+        logger.info(
+            AuthLog(
+                detail=json.dumps(
+                    {
+                        "host": request.client.host,
+                        "message": "email already verified",
+                        "verificationCode": verification_code,
+                    }
+                )
+            ).model_dump_json()
+        )
         return RedirectResponse("/check-email", status_code=status.HTTP_303_SEE_OTHER)
     if row[2] < datetime.now().replace(tzinfo=timezone.utc):
         # verification code has expired
         message = "Verification token has expired, request a new one."
+        logger.info(
+            AuthLog(
+                detail=json.dumps(
+                    {
+                        "host": request.client.host,
+                        "message": message,
+                        "verificationCode": verification_code,
+                    }
+                )
+            ).model_dump_json()
+        )
         return templates.TemplateResponse(
             "verify/index.html",
             {"request": request, "error": True, "error_message": message},

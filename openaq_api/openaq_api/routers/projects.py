@@ -1,5 +1,5 @@
 import logging
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
@@ -14,7 +14,7 @@ logger = logging.getLogger("projects")
 router = APIRouter()
 
 
-class ProjectsOrder(str, Enum):
+class ProjectsOrder(StrEnum):
     id = "id"
     name = "name"
     subtitle = "subtitle"

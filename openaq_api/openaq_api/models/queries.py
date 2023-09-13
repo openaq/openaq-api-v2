@@ -1,7 +1,7 @@
 import inspect
 import logging
 from datetime import date, datetime, timedelta
-from enum import Enum
+from enum import StrEnum
 from types import FunctionType
 
 import fastapi
@@ -145,13 +145,13 @@ class SourceName(OBaseModel):
     sourceSlug: list[str] | None = Query(None)
 
 
-class EntityTypes(str, Enum):
+class EntityTypes(StrEnum):
     government = "government"
     community = "community"
     research = "research"
 
 
-class SensorTypes(str, Enum):
+class SensorTypes(StrEnum):
     reference = "reference grade"
     lcs = "low-cost sensor"
 
@@ -302,19 +302,19 @@ class Paging(OBaseModel):
         return offset
 
 
-class Sort(str, Enum):
+class Sort(StrEnum):
     asc = "asc"
     desc = "desc"
 
 
-class Spatial(str, Enum):
+class Spatial(StrEnum):
     country = "country"
     location = "location"
     project = "project"
     total = "total"
 
 
-class Temporal(str, Enum):
+class Temporal(StrEnum):
     day = "day"
     month = "month"
     year = "year"

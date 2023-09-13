@@ -1,7 +1,7 @@
 import csv
 import io
 import logging
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated
 
 from dateutil.tz import UTC
@@ -32,6 +32,8 @@ router = APIRouter(
 
 
 def meas_csv(rows, includefields):
+    print("ROWS\n\n")
+    print(rows)
     output = io.StringIO()
     writer = csv.writer(output)
     header = [
@@ -58,17 +60,17 @@ def meas_csv(rows, includefields):
     for r in rows:
         try:
             row = [
-                r["locationId"],
-                r["location"],
-                r["city"],
-                r["country"],
-                r["date"]["utc"],
-                r["date"]["local"],
-                r["parameter"],
-                r["value"],
-                r["unit"],
-                r["coordinates"]["latitude"],
-                r["coordinates"]["longitude"],
+                r.get("locationId", ""),
+                r.get("location", ""),
+                r.get("city", ""),
+                r.get("country", ""),
+                r.get("date", {}).get("utc", ""),
+                r.get("date", {}).get("utc", ""),
+                r.get("parameter", ""),
+                r.get("value", ""),
+                r.get("unit", ""),
+                r.get("coordinates", {}).get("latitude", ""),
+                r.get("coordinates", {}).get("longitude", ""),
             ]
             # include_fields in csv data
             if includefields is not None:
@@ -84,7 +86,7 @@ def meas_csv(rows, includefields):
     return output.getvalue()
 
 
-class MeasOrder(str, Enum):
+class MeasOrder(StrEnum):
     city = "city"
     country = "country"
     location = "location"

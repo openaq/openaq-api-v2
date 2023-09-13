@@ -3,8 +3,7 @@ name: Deploy staging
 on: 
   push:
     branches:
-      - develop
-      - v3
+      - staging
 
 env:
   ENV: "staging"
@@ -72,7 +71,7 @@ jobs:
 
       - uses: actions/setup-python@v3
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Deploy stack
         working-directory: ./cdk

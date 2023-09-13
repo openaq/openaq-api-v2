@@ -36,10 +36,8 @@ class Source(BaseModel):
 
 
 class Manufacturer(BaseModel):
-    modelname: str = Field(..., alias="modelName")
+    modelName: str = Field(..., alias="modelName")
     manufacturer_name: str = Field(..., alias="manufacturerName")
-
-    model_config = ConfigDict(protected_namespaces=())
 
 
 class Parameter(BaseModel):
@@ -66,23 +64,22 @@ class OpenAQResult(BaseModel):
 
 
 class AveragesRow(BaseModel):
-    id: list[int] | int
-    name: list[str] | str
+    id: list[int] | int | None = None
+    name: list[str] | str | None = None
     hour: datetime | None = None
-    day: date | None = None
-    month: date | None = None
-    year: date | None = None
+    day: date | datetime | None = None
+    month: date | datetime | None = None
+    year: date | datetime | None = None
     hod: int | None = None
     dow: int | None = None
-    average: float
-    name: list[str] | str
-    measurement_count: int  # TODO make camelCase
-    parameter: str
-    parameter_id: int = Field(..., alias="parameterId")
-    display_name: str = Field(..., alias="displayName")
+    average: float | None = None
+    measurement_count: int | None = None  # TODO make camelCase
+    parameter: str | None = None
+    parameter_id: int | None = Field(None, alias="parameterId")
+    display_name: str | None = Field(None, alias="displayName")
     unit: str | None = None
-    first_datetime: datetime
-    last_datetime: datetime
+    first_datetime: datetime | None = None
+    last_datetime: datetime | None = None
 
 
 class AveragesResponse(OpenAQResult):
@@ -262,6 +259,8 @@ class LocationsRow(BaseModel):
     measurements: int
     bounds: list[float] | float = None
     manufacturers: list[Manufacturer] | Manufacturer = None
+
+    model_config = ConfigDict(protected_namespaces=())
 
 
 class LocationsResponse(OpenAQResult):
