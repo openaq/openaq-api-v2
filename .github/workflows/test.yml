@@ -6,6 +6,17 @@ on:
     branches:
       - main
       - staging
+  workflow_dispatch:
+
+
+env:
+  DATABASE_READ_USER: "placeholder"
+  DATABASE_READ_PASSWORD: "placeholder"
+  DATABASE_WRITE_USER: "placeholder"
+  DATABASE_WRITE_PASSWORD: "placeholder"
+  DATABASE_DB: "placeholder"
+  DATABASE_HOST: "placeholder"
+  DATABASE_PORT: 42
 
 jobs:
   deploy:
