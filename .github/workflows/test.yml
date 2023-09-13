@@ -5,7 +5,7 @@ on:
     types: [opened, reopened]
     branches:
       - main
-      - develop
+      - staging
 
 jobs:
   deploy:
