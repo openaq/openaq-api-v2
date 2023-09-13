@@ -5,9 +5,17 @@ from fastapi import APIRouter, Depends, Path
 
 from openaq_api.db import DB
 from openaq_api.v3.models.queries import (
-    Paging, 
-    QueryBaseModel, 
-    QueryBuilder
+    BboxQuery,
+    CountryIdQuery,
+    CountryIsoQuery,
+    MobileQuery,
+    MonitorQuery,
+    OwnerQuery,
+    Paging,
+    ProviderQuery,
+    QueryBaseModel,
+    QueryBuilder,
+    RadiusQuery,
 )
 from openaq_api.v3.models.responses import OwnersResponse
 
@@ -41,10 +49,20 @@ class OwnerPathQuery(QueryBaseModel):
         Returns:
             string of WHERE clause
         """
-        return "entities_id = :owners_id"
+        return "(owner->>'id')::int = :owners_id"
 
 
-class OwnersQueries(Paging):
+class OwnersQueries(
+    Paging,
+    RadiusQuery,
+    BboxQuery,
+    ProviderQuery,
+    OwnerQuery,
+    CountryIdQuery,
+    CountryIsoQuery,
+    MobileQuery,
+    MonitorQuery,
+):
     ...
 
 @router.get(
@@ -76,15 +94,43 @@ async def owners_get(
 async def fetch_owners(query, db):
     query_builder = QueryBuilder(query)
     sql = f"""
-    SELECT e.entities_id AS id
-    , e.full_name AS name
-    , COUNT(sn.owner_entities_id) AS locations_count
-    FROM entities e
-    JOIN sensor_nodes sn ON e.entities_id = sn.owner_entities_id
-    {query_builder.where()}
-    GROUP BY e.entities_id, name
-    ORDER BY e.entities_id
+    WITH Owners AS (
+        SELECT 
+            (owner->>'id')::int AS owner_id
+            , (owner->>'name') AS owner_name
+            , name
+            , ismobile as is_mobile
+            , ismonitor as is_monitor
+            , city as locality
+            , country
+            , owner
+            , provider
+            , coordinates
+            , instruments
+            , sensors
+            , timezone
+            , bbox(geom) as bounds
+            , datetime_first
+            , datetime_last
+            {query_builder.fields() or ''} 
+            {query_builder.total()}
+            FROM locations_view_cached
+            {query_builder.where()}
+    )
+
+    SELECT 
+        owner_id,
+        owner_name,
+        COUNT(owner_id) AS locations_count
+    FROM 
+        Owners
+    GROUP BY 
+        owner_id, owner_name
+    ORDER BY 
+        owner_id
     {query_builder.pagination()};
-    """
+            
+            """
+
     response = await db.fetchPage(sql, query_builder.params())
     return response

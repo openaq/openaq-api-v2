@@ -87,8 +87,8 @@ class EntityBase(JsonBase):
     name: str
 
 class OwnerBase(JsonBase):
-    id: int
-    name: str
+    owner_id: int = Field(alias='id')
+    owner_name: str = Field(alias='name')
     locations_count: int = Field(alias='locationsCount')
     
 class ProviderBase(JsonBase):
