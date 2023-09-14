@@ -198,6 +198,7 @@ async def measurements_get(
 ):
     where = m.where()
     params = m.params()
+    order_clause = f"ORDER BY {m.order_by} {m.sort}"
     includes = m.include_fields
 
     sql = f"""
@@ -226,6 +227,7 @@ async def measurements_get(
         JOIN locations_view_cached sn ON (sy.sensor_nodes_id = sn.id)
         JOIN measurands m ON (m.measurands_id = h.measurands_id)
         WHERE {where}
+        {order_clause}
         OFFSET :offset
         LIMIT :limit;
         """
@@ -256,6 +258,7 @@ async def measurements_get_v1(
     m.entity = "government"
     params = m.params()
     where = m.where()
+    order_clause = f"ORDER BY {m.order_by} {m.sort}"
 
     sql = f"""
         SELECT sn.id as "locationId"
@@ -277,6 +280,7 @@ async def measurements_get_v1(
         JOIN measurands m ON (m.measurands_id = h.measurands_id)
         JOIN countries c ON (c.countries_id = sn.countries_id)
         WHERE {where}
+        {order_clause}
         OFFSET :offset
         LIMIT :limit
         """
