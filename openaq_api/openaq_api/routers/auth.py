@@ -14,7 +14,7 @@ from passlib.hash import pbkdf2_sha256
 from ..db import DB
 from ..forms.register import RegisterForm, UserExistsException
 from ..models.auth import User
-from ..models.logging import AuthLog, InfoLog, SESEmailLog
+from ..models.logging import AuthLog, ErrorLog, InfoLog, SESEmailLog
 from ..settings import settings
 
 logger = logging.getLogger("auth")
@@ -207,11 +207,14 @@ async def verify(request: Request, verification_code: str, db: DB = Depends()):
             {"request": request, "error": True, "error_message": message},
         )
     else:
-        token = await db.get_user_token(row[0])
-        if request.app.state.redis_client:
-            redis_client = request.app.state.redis_client
-            await redis_client.sadd("keys", token)
-        send_api_key_email(token, row[3], row[4])
+        try:
+            token = await db.get_user_token(row[0])
+            if request.app.state.redis_client:
+                redis_client = request.app.state.redis_client
+                await redis_client.sadd("keys", token)
+            send_api_key_email(token, row[3], row[4])
+        except Exception as e:
+            logger.error(ErrorLog(detail=f"something went wrong: {e}"))
         return templates.TemplateResponse(
             "verify/index.html", {"request": request, "error": False, "verify": True}
         )
