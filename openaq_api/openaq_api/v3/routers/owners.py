@@ -8,9 +8,6 @@ from openaq_api.v3.models.queries import (
     BboxQuery,
     CountryIdQuery,
     CountryIsoQuery,
-    MobileQuery,
-    MonitorQuery,
-    OwnerQuery,
     Paging,
     ProviderQuery,
     QueryBaseModel,
@@ -57,11 +54,8 @@ class OwnersQueries(
     RadiusQuery,
     BboxQuery,
     ProviderQuery,
-    OwnerQuery,
     CountryIdQuery,
     CountryIsoQuery,
-    MobileQuery,
-    MonitorQuery,
 ):
     ...
 
@@ -96,9 +90,8 @@ async def fetch_owners(query, db):
     sql = f"""
     WITH Owners AS (
         SELECT 
-            (owner->>'id')::int AS owner_id
-            , (owner->>'name') AS owner_name
-            , name
+            (owner->>'id')::int AS id
+            , (owner->>'name') AS name
             , ismobile as is_mobile
             , ismonitor as is_monitor
             , city as locality
@@ -119,15 +112,15 @@ async def fetch_owners(query, db):
     )
 
     SELECT 
-        owner_id,
-        owner_name,
-        COUNT(owner_id) AS locations_count
+        id,
+        name,
+        COUNT(id) AS locations_count
     FROM 
         Owners
     GROUP BY 
-        owner_id, owner_name
+        id, name
     ORDER BY 
-        owner_id
+        id
     {query_builder.pagination()};
             
             """
