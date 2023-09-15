@@ -4,7 +4,17 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Path
 
 from openaq_api.db import DB
-from openaq_api.v3.models.queries import Paging, QueryBaseModel, QueryBuilder
+from openaq_api.v3.models.queries import (
+    BboxQuery,
+    CountryIdQuery,
+    CountryIsoQuery,
+    OwnerQuery,
+    Paging,
+    ProviderQuery,
+    QueryBaseModel,
+    QueryBuilder,
+    RadiusQuery,
+)
 from openaq_api.v3.models.responses import ManufacturersResponse
 
 logger = logging.getLogger("manufacturers")
@@ -36,10 +46,18 @@ class ManufacturerPathQuery(QueryBaseModel):
         Returns:
             string of WHERE clause
         """
-        return "id = :manufacturers_id"
+        return "(json_element->'manufacturer'->>'id')::int = :manufacturers_id"
 
 
-class ManufacturersQueries(Paging):
+class ManufacturersQueries(
+    Paging,
+    RadiusQuery,
+    BboxQuery,
+    ProviderQuery,
+    OwnerQuery,
+    CountryIdQuery,
+    CountryIsoQuery
+):
     ...
 
 
@@ -76,30 +94,45 @@ async def manufacturers_get(
 
 
 async def fetch_manufacturers(query, db):
-    # describe manufacturer eg clarity (makes multiple instruments)
     query_builder = QueryBuilder(query)
     sql = f"""
-    SELECT instruments_id
-    , manufacturer_entities_id as id
-    , label as name
-    , description
-    , is_monitor
-    {query_builder.fields() or ''} 
-    {query_builder.total()}
-    FROM instruments 
-    {query_builder.where()}
-    {query_builder.pagination()}
-    """
+        WITH Manufacturers AS (
+            SELECT 
+                (json_element->'manufacturer'->>'id')::int AS manufacturer_id,
+                json_element->'manufacturer'->>'name' AS manufacturer_name,
+                (json_element->>'id')::int AS instrument_id,
+                json_element->>'name' AS instrument_name,
+                country,
+                owner,
+                provider,
+                coordinates,
+                instruments,
+                sensors,
+                timezone,
+                bbox(geom) as bounds,
+                datetime_first,
+                datetime_last
+                {query_builder.fields() or ''} 
+                FROM locations_view_cached,
+                LATERAL json_array_elements(instruments) AS json_element
+                {query_builder.where()}
+        )
+
+        SELECT 
+            manufacturer_id AS id,
+            manufacturer_name AS name,
+            COUNT(manufacturer_id) AS locations_count,
+            ARRAY_AGG(DISTINCT (JSON_BUILD_OBJECT('id', instrument_id, 'name', instrument_name))::jsonb) AS instruments
+        FROM 
+            Manufacturers
+        GROUP BY 
+            manufacturer_id, manufacturer_name
+        ORDER BY 
+            manufacturer_id
+        {query_builder.pagination()};
+        
+        """
+
+
     response = await db.fetchPage(sql, query_builder.params())
     return response
-
-#  SELECT i.instruments_id
-#     , i.manufacturer_entities_id as id
-#     , i.label as name
-#     , i.description
-#     , i.is_monitor as isMonitor
-#     {query_builder.fields() or ''} 
-#     {query_builder.total()}
-#     FROM instruments i
-#     {query_builder.where()}
-#     {query_builder.pagination()}
