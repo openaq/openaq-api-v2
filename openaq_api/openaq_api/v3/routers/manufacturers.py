@@ -14,6 +14,8 @@ from openaq_api.v3.models.queries import (
     QueryBaseModel,
     QueryBuilder,
     RadiusQuery,
+    MonitorQuery,
+
 )
 from openaq_api.v3.models.responses import ManufacturersResponse
 
@@ -53,6 +55,7 @@ class ManufacturersQueries(
     Paging,
     RadiusQuery,
     BboxQuery,
+    MonitorQuery,
     ProviderQuery,
     OwnerQuery,
     CountryIdQuery,
@@ -98,23 +101,24 @@ async def fetch_manufacturers(query, db):
     sql = f"""
         WITH Manufacturers AS (
             SELECT 
-                (json_element->'manufacturer'->>'id')::int AS manufacturer_id,
-                json_element->'manufacturer'->>'name' AS manufacturer_name,
-                (json_element->>'id')::int AS instrument_id,
-                json_element->>'name' AS instrument_name,
-                country,
-                owner,
-                provider,
-                coordinates,
-                instruments,
-                sensors,
-                timezone,
-                bbox(geom) as bounds,
-                datetime_first,
-                datetime_last
+                (json_element->'manufacturer'->>'id')::int AS manufacturer_id
+                , json_element->'manufacturer'->>'name' AS manufacturer_name
+                , (json_element->>'id')::int AS instrument_id
+                , json_element->>'name' AS instrument_name
+                , ismonitor as is_monitor
+                , country
+                , owner
+                , provider
+                , coordinates
+                , instruments
+                , sensors
+                , timezone
+                , bbox(geom) as bounds
+                , datetime_first
+                , datetime_last
                 {query_builder.fields() or ''} 
-                FROM locations_view_cached,
-                LATERAL json_array_elements(instruments) AS json_element
+                FROM locations_view_cached
+                , LATERAL json_array_elements(instruments) AS json_element
                 {query_builder.where()}
         )
 
