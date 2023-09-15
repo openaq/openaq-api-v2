@@ -2,7 +2,6 @@ import logging
 import time
 from datetime import timedelta
 from os import environ
-import json
 from fastapi import Response, status
 from fastapi.responses import JSONResponse
 from redis.asyncio.cluster import RedisCluster
@@ -15,6 +14,7 @@ from openaq_api.models.logging import (
     LogType,
     TooManyRequestsLog,
     UnauthorizedLog,
+    RedisErrorLog,
 )
 
 from .settings import settings
@@ -111,29 +111,33 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         """Init Middleware."""
         super().__init__(app)
         self.redis_client = redis_client
-        self.rate_amount = rate_amount  # 100
-        self.rate_amount_key = rate_amount_key  # 400
+        self.rate_amount = rate_amount
+        self.rate_amount_key = rate_amount_key
         self.rate_time = rate_time
 
-    async def request_is_limited(self, key: str, limit: int, request: Request):
+    async def request_is_limited(self, key: str, limit: int, request: Request) -> bool:
         if await self.redis_client.set(key, limit, nx=True):
             await self.redis_client.expire(key, int(self.rate_time.total_seconds()))
         count = await self.redis_client.get(key)
+        if count in ("-1", "-2"):
+            logger.error(
+                RedisErrorLog(
+                    detail=f"redis has an invalid value for limit: {count} for key: {key}"
+                )
+            )
         if count and int(count) > 0:
             request.state.counter = await self.redis_client.decrby(key, 1)
             return False
-        if int(count) < 0:
-            logger.error(f"rate limiter hit a value below zero: {count} for key: {key}")
         return True
 
-    async def check_valid_key(self, key: str):
+    async def check_valid_key(self, key: str) -> bool:
         if await self.redis_client.sismember("keys", key):
             return True
         return False
 
     @staticmethod
     def limited_path(route: str) -> bool:
-        allow_list = ["/", "/openapi.json", "/docs", "/register", "/assets"]
+        allow_list = ["/", "/openapi.json", "/docs", "/register"]
         if route in allow_list:
             return False
         if "/v2/locations/tiles" in route:
@@ -157,16 +161,23 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         key = request.client.host
 
         if auth:
-            if not self.check_valid_key(auth):
-                logging.info(UnauthorizedLog(request=request).model_dump_json())
+            valid_key = await self.check_valid_key(auth)
+            if not valid_key:
+                logging.info(
+                    UnauthorizedLog(
+                        request=request, detail=f"invalid key used: {auth}"
+                    ).model_dump_json()
+                )
                 return JSONResponse(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     content={"message": "invalid credentials"},
                 )
             key = auth
             limit = self.rate_amount_key
-        request.state.counter = 0
-        limited = await self.request_is_limited(key, limit, request)
+        request.state.counter = limit
+        limited = False
+        if self.limited_path(route):
+            limited = await self.request_is_limited(key, limit, request)
         if self.limited_path(route) and limited:
             logging.info(
                 TooManyRequestsLog(
