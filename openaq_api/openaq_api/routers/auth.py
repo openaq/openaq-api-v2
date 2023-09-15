@@ -143,13 +143,13 @@ async def check_email(request: Request):
 @router.get("/verify/{verification_code}")
 async def verify(request: Request, verification_code: str, db: DB = Depends()):
     query = """
-    SELECT 
+    SELECT
         users.users_id,  users.is_active, users.expires_on, entities.full_name, users.email_address
-    FROM 
+    FROM
         users
     JOIN
         users_entities USING (users_id)
-    JOIN 
+    JOIN
         entities USING (entities_id)
     WHERE
         verification_code = :verification_code
@@ -209,8 +209,8 @@ async def verify(request: Request, verification_code: str, db: DB = Depends()):
     else:
         try:
             token = await db.get_user_token(row[0])
-            if request.app.state.redis_client:
-                redis_client = request.app.state.redis_client
+            redis_client = getattr(request.app.state, "redis_client")
+            if redis_client:
                 await redis_client.sadd("keys", token)
             send_api_key_email(token, row[3], row[4])
         except Exception as e:
