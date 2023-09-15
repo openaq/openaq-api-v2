@@ -44,7 +44,7 @@ def send_verification_email(verification_code: str, full_name: str, email: str):
     TEXT_EMAIL_CONTENT = f"""
     Thank you for signing up for an OpenAQ API Key
     Visit the following URL to verify your email:
-    https://api.openaq.org/verify/{verifiation_code}
+    https://api.openaq.org/verify/{verification_code}
     """
     HTML_EMAIL_CONTENT = f"""
         <html>
@@ -55,7 +55,7 @@ def send_verification_email(verification_code: str, full_name: str, email: str):
                 <td bgcolor="#FFFFFF" style="padding:30px;">
                     <h1 style='text-align:center'>Thank you for signing up for an OpenAQ API Key</h1>
                     <p>Click the following link to verify your email:</p>
-                    <a href="https://api.openaq.org/verify/{verification_code}">https://api.openaq.org/verify/{verifiation_code}</a>
+                    <a href="https://api.openaq.org/verify/{verification_code}">https://api.openaq.org/verify/{verification_code}</a>
                 </td>
             </tr>
             </table>
