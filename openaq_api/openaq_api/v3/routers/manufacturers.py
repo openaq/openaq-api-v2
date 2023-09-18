@@ -48,7 +48,7 @@ class ManufacturerPathQuery(QueryBaseModel):
         Returns:
             string of WHERE clause
         """
-        return "(json_element->'manufacturer'->>'id')::int = :manufacturers_id"
+        return "e.entities_id = :manufacturers_id"
 
 
 class ManufacturersQueries(
@@ -101,25 +101,35 @@ async def fetch_manufacturers(query, db):
     sql = f"""
         WITH Manufacturers AS (
             SELECT 
-                (json_element->'manufacturer'->>'id')::int AS manufacturer_id
-                , json_element->'manufacturer'->>'name' AS manufacturer_name
-                , (json_element->>'id')::int AS instrument_id
-                , json_element->>'name' AS instrument_name
-                , ismonitor as is_monitor
-                , country
-                , owner
-                , provider
-                , coordinates
-                , instruments
-                , sensors
-                , timezone
-                , bbox(geom) as bounds
-                , datetime_first
-                , datetime_last
+                e.entities_id AS manufacturer_id,
+                e.full_name AS manufacturer_name,
+                i.instruments_id AS instrument_id,
+                i.label AS instrument_name,
+                i.is_monitor AS is_monitor,
+                lv.country AS country,
+                lv.owner AS owner,
+                lv.provider AS provider,
+                lv.coordinates AS coordinates,
+                lv.instruments AS instruments,
+                lv.sensors AS sensors,
+                lv.timezone AS timezone,
+                bbox(lv.geom) AS bounds,
+                lv.datetime_first AS datetime_first,
+                lv.datetime_last AS datetime_last
                 {query_builder.fields() or ''} 
-                FROM locations_view_cached
-                , LATERAL json_array_elements(instruments) AS json_element
-                {query_builder.where()}
+                {query_builder.total()}
+            FROM 
+                locations_view_cached lv
+            JOIN 
+                (SELECT sensor_nodes_id FROM sensor_nodes) sn ON lv.id = sn.sensor_nodes_id
+            JOIN 
+                sensor_systems ss ON sn.sensor_nodes_id = ss.sensor_nodes_id
+            JOIN 
+                instruments i ON i.instruments_id = ss.instruments_id
+            JOIN 
+                entities e ON e.entities_id = i.manufacturer_entities_id
+            {query_builder.where()}
+
         )
 
         SELECT 
@@ -134,9 +144,10 @@ async def fetch_manufacturers(query, db):
         ORDER BY 
             manufacturer_id
         {query_builder.pagination()};
-        
+
         """
 
 
     response = await db.fetchPage(sql, query_builder.params())
     return response
+
