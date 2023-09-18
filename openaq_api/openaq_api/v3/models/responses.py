@@ -105,8 +105,7 @@ class InstrumentBase(JsonBase):
 class ManufacturerBase(JsonBase):
     id: int
     name: str
-    instruments: List[InstrumentBase]
-    locations_count: int = Field(alias='locationsCount')
+    
 
 
 class Latest(JsonBase):
@@ -177,6 +176,7 @@ class Instrument(InstrumentBase):
 
 
 class Manufacturer(ManufacturerBase):
+    instruments: List[InstrumentBase]
     ...
 
 

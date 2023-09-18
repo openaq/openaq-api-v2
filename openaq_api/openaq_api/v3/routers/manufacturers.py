@@ -5,17 +5,9 @@ from fastapi import APIRouter, Depends, Path
 
 from openaq_api.db import DB
 from openaq_api.v3.models.queries import (
-    BboxQuery,
-    CountryIdQuery,
-    CountryIsoQuery,
-    OwnerQuery,
     Paging,
-    ProviderQuery,
     QueryBaseModel,
     QueryBuilder,
-    RadiusQuery,
-    MonitorQuery,
-
 )
 from openaq_api.v3.models.responses import ManufacturersResponse
 
@@ -52,14 +44,7 @@ class ManufacturerPathQuery(QueryBaseModel):
 
 
 class ManufacturersQueries(
-    Paging,
-    RadiusQuery,
-    BboxQuery,
-    MonitorQuery,
-    ProviderQuery,
-    OwnerQuery,
-    CountryIdQuery,
-    CountryIsoQuery
+    Paging
 ):
     ...
 
@@ -98,51 +83,23 @@ async def manufacturers_get(
 
 async def fetch_manufacturers(query, db):
     query_builder = QueryBuilder(query)
-    sql = f"""
-        WITH Manufacturers AS (
-            SELECT 
-                e.entities_id AS manufacturer_id,
-                e.full_name AS manufacturer_name,
-                i.instruments_id AS instrument_id,
-                i.label AS instrument_name,
-                i.is_monitor AS is_monitor,
-                lv.country AS country,
-                lv.owner AS owner,
-                lv.provider AS provider,
-                lv.coordinates AS coordinates,
-                lv.instruments AS instruments,
-                lv.sensors AS sensors,
-                lv.timezone AS timezone,
-                bbox(lv.geom) AS bounds,
-                lv.datetime_first AS datetime_first,
-                lv.datetime_last AS datetime_last
-                {query_builder.fields() or ''} 
-                {query_builder.total()}
-            FROM 
-                locations_view_cached lv
-            JOIN 
-                (SELECT sensor_nodes_id FROM sensor_nodes) sn ON lv.id = sn.sensor_nodes_id
-            JOIN 
-                sensor_systems ss ON sn.sensor_nodes_id = ss.sensor_nodes_id
-            JOIN 
-                instruments i ON i.instruments_id = ss.instruments_id
-            JOIN 
-                entities e ON e.entities_id = i.manufacturer_entities_id
-            {query_builder.where()}
-
-        )
-
+    sql = f"""   
         SELECT 
-            manufacturer_id AS id,
-            manufacturer_name AS name,
-            COUNT(manufacturer_id) AS locations_count,
-            ARRAY_AGG(DISTINCT (JSON_BUILD_OBJECT('id', instrument_id, 'name', instrument_name))::jsonb) AS instruments
+            e.entities_id AS id
+            , e.full_name AS "name"
+            , ARRAY_AGG(DISTINCT (JSON_BUILD_OBJECT('id', i.instruments_id, 'name', i.label))::jsonb) AS instruments
+            , COUNT(1) OVER() as found
         FROM 
-            Manufacturers
-        GROUP BY 
-            manufacturer_id, manufacturer_name
-        ORDER BY 
-            manufacturer_id
+            sensor_nodes sn
+        JOIN 
+            sensor_systems ss ON sn.sensor_nodes_id = ss.sensor_nodes_id
+        JOIN 
+            instruments i ON i.instruments_id = ss.instruments_id
+        JOIN 
+            entities e ON e.entities_id = i.manufacturer_entities_id
+        {query_builder.where()}
+
+        GROUP BY id, "name"
         {query_builder.pagination()};
 
         """
@@ -150,4 +107,3 @@ async def fetch_manufacturers(query, db):
 
     response = await db.fetchPage(sql, query_builder.params())
     return response
-
