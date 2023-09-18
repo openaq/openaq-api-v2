@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, List
 
 from humps import camelize
 from pydantic import BaseModel, ConfigDict, Field
@@ -99,7 +99,6 @@ class ProviderBase(JsonBase):
 class ManufacturerBase(JsonBase):
     id: int
     name: str
-    entity: EntityBase
 
 
 class Latest(JsonBase):
@@ -111,6 +110,7 @@ class Latest(JsonBase):
 class InstrumentBase(JsonBase):
     id: int
     name: str
+    is_monitor: bool = Field(alias='isMonitor')
 
 
 class ParameterBase(JsonBase):
@@ -171,7 +171,8 @@ class Owner(OwnerBase):
 
 
 class Instrument(InstrumentBase):
-    manufacturer: ManufacturerBase
+    manufacturer: List[ManufacturerBase]
+    ...
 
 
 class Manufacturer(ManufacturerBase):
@@ -227,6 +228,8 @@ class Trend(JsonBase):
 
 # response classes
 
+class InstrumentsResponse(OpenAQResult):
+    results: list[Instrument]
 
 class LocationsResponse(OpenAQResult):
     results: list[Location]
