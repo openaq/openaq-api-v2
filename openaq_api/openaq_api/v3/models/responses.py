@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, List
 
 from humps import camelize
 from pydantic import BaseModel, ConfigDict, Field
@@ -86,12 +86,18 @@ class EntityBase(JsonBase):
     id: int
     name: str
 
+
 class OwnerBase(JsonBase):
     id: int
     name: str
-    locations_count: int = Field(alias='locationsCount')
-    
+
+
 class ProviderBase(JsonBase):
+    id: int
+    name: str
+
+
+class InstrumentBase(JsonBase):
     id: int
     name: str
 
@@ -99,18 +105,13 @@ class ProviderBase(JsonBase):
 class ManufacturerBase(JsonBase):
     id: int
     name: str
-    entity: EntityBase
+    
 
 
 class Latest(JsonBase):
     datetime: DatetimeObject
     value: float
     coordinates: Coordinates
-
-
-class InstrumentBase(JsonBase):
-    id: int
-    name: str
 
 
 class ParameterBase(JsonBase):
@@ -167,7 +168,7 @@ class Provider(ProviderBase):
 
 
 class Owner(OwnerBase):
-    ...
+    entity: EntityBase
 
 
 class Instrument(InstrumentBase):
@@ -175,6 +176,7 @@ class Instrument(InstrumentBase):
 
 
 class Manufacturer(ManufacturerBase):
+    instruments: List[InstrumentBase]
     ...
 
 
