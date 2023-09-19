@@ -87,7 +87,7 @@ async def fetch_manufacturers(query, db):
         SELECT 
             e.entities_id AS id
             , e.full_name AS name
-            , ARRAY_AGG(DISTINCT (JSON_BUILD_OBJECT('id', i.instruments_id, 'name', i.label))::jsonb) AS instruments
+            , ARRAY_AGG(DISTINCT (json_build_object('id', i.instruments_id, 'name', i.label))::jsonb) AS instruments
             , COUNT(sn.sensor_nodes_id) AS locations_count
             , COUNT(1) OVER() AS found
         FROM 
