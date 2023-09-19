@@ -20,6 +20,23 @@ router = APIRouter(
     include_in_schema=True,
 )
 
+class ManufacturerInstrumentsQuery(QueryBaseModel):
+    """
+    Path query to filter results by manufacturers ID
+    
+    Inherits from QueryBaseModel
+
+    Attributes:
+        manufacturers_id: manufacturers ID value
+    """
+    
+    manufacturers_id: int = Path(
+        ..., description="Limit results to a specific manufacturer id", ge=1
+    )
+
+    def where(self) -> str:
+        return "i.manufacturer_entities_id = :manufacturers_id"
+
 class InstrumentPathQuery(QueryBaseModel):
     """Path query to filter results by instruments ID
 
@@ -44,7 +61,7 @@ class InstrumentPathQuery(QueryBaseModel):
         return "i.instruments_id = :instruments_id"
 
 
-class ManufacturersQueries(
+class InstrumentsQueries(
     Paging,
 ):
     ...
@@ -69,18 +86,32 @@ async def instrument_get(
 @router.get(
     "/instruments",
     response_model=InstrumentsResponse,
-    summary="Get manufacturers",
-    description="Provides a list of manufacturers",
+    summary="Get instruments",
+    description="Provides a list of instruments",
 )
 async def instruments_get(
     instruments: Annotated[
-        ManufacturersQueries, Depends(ManufacturersQueries.depends())
+        InstrumentsQueries, Depends(InstrumentsQueries.depends())
     ],
     db: DB = Depends(),
 ):
     response = await fetch_instruments(instruments, db)
     return response
 
+@router.get(
+    "/manufacturers/{manufacturers_id}/instruments",
+    response_model=InstrumentsResponse,
+    summary="Get instruments by manufacturer ID",
+    description="Provides a list of instruments for a specific manufacturer",
+)
+async def get_instruments_by_manufacturer(
+    manufacturer: Annotated[
+        ManufacturerInstrumentsQuery, Depends(ManufacturerInstrumentsQuery.depends())
+    ],
+    db: DB = Depends(),
+):
+    response = await fetch_instruments(manufacturer, db)
+    return response
 
 async def fetch_instruments(query, db):
     query_builder = QueryBuilder(query)
