@@ -105,8 +105,6 @@ class InstrumentBase(JsonBase):
 class ManufacturerBase(JsonBase):
     id: int
     name: str
-    
-    
 
 
 class Latest(JsonBase):
@@ -114,6 +112,10 @@ class Latest(JsonBase):
     value: float
     coordinates: Coordinates
 
+
+class InstrumentBase(JsonBase):
+    id: int
+    name: str
 
 class ParameterBase(JsonBase):
     id: int
@@ -173,7 +175,9 @@ class Owner(OwnerBase):
 
 
 class Instrument(InstrumentBase):
-    ...
+    locations_count: int = Field(alias='locationsCount')
+    is_monitor: bool = Field(alias='isMonitor')
+    manufacturer: ManufacturerBase
 
 
 class Manufacturer(ManufacturerBase):
@@ -231,6 +235,8 @@ class Trend(JsonBase):
 
 # response classes
 
+class InstrumentsResponse(OpenAQResult):
+    results: list[Instrument]
 
 class LocationsResponse(OpenAQResult):
     results: list[Location]

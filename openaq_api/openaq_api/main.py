@@ -47,6 +47,7 @@ from openaq_api.settings import settings
 # V3 routers
 from openaq_api.v3.routers import (
     countries,
+    instruments,
     locations,
     manufacturers,
     measurements,
@@ -243,7 +244,8 @@ def pong():
 def favico():
     return RedirectResponse("https://openaq.org/assets/graphics/meta/favicon.png")
 
-
+# v3
+app.include_router(instruments.router)
 app.include_router(locations.router)
 app.include_router(parameters.router)
 app.include_router(tiles.router)
