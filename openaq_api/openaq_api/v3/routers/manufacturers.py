@@ -86,9 +86,10 @@ async def fetch_manufacturers(query, db):
     sql = f"""   
         SELECT 
             e.entities_id AS id
-            , e.full_name AS "name"
+            , e.full_name AS name
             , ARRAY_AGG(DISTINCT (JSON_BUILD_OBJECT('id', i.instruments_id, 'name', i.label))::jsonb) AS instruments
-            , COUNT(1) OVER() as found
+            , COUNT(sn.sensor_nodes_id) AS locations_count
+            , COUNT(1) OVER() AS found
         FROM 
             sensor_nodes sn
         JOIN 
@@ -99,7 +100,7 @@ async def fetch_manufacturers(query, db):
             entities e ON e.entities_id = i.manufacturer_entities_id
         {query_builder.where()}
 
-        GROUP BY id, "name"
+        GROUP BY id, name
         {query_builder.pagination()};
 
         """

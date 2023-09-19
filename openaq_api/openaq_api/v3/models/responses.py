@@ -106,6 +106,7 @@ class ManufacturerBase(JsonBase):
     id: int
     name: str
     
+    
 
 
 class Latest(JsonBase):
@@ -172,12 +173,13 @@ class Owner(OwnerBase):
 
 
 class Instrument(InstrumentBase):
-    manufacturer: ManufacturerBase
+    ...
 
 
 class Manufacturer(ManufacturerBase):
     instruments: List[InstrumentBase]
-    ...
+    locations_count: int = Field(alias="locationsCount")
+
 
 
 class Sensor(SensorBase):
