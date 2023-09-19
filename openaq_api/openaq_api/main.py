@@ -30,8 +30,6 @@ from openaq_api.models.logging import (
     UnprocessableEntityLog,
     WarnLog,
 )
-
-# v2 routers
 from openaq_api.routers.auth import router as auth_router
 from openaq_api.routers.averages import router as averages_router
 from openaq_api.routers.cities import router as cities_router
@@ -51,8 +49,8 @@ from openaq_api.v3.routers import (
     countries,
     instruments,
     locations,
+    manufacturers,
     measurements,
-    owners,
     parameters,
     providers,
     sensors,
@@ -252,13 +250,12 @@ app.include_router(locations.router)
 app.include_router(parameters.router)
 app.include_router(tiles.router)
 app.include_router(countries.router)
+app.include_router(manufacturers.router)
 app.include_router(measurements.router)
-app.include_router(owners.router)
 app.include_router(trends.router)
 app.include_router(providers.router)
 app.include_router(sensors.router)
 
-# v2
 app.include_router(auth_router)
 app.include_router(averages_router)
 app.include_router(cities_router)

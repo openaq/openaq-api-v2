@@ -86,12 +86,18 @@ class EntityBase(JsonBase):
     id: int
     name: str
 
+
 class OwnerBase(JsonBase):
     id: int
     name: str
-    locations_count: int = Field(alias='locationsCount')
-    
+
+
 class ProviderBase(JsonBase):
+    id: int
+    name: str
+
+
+class InstrumentBase(JsonBase):
     id: int
     name: str
 
@@ -110,8 +116,6 @@ class Latest(JsonBase):
 class InstrumentBase(JsonBase):
     id: int
     name: str
-
-
 
 class ParameterBase(JsonBase):
     id: int
@@ -167,18 +171,19 @@ class Provider(ProviderBase):
 
 
 class Owner(OwnerBase):
-    ...
+    entity: EntityBase
 
 
 class Instrument(InstrumentBase):
     locations_count: int = Field(alias='locationsCount')
     is_monitor: bool = Field(alias='isMonitor')
     manufacturer: ManufacturerBase
-    ...
 
 
 class Manufacturer(ManufacturerBase):
-    ...
+    instruments: List[InstrumentBase]
+    locations_count: int = Field(alias="locationsCount")
+
 
 
 class Sensor(SensorBase):
