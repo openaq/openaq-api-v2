@@ -85,35 +85,34 @@ async def instruments_get(
 async def fetch_instruments(query, db):
     query_builder = QueryBuilder(query)
     sql = f"""
-        WITH Instruments AS (
+        WITH locations_summary AS (
             SELECT 
-                e.entities_id
-                , e.full_name AS entities_name
-                , i.instruments_id
-                , i.label AS instruments_name
-                , i.is_monitor
-                {query_builder.fields() or ''} 
-                {query_builder.total()}
+                i.instruments_id
+                , COUNT(sn.sensor_nodes_id) AS locations_count
             FROM 
                 sensor_nodes sn 
             JOIN 
                 sensor_systems ss ON sn.sensor_nodes_id = ss.sensor_nodes_id
             JOIN 
-                instruments i ON i.instruments_id = ss.instruments_id
-            JOIN 
-                entities e ON e.entities_id = i.manufacturer_entities_id
-            {query_builder.where()}
-        )
+                instruments i ON i.instruments_id = ss.instruments_id  
 
+            GROUP BY i.instruments_id
+        )
         SELECT 
             instruments_id AS id
-            , instruments_name AS name
+            , label AS name
+            , locations_count
             , is_monitor
-            , ARRAY_AGG(DISTINCT (JSON_BUILD_OBJECT('id', entities_id, 'name', entities_name))::jsonb) AS manufacturer         
+            , json_build_object('id', e.entities_id, 'name', e.full_name) AS manufacturer         
         FROM 
-            Instruments
-        GROUP BY 
-            instruments_id, instruments_name, is_monitor
+            instruments i 
+        JOIN 
+            locations_summary USING (instruments_id)
+        JOIN 
+            entities e 
+        ON 
+            i.manufacturer_entities_id = e.entities_id
+            {query_builder.where()}
         ORDER BY 
             instruments_id
         {query_builder.pagination()};
@@ -122,4 +121,4 @@ async def fetch_instruments(query, db):
 
 
     response = await db.fetchPage(sql, query_builder.params())
-    return response
+    return response 

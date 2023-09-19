@@ -110,7 +110,7 @@ class Latest(JsonBase):
 class InstrumentBase(JsonBase):
     id: int
     name: str
-    is_monitor: bool = Field(alias='isMonitor')
+
 
 
 class ParameterBase(JsonBase):
@@ -171,6 +171,8 @@ class Owner(OwnerBase):
 
 
 class Instrument(InstrumentBase):
+    locations_count: int = Field(alias='locationsCount')
+    is_monitor: bool = Field(alias='isMonitor')
     manufacturer: List[ManufacturerBase]
     ...
 
