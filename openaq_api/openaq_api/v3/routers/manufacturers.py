@@ -4,7 +4,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Path
 
 from openaq_api.db import DB
-from openaq_api.v3.models.queries import Paging, QueryBaseModel, QueryBuilder
+from openaq_api.v3.models.queries import (
+    Paging,
+    QueryBaseModel,
+    QueryBuilder,
+)
 from openaq_api.v3.models.responses import ManufacturersResponse
 
 logger = logging.getLogger("manufacturers")
@@ -14,7 +18,6 @@ router = APIRouter(
     tags=["v3-alpha"],
     include_in_schema=True,
 )
-
 
 class ManufacturerPathQuery(QueryBaseModel):
     """Path query to filter results by manufacturers ID
@@ -37,10 +40,12 @@ class ManufacturerPathQuery(QueryBaseModel):
         Returns:
             string of WHERE clause
         """
-        return "id = :manufacturers_id"
+        return "e.entities_id = :manufacturers_id"
 
 
-class ManufacturersQueries(Paging):
+class ManufacturersQueries(
+    Paging
+):
     ...
 
 
@@ -78,7 +83,28 @@ async def manufacturers_get(
 
 async def fetch_manufacturers(query, db):
     query_builder = QueryBuilder(query)
-    sql = f"""
-    """
+    sql = f"""   
+        SELECT 
+            e.entities_id AS id
+            , e.full_name AS name
+            , ARRAY_AGG(DISTINCT (jsonb_build_object('id', i.instruments_id, 'name', i.label))) AS instruments
+            , COUNT(sn.sensor_nodes_id) AS locations_count
+            , COUNT(1) OVER() AS found
+        FROM 
+            sensor_nodes sn
+        JOIN 
+            sensor_systems ss ON sn.sensor_nodes_id = ss.sensor_nodes_id
+        JOIN 
+            instruments i ON i.instruments_id = ss.instruments_id
+        JOIN 
+            entities e ON e.entities_id = i.manufacturer_entities_id
+        {query_builder.where()}
+
+        GROUP BY id, name
+        {query_builder.pagination()};
+
+        """
+
+
     response = await db.fetchPage(sql, query_builder.params())
     return response
