@@ -1,5 +1,5 @@
 import logging
-from enum import StrEnum
+from enum import StrEnum, auto
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query
@@ -13,6 +13,7 @@ from openaq_api.v3.models.queries import (
     QueryBaseModel,
     QueryBuilder,
     RadiusQuery,
+    SortingBase
 )
 from openaq_api.v3.models.responses import ParametersResponse
 
@@ -23,6 +24,16 @@ router = APIRouter(
     tags=["v3-alpha"],
     include_in_schema=True,
 )
+
+class ProvidersSortFields(StrEnum):
+    ID = auto()
+
+class ProvidersSorting(SortingBase):
+    order_by: ProvidersSortFields | None = Query(
+        "id",
+        description="""Order results by ID""",
+        examples=["order_by=id"],
+    )
 
 
 class ParameterPathQuery(QueryBaseModel):

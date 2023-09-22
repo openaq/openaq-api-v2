@@ -1,5 +1,5 @@
 from typing import Annotated
-
+from enum import StrEnum, auto
 from fastapi import APIRouter, Depends, Path, Query
 
 from openaq_api.db import DB
@@ -11,6 +11,7 @@ from openaq_api.v3.models.queries import (
     PeriodNameQuery,
     QueryBaseModel,
     QueryBuilder,
+    SortingBase
 )
 from openaq_api.v3.models.responses import MeasurementsResponse
 
@@ -20,6 +21,16 @@ router = APIRouter(
     include_in_schema=True,
 )
 
+
+class MeasurementsSortFields(StrEnum):
+    DATETIME_LAST = auto()
+
+class MeasurementsSorting(SortingBase):
+    order_by: MeasurementsSortFields | None = Query(
+        "id",
+        description="""Order results by datetime, ascending or descending""",
+        examples=["order_by=datetime_last"],
+    )
 
 class LocationPathQuery(QueryBaseModel):
     locations_id: int = Path(

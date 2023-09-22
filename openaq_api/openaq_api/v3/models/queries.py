@@ -5,7 +5,7 @@ import operator
 import types
 import weakref
 from datetime import date, datetime
-from enum import StrEnum
+from enum import StrEnum, auto
 from types import FunctionType
 from typing import Annotated, Any
 
@@ -270,6 +270,12 @@ class QueryBuilder(object):
         else:
             return ""
 
+    def order_by(self) -> str:
+        sort_direction = getattr(self.query, "sort", None)
+        
+        if sort_direction in ["desc"]:
+            return f"ORDER BY datetime {sort_direction}"
+        return ""
 
 class QueryBaseModel(BaseModel):
     """Base class for building query objects.
@@ -323,6 +329,22 @@ class QueryBaseModel(BaseModel):
     def pagination(self):
         """abstract method for"""
         ...
+
+
+class SortOrder(StrEnum):
+    ASC = auto()
+    DESC = auto()
+
+class SortingBase(QueryBaseModel):
+    order_by: str
+    sort_order: SortOrder = Query(
+        SortOrder.ASC,
+        description="Sort results ascending or descending. Default ASC",
+        examples=["sort=desc"],
+    )
+    def order_by() -> str:
+        return f"ORDER BY {order_by} {sort_order}"
+    
 
 
 # Thinking about how the paging should be done
