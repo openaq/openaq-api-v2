@@ -16,7 +16,7 @@ from openaq_api.v3.models.queries import (
     QueryBaseModel,
     QueryBuilder,
     RadiusQuery,
-    SortingBase
+    SortingBase,
 )
 from openaq_api.v3.models.responses import LocationsResponse
 
@@ -28,10 +28,12 @@ router = APIRouter(
     include_in_schema=True,
 )
 
+
 class LocationsSortFields(StrEnum):
     ID = auto()
     DISTANCE = auto()
     DATETIME_LAST = auto()
+
 
 class LocationsSorting(SortingBase):
     order_by: LocationsSortFields | None = Query(
@@ -39,7 +41,6 @@ class LocationsSorting(SortingBase):
         description="""Order results by ID, distance, datetime""",
         examples=["order_by=distance"],
     )
-
 
 
 class LocationPathQuery(QueryBaseModel):
@@ -76,6 +77,7 @@ class LocationsQueries(
     CountryIsoQuery,
     MobileQuery,
     MonitorQuery,
+    LocationsSorting,
 ):
     ...
 

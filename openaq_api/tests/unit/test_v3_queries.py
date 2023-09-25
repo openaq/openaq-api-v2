@@ -22,6 +22,7 @@ from openaq_api.v3.models.queries import (
     ProviderQuery,
     QueryBuilder,
     RadiusQuery,
+    SortingBase,
     truncate_float,
 )
 from openaq_api.v3.routers.locations import LocationPathQuery, LocationsQueries
@@ -382,11 +383,29 @@ class QueryContainer(CountryIsoQuery, MonitorQuery):
     ...
 
 
+class SortTestClass(SortingBase):
+    order_by: str = "id"
+
+
+class QueryContainerSort(CountryIsoQuery, MonitorQuery, SortTestClass):
+    ...
+
+
 class TestQueryBuilder:
     def test_bases_method(self):
         query = QueryContainer(iso="us", monitor=True)
         query_builder = QueryBuilder(query)
         assert query_builder._bases() == [CountryIsoQuery, MonitorQuery, QueryContainer]
+
+    def test_sortable_method(self):
+        query = QueryContainerSort(iso="us", monitor=True)
+        query_builder = QueryBuilder(query)
+        assert query_builder._sortable == SortTestClass
+
+    def test_sortable_method_none(self):
+        query = QueryContainer(iso="us", monitor=True)
+        query_builder = QueryBuilder(query)
+        assert query_builder._sortable == None
 
     def test_params_method(self):
         query = QueryContainer(iso="us", monitor=True)
@@ -437,6 +456,17 @@ class TestQueryBuilder:
         )
         query_builder = QueryBuilder(query)
         assert query_builder.pagination() == "\nLIMIT :limit OFFSET :offset"
+
+    def test_order_by_method(self):
+        query = QueryContainerSort(iso="us", monitor=True)
+        query_builder = QueryBuilder(query)
+        expected = "ORDER BY id ASC"
+        assert query_builder.order_by() == expected
+
+    def test_order_by_method_none(self):
+        query = QueryContainer(iso="us", monitor=True)
+        query_builder = QueryBuilder(query)
+        assert query_builder.order_by() == None
 
 
 class TestLocationPathQuery:
