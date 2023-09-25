@@ -107,22 +107,6 @@ app = FastAPI(
 
 redis_client = None  # initialize for generalize_schema.py
 
-if settings.RATE_LIMITING:
-    logger.debug("Connecting to redis")
-    from redis.asyncio.cluster import RedisCluster
-
-    try:
-        redis_client = RedisCluster(
-            host=settings.REDIS_HOST,
-            port=settings.REDIS_PORT,
-            decode_responses=True,
-            socket_timeout=5,
-        )
-        app.state.redis_client = redis_client
-    except Exception as e:
-        logging.error(InfrastructureErrorLog(detail=f"failed to connect to redis: {e}"))
-    logger.debug("Redis connected")
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -207,7 +191,24 @@ async def startup_event():
         logger.debug("initializing connection pool")
         app.state.pool = await db_pool(None)
         logger.debug("Connection pool established")
+    if not hasattr(app.state, "redis_client"):
+        if settings.RATE_LIMITING:
+            logger.debug("Connecting to redis")
+            from redis.asyncio.cluster import RedisCluster
 
+            try:
+                redis_client = RedisCluster(
+                    host=settings.REDIS_HOST,
+                    port=settings.REDIS_PORT,
+                    decode_responses=True,
+                    socket_timeout=5,
+                )
+                app.state.redis_client = redis_client
+            except Exception as e:
+                logging.error(
+                    InfrastructureErrorLog(detail=f"failed to connect to redis: {e}")
+                )
+            logger.debug("Redis connected")
     if hasattr(app.state, "counter"):
         app.state.counter += 1
     else:
@@ -243,6 +244,7 @@ def pong():
 @app.get("/favicon.ico", include_in_schema=False)
 def favico():
     return RedirectResponse("https://openaq.org/assets/graphics/meta/favicon.png")
+
 
 # v3
 app.include_router(instruments.router)

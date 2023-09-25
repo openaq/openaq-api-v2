@@ -14,7 +14,7 @@ from passlib.hash import pbkdf2_sha256
 from ..db import DB
 from ..forms.register import RegisterForm, UserExistsException
 from ..models.auth import User
-from ..models.logging import AuthLog, InfoLog, SESEmailLog
+from ..models.logging import AuthLog, ErrorLog, InfoLog, SESEmailLog
 from ..settings import settings
 
 logger = logging.getLogger("auth")
@@ -44,7 +44,7 @@ def send_verification_email(verification_code: str, full_name: str, email: str):
     TEXT_EMAIL_CONTENT = f"""
     Thank you for signing up for an OpenAQ API Key
     Visit the following URL to verify your email:
-    https://api.openaq.org/verify/{verifiation_code}
+    https://api.openaq.org/verify/{verification_code}
     """
     HTML_EMAIL_CONTENT = f"""
         <html>
@@ -55,7 +55,7 @@ def send_verification_email(verification_code: str, full_name: str, email: str):
                 <td bgcolor="#FFFFFF" style="padding:30px;">
                     <h1 style='text-align:center'>Thank you for signing up for an OpenAQ API Key</h1>
                     <p>Click the following link to verify your email:</p>
-                    <a href="https://api.openaq.org/verify/{verification_code}">https://api.openaq.org/verify/{verifiation_code}</a>
+                    <a href="https://api.openaq.org/verify/{verification_code}">https://api.openaq.org/verify/{verification_code}</a>
                 </td>
             </tr>
             </table>
@@ -142,14 +142,15 @@ async def check_email(request: Request):
 
 @router.get("/verify/{verification_code}")
 async def verify(request: Request, verification_code: str, db: DB = Depends()):
+    print(f"\n\n\nAPPP: { getattr(request.app.state, 'redis_client')}\n\n")
     query = """
-    SELECT 
+    SELECT
         users.users_id,  users.is_active, users.expires_on, entities.full_name, users.email_address
-    FROM 
+    FROM
         users
     JOIN
         users_entities USING (users_id)
-    JOIN 
+    JOIN
         entities USING (entities_id)
     WHERE
         verification_code = :verification_code
@@ -207,11 +208,14 @@ async def verify(request: Request, verification_code: str, db: DB = Depends()):
             {"request": request, "error": True, "error_message": message},
         )
     else:
-        token = await db.get_user_token(row[0])
-        if request.app.state.redis_client:
-            redis_client = request.app.state.redis_client
-            await redis_client.sadd("keys", token)
-        send_api_key_email(token, row[3], row[4])
+        try:
+            token = await db.get_user_token(row[0])
+            redis_client = getattr(request.app.state, "redis_client")
+            if redis_client:
+                await redis_client.sadd("keys", token)
+            send_api_key_email(token, row[3], row[4])
+        except Exception as e:
+            logger.error(ErrorLog(detail=f"something went wrong: {e}"))
         return templates.TemplateResponse(
             "verify/index.html", {"request": request, "error": False, "verify": True}
         )

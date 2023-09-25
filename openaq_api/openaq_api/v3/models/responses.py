@@ -171,7 +171,7 @@ class Provider(ProviderBase):
 
 
 class Owner(OwnerBase):
-    entity: EntityBase
+    locations_count: int = Field(alias='locationsCount')
 
 
 class Instrument(InstrumentBase):

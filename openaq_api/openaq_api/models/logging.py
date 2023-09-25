@@ -14,6 +14,7 @@ class LogType(StrEnum):
     TOO_MANY_REQUESTS = "TOO_MANY_REQUESTS"
     WARNING = "WARNING"
     INFO = "INFO"
+    ERROR = "ERROR"
 
 
 class BaseLog(BaseModel):
@@ -40,6 +41,10 @@ class InfoLog(BaseLog):
 
 class WarnLog(BaseLog):
     type: LogType = LogType.WARNING
+
+
+class ErrorLog(BaseLog):
+    type: LogType = LogType.ERROR
 
 
 class InfrastructureErrorLog(BaseLog):
@@ -124,7 +129,7 @@ class HTTPLog(BaseLog):
         return [] if self.params_obj is None else list(self.params_obj.keys())
 
 
-class ErrorLog(HTTPLog):
+class HTTPErrorLog(HTTPLog):
     """Log for HTTP 500.
 
     Inherits from HTTPLog
@@ -163,10 +168,14 @@ class UnauthorizedLog(HTTPLog):
     type: LogType = LogType.UNAUTHORIZED
 
 
-class ModelValidationError(ErrorLog):
+class ModelValidationError(HTTPErrorLog):
     """Log for model validations
 
     Inherits from ErrorLog
     """
 
     type: LogType = LogType.VALIDATION_ERROR
+
+
+class RedisErrorLog(ErrorLog):
+    detail: str
