@@ -14,7 +14,6 @@ from asyncio.exceptions import TimeoutError
 from openaq_api.settings import settings
 
 from .models.responses import Meta, OpenAQResult
-from pydantic import BaseModel, validate_call
 
 logger = logging.getLogger("db")
 
