@@ -31,15 +31,13 @@ router = APIRouter(
 
 class LocationsSortFields(StrEnum):
     ID = auto()
-    DISTANCE = auto()
-    DATETIME_LAST = auto()
 
 
 class LocationsSorting(SortingBase):
     order_by: LocationsSortFields | None = Query(
         "id",
-        description="""Order results by ID, distance, datetime""",
-        examples=["order_by=distance"],
+        description="The field by which to order results",
+        examples=["order_by=id"],
     )
 
 

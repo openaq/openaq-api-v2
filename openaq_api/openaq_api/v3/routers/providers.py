@@ -15,7 +15,7 @@ from openaq_api.v3.models.queries import (
     QueryBaseModel,
     QueryBuilder,
     RadiusQuery,
-    SortingBase
+    SortingBase,
 )
 from openaq_api.v3.models.responses import ProvidersResponse
 
@@ -27,8 +27,10 @@ router = APIRouter(
     include_in_schema=True,
 )
 
+
 class ProvidersSortFields(StrEnum):
     ID = auto()
+
 
 class ProvidersSorting(SortingBase):
     order_by: ProvidersSortFields | None = Query(
@@ -36,7 +38,6 @@ class ProvidersSorting(SortingBase):
         description="""Order results by ID""",
         examples=["order_by=id"],
     )
-
 
 
 class ProviderPathQuery(QueryBaseModel):
@@ -64,6 +65,18 @@ class ProviderPathQuery(QueryBaseModel):
         return "id = :providers_id"
 
 
+class ProvidersSortFields(StrEnum):
+    ID = auto()
+
+
+class ParametersSorting(SortingBase):
+    order_by: ProvidersSortFields | None = Query(
+        "id",
+        description="The field by which to order results",
+        examples=["order_by=id"],
+    )
+
+
 ## TODO
 class ProvidersQueries(
     Paging,
@@ -73,6 +86,7 @@ class ProvidersQueries(
     CountryIsoQuery,
     MonitorQuery,
     ParametersQuery,
+    ParametersSorting,
 ):
     ...
 

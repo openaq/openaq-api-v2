@@ -13,7 +13,7 @@ from openaq_api.v3.models.queries import (
     QueryBaseModel,
     QueryBuilder,
     RadiusQuery,
-    SortingBase
+    SortingBase,
 )
 from openaq_api.v3.models.responses import ParametersResponse
 
@@ -25,8 +25,10 @@ router = APIRouter(
     include_in_schema=True,
 )
 
+
 class ProvidersSortFields(StrEnum):
     ID = auto()
+
 
 class ProvidersSorting(SortingBase):
     order_by: ProvidersSortFields | None = Query(
@@ -113,6 +115,18 @@ class ParametersCountryIsoQuery(CountryIsoQuery):
             return "country->>'code' IN :iso"
 
 
+class ParametersSortFields(StrEnum):
+    ID = auto()
+
+
+class ParametersSorting(SortingBase):
+    order_by: ParametersSortFields | None = Query(
+        "id",
+        description="The field by which to order results",
+        examples=["order_by=id"],
+    )
+
+
 class ParametersQueries(
     Paging,
     CountryIdQuery,
@@ -120,6 +134,7 @@ class ParametersQueries(
     BboxQuery,
     RadiusQuery,
     ParameterTypeQuery,
+    ParametersSorting,
 ):
     ...
 
