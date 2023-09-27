@@ -32,7 +32,7 @@ def create_dependencies_layer(
             client.images.build(
                 path=str("."),
                 dockerfile="Dockerfile",
-                platform="linux/amd64",
+                platform="linux/arm64",
                 tag="openaqapidependencies",
                 nocache=False,
             )
@@ -75,6 +75,6 @@ def create_dependencies_layer(
         self,
         layer_id,
         code=layer_code,
-        compatible_architectures=[aws_lambda.Architecture.X86_64],
+        compatible_architectures=[aws_lambda.Architecture.ARM_64],
         compatible_runtimes=[aws_lambda.Runtime.PYTHON_3_11],
     )

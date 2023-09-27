@@ -40,6 +40,8 @@ env:
   RATE_TIME: 1
 
   EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+
+  DOCKER_BUILD: True
   
 jobs:
   deploy:
