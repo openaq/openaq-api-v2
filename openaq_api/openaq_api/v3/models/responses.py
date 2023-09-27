@@ -161,7 +161,6 @@ class Provider(ProviderBase):
     datetime_first: datetime
     datetime_last: datetime
     owner_entity: EntityBase
-    countries_count: int
     parameters: list[ParameterBase]
     bbox: GeoJSON | None = None
 

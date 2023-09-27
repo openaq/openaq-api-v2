@@ -102,7 +102,6 @@ async def fetch_providers(query, db):
     , datetime_first
     , datetime_last
     , datetime_added
-    , countries_count
     , owner_entity
     , parameters
     , license
