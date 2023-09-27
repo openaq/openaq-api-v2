@@ -51,6 +51,7 @@ from openaq_api.v3.routers import (
     locations,
     manufacturers,
     measurements,
+	owners,
     parameters,
     providers,
     sensors,
@@ -254,6 +255,7 @@ app.include_router(tiles.router)
 app.include_router(countries.router)
 app.include_router(manufacturers.router)
 app.include_router(measurements.router)
+app.include_router(owners.router)
 app.include_router(trends.router)
 app.include_router(providers.router)
 app.include_router(sensors.router)
