@@ -466,7 +466,7 @@ class TestQueryBuilder:
     def test_order_by_method_none(self):
         query = QueryContainer(iso="us", monitor=True)
         query_builder = QueryBuilder(query)
-        assert query_builder.order_by() == None
+        assert query_builder.order_by() == ""
 
 
 class TestLocationPathQuery:
