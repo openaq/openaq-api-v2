@@ -96,7 +96,6 @@ async def fetch_owners(query, db):
     sql = f"""
     SELECT e.entities_id AS id
     , e.full_name AS name
-    , COUNT(sn.owner_entities_id) AS locations_count
     FROM entities e
     JOIN sensor_nodes sn ON e.entities_id = sn.owner_entities_id
     {query_builder.where()}

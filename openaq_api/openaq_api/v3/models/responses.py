@@ -135,8 +135,6 @@ class SensorBase(JsonBase):
 
 class Parameter(ParameterBase):
     description: str | None = None
-    locations_count: int
-    measurements_count: int
 
 
 class Country(CountryBase):
@@ -163,26 +161,20 @@ class Provider(ProviderBase):
     datetime_first: datetime
     datetime_last: datetime
     owner_entity: EntityBase
-    locations_count: int
-    measurements_count: int
-    countries_count: int
     parameters: list[ParameterBase]
     bbox: GeoJSON | None = None
 
 
 class Owner(OwnerBase):
-    locations_count: int = Field(alias='locationsCount')
-
+    ...
 
 class Instrument(InstrumentBase):
-    locations_count: int = Field(alias='locationsCount')
     is_monitor: bool = Field(alias='isMonitor')
     manufacturer: ManufacturerBase
 
 
 class Manufacturer(ManufacturerBase):
     instruments: List[InstrumentBase]
-    locations_count: int = Field(alias="locationsCount")
 
 
 
