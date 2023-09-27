@@ -150,7 +150,6 @@ async def fetch_parameters(query, db) -> ParametersResponse:
         , p.display_name
         , p.units
         , p.description
-        , p.measurements_count
         {query_builder.total()}
     FROM 
         parameters_view_cached p 

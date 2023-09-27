@@ -135,7 +135,6 @@ class SensorBase(JsonBase):
 
 class Parameter(ParameterBase):
     description: str | None = None
-    measurements_count: int
 
 
 class Country(CountryBase):
@@ -162,7 +161,6 @@ class Provider(ProviderBase):
     datetime_first: datetime
     datetime_last: datetime
     owner_entity: EntityBase
-    measurements_count: int
     countries_count: int
     parameters: list[ParameterBase]
     bbox: GeoJSON | None = None
