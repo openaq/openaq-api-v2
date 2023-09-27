@@ -103,7 +103,6 @@ async def fetch_providers(query, db):
     , datetime_last
     , datetime_added
     , measurements_count
-    , locations_count
     , countries_count
     , owner_entity
     , parameters
