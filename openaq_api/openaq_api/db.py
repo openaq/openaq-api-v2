@@ -17,12 +17,15 @@ from .models.responses import Meta, OpenAQResult
 
 logger = logging.getLogger("db")
 
+allowed_config_params = ['work_mem']
 
 def default(obj):
     return str(obj)
 
-
-def dbkey(m, f, query, args):
+# config is required as a placeholder here because of this
+# function is used in the `cached` decorator and without it
+# we will get a number of arguments error
+def dbkey(m, f, query, args, config = None):
     j = orjson.dumps(
         args, option=orjson.OPT_OMIT_MICROSECONDS, default=default
     ).decode()
@@ -84,14 +87,24 @@ class DB:
         return self.request.app.state.pool
 
     @cached(settings.API_CACHE_TIMEOUT, **cache_config)
-    async def fetch(self, query, kwargs):
+    async def fetch(self, query, kwargs, config = None):
         pool = await self.pool()
         start = time.time()
         logger.debug("Start time: %s\nQuery: %s \nArgs:%s\n", start, query, kwargs)
         rquery, args = render(query, **kwargs)
         async with pool.acquire() as con:
             try:
+				# a transaction is required to prevent auto-commit
+                tr = con.transaction()
+                if config is not None:
+                    await tr.start()
+                    for param, value in config.items():
+                        if param in allowed_config_params:
+                            q = f"SELECT set_config('{param}', $1, TRUE)"
+                            s = await con.execute(q, value)
+
                 r = await con.fetch(rquery, *args)
+                await tr.commit()
             except asyncpg.exceptions.UndefinedColumnError as e:
                 logger.error(f"Undefined Column Error: {e}\n{rquery}\n{kwargs}")
                 raise ValueError(f"{e}") from e
@@ -130,12 +143,12 @@ class DB:
             return r[0]
         return None
 
-    async def fetchPage(self, query, kwargs) -> OpenAQResult:
+    async def fetchPage(self, query, kwargs, config = None) -> OpenAQResult:
         page = kwargs.get("page", 1)
         limit = kwargs.get("limit", 1000)
         kwargs["offset"] = abs((page - 1) * limit)
 
-        data = await self.fetch(query, kwargs)
+        data = await self.fetch(query, kwargs, config)
         if len(data) > 0:
             if "found" in data[0].keys():
                 kwargs["found"] = data[0]["found"]
