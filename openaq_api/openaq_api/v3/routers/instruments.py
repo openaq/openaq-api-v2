@@ -119,7 +119,6 @@ async def fetch_instruments(query, db):
         WITH locations_summary AS (
             SELECT 
                 i.instruments_id
-                , COUNT(sn.sensor_nodes_id) AS locations_count
             FROM 
                 sensor_nodes sn 
             JOIN 
