@@ -94,11 +94,10 @@ class DB:
         rquery, args = render(query, **kwargs)
         async with pool.acquire() as con:
             try:
-                self.request.state.timer.mark('connected')
-				        # a transaction is required to prevent auto-commit
+                # a transaction is required to prevent auto-commit
                 tr = con.transaction()
+                await tr.start()
                 if config is not None:
-                    await tr.start()
                     for param, value in config.items():
                         if param in allowed_config_params:
                             q = f"SELECT set_config('{param}', $1, TRUE)"
