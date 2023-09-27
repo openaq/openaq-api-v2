@@ -74,7 +74,7 @@ async def db_pool(pool):
 class DB:
     def __init__(self, request: Request):
         self.request = request
-        logger.debug(f"New db: {request.app.state}")
+        request.state.timer.mark('db')
 
     async def acquire(self):
         pool = await self.pool()
@@ -89,12 +89,13 @@ class DB:
     @cached(settings.API_CACHE_TIMEOUT, **cache_config)
     async def fetch(self, query, kwargs, config = None):
         pool = await self.pool()
-        start = time.time()
+        self.request.state.timer.mark('pooled')
         logger.debug("Start time: %s\nQuery: %s \nArgs:%s\n", start, query, kwargs)
         rquery, args = render(query, **kwargs)
         async with pool.acquire() as con:
             try:
-				# a transaction is required to prevent auto-commit
+                self.request.state.timer.mark('connected')
+				        # a transaction is required to prevent auto-commit
                 tr = con.transaction()
                 if config is not None:
                     await tr.start()
@@ -102,7 +103,6 @@ class DB:
                         if param in allowed_config_params:
                             q = f"SELECT set_config('{param}', $1, TRUE)"
                             s = await con.execute(q, value)
-
                 r = await con.fetch(rquery, *args)
                 await tr.commit()
             except asyncpg.exceptions.UndefinedColumnError as e:
@@ -125,7 +125,7 @@ class DB:
                 raise HTTPException(status_code=500, detail=f"{e}")
         logger.debug(
             "query took: %s and returned:%s\n -- results_firstrow: %s",
-            time.time() - start,
+            self.request.state.timer.mark('fetched', 'since'),
             len(r),
             str(r and r[0])[0:1000],
         )
