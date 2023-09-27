@@ -879,6 +879,8 @@ class QueryBuilder(object):
         else:
             return ""
 
-    def order_by(self) -> str | None:
+    def order_by(self) -> str:
         if self._sortable:
             return f"ORDER BY {self.query.order_by.lower()} {self.query.sort_order.upper()}"
+        else:
+            return ""

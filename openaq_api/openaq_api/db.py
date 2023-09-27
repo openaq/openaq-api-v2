@@ -17,15 +17,17 @@ from .models.responses import Meta, OpenAQResult
 
 logger = logging.getLogger("db")
 
-allowed_config_params = ['work_mem']
+allowed_config_params = ["work_mem"]
+
 
 def default(obj):
     return str(obj)
 
+
 # config is required as a placeholder here because of this
 # function is used in the `cached` decorator and without it
 # we will get a number of arguments error
-def dbkey(m, f, query, args, config = None):
+def dbkey(m, f, query, args, config=None):
     j = orjson.dumps(
         args, option=orjson.OPT_OMIT_MICROSECONDS, default=default
     ).decode()
@@ -74,7 +76,7 @@ async def db_pool(pool):
 class DB:
     def __init__(self, request: Request):
         self.request = request
-        request.state.timer.mark('db')
+        request.state.timer.mark("db")
 
     async def acquire(self):
         pool = await self.pool()
@@ -87,9 +89,10 @@ class DB:
         return self.request.app.state.pool
 
     @cached(settings.API_CACHE_TIMEOUT, **cache_config)
-    async def fetch(self, query, kwargs, config = None):
+    async def fetch(self, query, kwargs, config=None):
         pool = await self.pool()
-        self.request.state.timer.mark('pooled')
+        self.request.state.timer.mark("pooled")
+        start = time.time()
         logger.debug("Start time: %s\nQuery: %s \nArgs:%s\n", start, query, kwargs)
         rquery, args = render(query, **kwargs)
         async with pool.acquire() as con:
@@ -124,7 +127,7 @@ class DB:
                 raise HTTPException(status_code=500, detail=f"{e}")
         logger.debug(
             "query took: %s and returned:%s\n -- results_firstrow: %s",
-            self.request.state.timer.mark('fetched', 'since'),
+            self.request.state.timer.mark("fetched", "since"),
             len(r),
             str(r and r[0])[0:1000],
         )
@@ -142,7 +145,7 @@ class DB:
             return r[0]
         return None
 
-    async def fetchPage(self, query, kwargs, config = None) -> OpenAQResult:
+    async def fetchPage(self, query, kwargs, config=None) -> OpenAQResult:
         page = kwargs.get("page", 1)
         limit = kwargs.get("limit", 1000)
         kwargs["offset"] = abs((page - 1) * limit)
