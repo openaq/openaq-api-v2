@@ -79,6 +79,7 @@ async def averages_v2_get(
     db: DB = Depends(),
 ) -> AveragesResponse:
     query = QueryBuilder(av)
+    config = None
 
     if av.temporal in [None, "hour"]:
         # Query for hourly data
@@ -123,6 +124,7 @@ async def averages_v2_get(
         elif av.temporal == "moy":
             factor = "to_char(datetime - '1sec'::interval, 'MM') as moy"
 
+        config = {"work_mem": "512MB"}
         sql = f"""
         SELECT sn.id
         , sn.name
@@ -145,5 +147,5 @@ async def averages_v2_get(
         {query.pagination()}
     """
 
-    response = await db.fetchPage(sql, query.params())
+    response = await db.fetchPage(sql, query.params(), config)
     return response
