@@ -1,7 +1,7 @@
 import logging
 from typing import Annotated
-
-from fastapi import APIRouter, Depends, Path
+from enum import StrEnum, auto
+from fastapi import APIRouter, Depends, Path, Query
 
 from openaq_api.db import DB
 from openaq_api.v3.models.queries import (
@@ -16,6 +16,7 @@ from openaq_api.v3.models.queries import (
     QueryBaseModel,
     QueryBuilder,
     RadiusQuery,
+    SortingBase,
 )
 from openaq_api.v3.models.responses import LocationsResponse
 
@@ -26,6 +27,18 @@ router = APIRouter(
     tags=["v3-alpha"],
     include_in_schema=True,
 )
+
+
+class LocationsSortFields(StrEnum):
+    ID = auto()
+
+
+class LocationsSorting(SortingBase):
+    order_by: LocationsSortFields | None = Query(
+        "id",
+        description="The field by which to order results",
+        examples=["order_by=id"],
+    )
 
 
 class LocationPathQuery(QueryBaseModel):
@@ -62,6 +75,7 @@ class LocationsQueries(
     CountryIsoQuery,
     MobileQuery,
     MonitorQuery,
+    LocationsSorting,
 ):
     ...
 
@@ -116,6 +130,7 @@ async def fetch_locations(query, db):
     {query_builder.total()}
     FROM locations_view_cached
     {query_builder.where()}
+    {query_builder.order_by()}
     {query_builder.pagination()}
     """
     response = await db.fetchPage(sql, query_builder.params())

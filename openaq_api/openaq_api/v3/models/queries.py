@@ -5,9 +5,10 @@ import operator
 import types
 import weakref
 from datetime import date, datetime
-from enum import StrEnum
+from enum import StrEnum, auto
 from types import FunctionType
 from typing import Annotated, Any
+from abc import ABC
 
 import fastapi
 import humps
@@ -25,6 +26,7 @@ from pydantic import (
     model_validator,
 )
 from pydantic_core import CoreSchema, core_schema
+
 
 logger = logging.getLogger("queries")
 
@@ -177,101 +179,7 @@ class CommaSeparatedList(list, metaclass=TypeParametersMemoizer):
         raise NotImplementedError("should be overridden in metaclass")
 
 
-class QueryBuilder(object):
-    """A utility class to wrap multiple QueryBaseModel classes"""
-
-    def __init__(self, query: type):
-        """
-        Args:
-             query: a class which inherits from one or more pydantic query
-             models, QueryBaseModel.
-        """
-        self.query = query
-
-    def _bases(self) -> list[type]:
-        """inspects the object and returns base classes
-
-        Removes primitive objects in ancestry to only include Pydantic Query
-        and Path models
-
-        Returns:
-            a sorted list of base classes
-        """
-        bases = list(inspect.getmro(self.query.__class__))[
-            :-3
-        ]  # removes object primitives <class '__main__.QueryBaseModel'>, <class 'pydantic.main.BaseModel'>, <class 'object'>
-        bases_sorted = sorted(
-            bases, key=operator.attrgetter("__name__")
-        )  # sort to ensure consistent order for reliability in testing
-        return bases_sorted
-
-    def fields(self) -> str:
-        """
-        loops through all ancestor classes and calls
-        their respective fields() methods to concatenate
-        into additional fields for select
-
-        Returns:
-
-        """
-        fields = []
-        bases = self._bases()
-        for base in bases:
-            if callable(getattr(base, "fields", None)):
-                if base.fields(self.query):
-                    fields.append(base.fields(self.query))
-        if len(fields):
-            fields = list(set(fields))
-            return "\n," + ("\n,").join(fields)
-        else:
-            return ""
-
-    def pagination(self) -> str:
-        pagination = []
-        bases = self._bases()
-        for base in bases:
-            if callable(getattr(base, "pagination", None)):
-                if base.pagination(self.query):
-                    pagination.append(base.pagination(self.query))
-        if len(pagination):
-            pagination = list(set(pagination))
-            return "\n" + ("\n,").join(pagination)
-        else:
-            return ""
-
-    def params(self) -> dict:
-        return self.query.model_dump(exclude_unset=True, by_alias=True)
-
-    @staticmethod
-    def total() -> str:
-        """Generates the SQL for the count of total records found.
-
-        Returns:
-            SQL string for the count of total records found
-        """
-        return ", COUNT(1) OVER() as found"
-
-    def where(self) -> str:
-        """Introspects object ancestors and calls respective where() methods.
-
-        Returns:
-            SQL string of all ancestor WHERE clauses.
-        """
-        where = []
-        bases = self._bases()
-        for base in bases:
-            if callable(getattr(base, "where", None)):
-                if base.where(self.query):
-                    where.append(base.where(self.query))
-        if len(where):
-            where = list(set(where))
-            where.sort()  # ensure the order is consistent for testing
-            return "WHERE " + ("\nAND ").join(where)
-        else:
-            return ""
-
-
-class QueryBaseModel(BaseModel):
+class QueryBaseModel(ABC, BaseModel):
     """Base class for building query objects.
 
     All query objects should inherit this model and can implement
@@ -323,6 +231,20 @@ class QueryBaseModel(BaseModel):
     def pagination(self):
         """abstract method for"""
         ...
+
+
+class SortOrder(StrEnum):
+    ASC = "asc"
+    DESC = "desc"
+
+
+class SortingBase(ABC, BaseModel):
+    order_by: str
+    sort_order: SortOrder | None = Query(
+        SortOrder.ASC,
+        description="Sort results ascending or descending. Default ASC",
+        examples=["sort=desc"],
+    )
 
 
 # Thinking about how the paging should be done
@@ -846,3 +768,117 @@ class BboxQuery(QueryBaseModel):
 
 class MeasurementsQueries(Paging, ParametersQuery):
     ...
+
+
+class QueryBuilder(object):
+    """A utility class to wrap multiple QueryBaseModel classes"""
+
+    def __init__(self, query: type):
+        """
+        Args:
+             query: a class which inherits from one or more pydantic query
+             models, QueryBaseModel.
+        """
+        self.query = query
+        self.sort_field = False
+
+    def _bases(self) -> list[type]:
+        """inspects the object and returns base classes
+
+        Removes primitive objects in ancestry to only include Pydantic Query
+        and Path models
+
+        Returns:
+            a sorted list of base classes
+        """
+        base_classes = inspect.getmro(self.query.__class__)
+        bases = [
+            x for x in base_classes if not ABC in x.__bases__
+        ]  # remove all abstract classes
+        bases.remove(object)  # remove <class 'object'>
+        bases.remove(ABC)  # <class 'ABC'>
+        bases.remove(BaseModel)  # <class 'pydantic.main.BaseModel'>
+        bases_sorted = sorted(
+            bases, key=operator.attrgetter("__name__")
+        )  # sort to ensure consistent order for reliability in testing
+        return bases_sorted
+
+    @property
+    def _sortable(self) -> SortingBase | None:
+        base_classes = inspect.getmro(self.query.__class__)
+        sort_class = [x for x in base_classes if issubclass(x, SortingBase)]
+        if len(sort_class) > 0:
+            sort_class.remove(self.query.__class__)
+            sort_class.remove(SortingBase)
+            return sort_class[0]
+        else:
+            return None
+
+    def fields(self) -> str:
+        """
+        loops through all ancestor classes and calls
+        their respective fields() methods to concatenate
+        into additional fields for select
+
+        Returns:
+
+        """
+        fields = []
+        bases = self._bases()
+        for base in bases:
+            if callable(getattr(base, "fields", None)):
+                if base.fields(self.query):
+                    fields.append(base.fields(self.query))
+        if len(fields):
+            fields = list(set(fields))
+            return "\n," + ("\n,").join(fields)
+        else:
+            return ""
+
+    def pagination(self) -> str:
+        pagination = []
+        bases = self._bases()
+        for base in bases:
+            if callable(getattr(base, "pagination", None)):
+                if base.pagination(self.query):
+                    pagination.append(base.pagination(self.query))
+        if len(pagination):
+            pagination = list(set(pagination))
+            return "\n" + ("\n,").join(pagination)
+        else:
+            return ""
+
+    def params(self) -> dict:
+        return self.query.model_dump(exclude_unset=True, by_alias=True)
+
+    @staticmethod
+    def total() -> str:
+        """Generates the SQL for the count of total records found.
+
+        Returns:
+            SQL string for the count of total records found
+        """
+        return ", COUNT(1) OVER() as found"
+
+    def where(self) -> str:
+        """Introspects object ancestors and calls respective where() methods.
+
+        Returns:
+            SQL string of all ancestor WHERE clauses.
+        """
+        where = []
+        bases = self._bases()
+        for base in bases:
+            if callable(getattr(base, "where", None)):
+                if base.where(self.query):
+                    where.append(base.where(self.query))
+        if len(where):
+            where = list(set(where))
+            where.sort()  # ensure the order is consistent for testing
+            return "WHERE " + ("\nAND ").join(where)
+        else:
+            return ""
+
+    def order_by(self) -> str | None:
+        if self._sortable:
+            return f"ORDER BY {self.query.order_by.lower()} {self.query.sort_order.upper()}"
