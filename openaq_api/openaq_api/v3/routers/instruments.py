@@ -1,14 +1,15 @@
+from enum import StrEnum, auto
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends, Path, Query
 
 from openaq_api.db import DB
 from openaq_api.v3.models.queries import (
     Paging,
     QueryBaseModel,
     QueryBuilder,
-
+    SortingBase,
 )
 from openaq_api.v3.models.responses import InstrumentsResponse
 
@@ -20,22 +21,24 @@ router = APIRouter(
     include_in_schema=True,
 )
 
+
 class ManufacturerInstrumentsQuery(QueryBaseModel):
     """
     Path query to filter results by manufacturers ID
-    
+
     Inherits from QueryBaseModel
 
     Attributes:
         manufacturers_id: manufacturers ID value
     """
-    
+
     manufacturers_id: int = Path(
         ..., description="Limit results to a specific manufacturer id", ge=1
     )
 
     def where(self) -> str:
         return "i.manufacturer_entities_id = :manufacturers_id"
+
 
 class InstrumentPathQuery(QueryBaseModel):
     """Path query to filter results by instruments ID
@@ -61,9 +64,19 @@ class InstrumentPathQuery(QueryBaseModel):
         return "i.instruments_id = :instruments_id"
 
 
-class InstrumentsQueries(
-    Paging,
-):
+class InstrumentsSortFields(StrEnum):
+    ID = auto()
+
+
+class InstrumentsSorting(SortingBase):
+    order_by: InstrumentsSortFields | None = Query(
+        "id",
+        description="The field by which to order results",
+        examples=["order_by=id"],
+    )
+
+
+class InstrumentsQueries(Paging, InstrumentsSorting):
     ...
 
 
@@ -74,9 +87,7 @@ class InstrumentsQueries(
     description="Provides a instrument by instrument ID",
 )
 async def instrument_get(
-    instruments: Annotated[
-        InstrumentPathQuery, Depends(InstrumentPathQuery.depends())
-    ],
+    instruments: Annotated[InstrumentPathQuery, Depends(InstrumentPathQuery.depends())],
     db: DB = Depends(),
 ):
     response = await fetch_instruments(instruments, db)
@@ -90,13 +101,12 @@ async def instrument_get(
     description="Provides a list of instruments",
 )
 async def instruments_get(
-    instruments: Annotated[
-        InstrumentsQueries, Depends(InstrumentsQueries.depends())
-    ],
+    instruments: Annotated[InstrumentsQueries, Depends(InstrumentsQueries.depends())],
     db: DB = Depends(),
 ):
     response = await fetch_instruments(instruments, db)
     return response
+
 
 @router.get(
     "/manufacturers/{manufacturers_id}/instruments",
@@ -113,13 +123,13 @@ async def get_instruments_by_manufacturer(
     response = await fetch_instruments(manufacturer, db)
     return response
 
+
 async def fetch_instruments(query, db):
     query_builder = QueryBuilder(query)
     sql = f"""
         WITH locations_summary AS (
             SELECT 
                 i.instruments_id
-                , COUNT(sn.sensor_nodes_id) AS locations_count
             FROM 
                 sensor_nodes sn 
             JOIN 
@@ -132,7 +142,6 @@ async def fetch_instruments(query, db):
         SELECT 
             instruments_id AS id
             , label AS name
-            , locations_count
             , is_monitor
             , json_build_object('id', e.entities_id, 'name', e.full_name) AS manufacturer         
         FROM 
@@ -150,6 +159,5 @@ async def fetch_instruments(query, db):
 
         """
 
-
     response = await db.fetchPage(sql, query_builder.params())
-    return response 
+    return response

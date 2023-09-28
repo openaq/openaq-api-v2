@@ -117,6 +117,7 @@ class InstrumentBase(JsonBase):
     id: int
     name: str
 
+
 class ParameterBase(JsonBase):
     id: int
     name: str
@@ -135,8 +136,6 @@ class SensorBase(JsonBase):
 
 class Parameter(ParameterBase):
     description: str | None = None
-    locations_count: int
-    measurements_count: int
 
 
 class Country(CountryBase):
@@ -146,9 +145,6 @@ class Country(CountryBase):
     datetime_first: datetime
     datetime_last: datetime
     parameters: list[ParameterBase]
-    locations_count: int
-    measurements_count: int
-    providers_count: int
 
 
 class Entity(EntityBase):
@@ -163,27 +159,21 @@ class Provider(ProviderBase):
     datetime_first: datetime
     datetime_last: datetime
     owner_entity: EntityBase
-    locations_count: int
-    measurements_count: int
-    countries_count: int
     parameters: list[ParameterBase]
     bbox: GeoJSON | None = None
 
 
 class Owner(OwnerBase):
-    locations_count: int = Field(alias='locationsCount')
+    ...
 
 
 class Instrument(InstrumentBase):
-    locations_count: int = Field(alias='locationsCount')
-    is_monitor: bool = Field(alias='isMonitor')
+    is_monitor: bool = Field(alias="isMonitor")
     manufacturer: ManufacturerBase
 
 
 class Manufacturer(ManufacturerBase):
     instruments: List[InstrumentBase]
-    locations_count: int = Field(alias="locationsCount")
-
 
 
 class Sensor(SensorBase):
@@ -235,8 +225,10 @@ class Trend(JsonBase):
 
 # response classes
 
+
 class InstrumentsResponse(OpenAQResult):
     results: list[Instrument]
+
 
 class LocationsResponse(OpenAQResult):
     results: list[Location]

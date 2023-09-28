@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 import datetime
 import logging
 import time
@@ -109,18 +110,23 @@ app = FastAPI(
 redis_client = None  # initialize for generalize_schema.py
 
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
-app.add_middleware(LoggingMiddleware)
-app.add_middleware(GZipMiddleware, minimum_size=1000)
-
 if settings.RATE_LIMITING is True:
+    if settings.RATE_LIMITING:
+        logger.debug("Connecting to redis")
+        from redis.asyncio.cluster import RedisCluster
+
+        try:
+            redis_client = RedisCluster(
+                host=settings.REDIS_HOST,
+                port=settings.REDIS_PORT,
+                decode_responses=True,
+                socket_timeout=5,
+            )
+        except Exception as e:
+            logging.error(
+                InfrastructureErrorLog(detail=f"failed to connect to redis: {e}")
+            )
+        logger.debug("Redis connected")
     if redis_client:
         app.add_middleware(
             RateLimiterMiddleWare,
@@ -135,6 +141,17 @@ if settings.RATE_LIMITING is True:
                 detail="valid redis client not provided but RATE_LIMITING set to TRUE"
             )
         )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
+app.add_middleware(LoggingMiddleware)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 app.include_router(auth_router)
 
@@ -182,53 +199,23 @@ async def openaq_exception_handler(request: Request, exc: ValidationError):
     # return ORJSONResponse(status_code=500, content={"message": "internal server error"})
 
 
-@app.on_event("startup")
-async def startup_event():
-    """
-    Application startup:
-    register the database
-    """
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     if not hasattr(app.state, "pool"):
         logger.debug("initializing connection pool")
         app.state.pool = await db_pool(None)
         logger.debug("Connection pool established")
-    if not hasattr(app.state, "redis_client"):
-        if settings.RATE_LIMITING:
-            logger.debug("Connecting to redis")
-            from redis.asyncio.cluster import RedisCluster
 
-            try:
-                redis_client = RedisCluster(
-                    host=settings.REDIS_HOST,
-                    port=settings.REDIS_PORT,
-                    decode_responses=True,
-                    socket_timeout=5,
-                )
-                app.state.redis_client = redis_client
-            except Exception as e:
-                logging.error(
-                    InfrastructureErrorLog(detail=f"failed to connect to redis: {e}")
-                )
-            logger.debug("Redis connected")
     if hasattr(app.state, "counter"):
         app.state.counter += 1
     else:
         app.state.counter = 0
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Application shutdown: de-register the database connection."""
+    yield
     if hasattr(app.state, "pool") and not settings.USE_SHARED_POOL:
         logger.debug("Closing connection")
         await app.state.pool.close()
         delattr(app.state, "pool")
         logger.debug("Connection closed")
-    if hasattr(app.state, "redis_client") and settings.RATE_LIMITING:
-        logger.debug("Closing redis connection")
-        await app.state.redis_client.close()
-        delattr(app.state, "redis_client")
-        logger.debug("redis connection closed")
 
 
 @app.get("/ping", include_in_schema=False)

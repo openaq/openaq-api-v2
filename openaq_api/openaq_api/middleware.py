@@ -54,19 +54,36 @@ class GetHostMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class Timer:
+    def __init__(self):
+        self.start_time = time.time()
+        self.last_mark = self.start_time
+        self.marks = []
+
+    def mark(self, key: str, return_time: str = "total") -> float:
+        now = time.time()
+        mrk = {
+            "key": key,
+            "since": round((now - self.last_mark) * 1000, 1),
+            "total": round((now - self.start_time) * 1000, 1),
+        }
+        self.last_make = now
+        self.marks.append(mrk)
+        logger.debug(f"TIMER ({key}): {mrk['since']}")
+        return mrk.get(return_time)
+
+
 class LoggingMiddleware(BaseHTTPMiddleware):
     """MiddleWare to set servers url on App with current url."""
 
     async def dispatch(self, request: Request, call_next):
-        start_time = time.time()
+        request.state.timer = Timer()
         response = await call_next(request)
-        process_time = time.time() - start_time
-        timing = round(process_time * 1000, 2)
+        timing = request.state.timer.mark("process")
         if hasattr(request.state, "rate_limiter"):
             rate_limiter = request.state.rate_limiter
         else:
             rate_limiter = None
-
         if hasattr(request.app.state, "counter"):
             counter = request.app.state.counter
         else:
@@ -189,7 +206,6 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 content={"message": "Too many requests"},
             )
-
         request.state.rate_limiter = f"{key}/{limit}/{request.state.counter}"
         response = await call_next(request)
         return response

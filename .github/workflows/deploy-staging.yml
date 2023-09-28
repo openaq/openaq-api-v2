@@ -3,7 +3,7 @@ name: Deploy staging
 on: 
   push:
     branches:
-      - staging
+      - release-*
 
 env:
   ENV: "staging"

@@ -1,13 +1,15 @@
+from enum import StrEnum, auto
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends, Path, Query
 
 from openaq_api.db import DB
 from openaq_api.v3.models.queries import (
     Paging,
     QueryBaseModel,
     QueryBuilder,
+    SortingBase,
 )
 from openaq_api.v3.models.responses import ManufacturersResponse
 
@@ -18,6 +20,7 @@ router = APIRouter(
     tags=["v3-alpha"],
     include_in_schema=True,
 )
+
 
 class ManufacturerPathQuery(QueryBaseModel):
     """Path query to filter results by manufacturers ID
@@ -43,9 +46,19 @@ class ManufacturerPathQuery(QueryBaseModel):
         return "e.entities_id = :manufacturers_id"
 
 
-class ManufacturersQueries(
-    Paging
-):
+class ManufacturersSortFields(StrEnum):
+    ID = auto()
+
+
+class InstrumentsSorting(SortingBase):
+    order_by: ManufacturersSortFields | None = Query(
+        "id",
+        description="The field by which to order results",
+        examples=["order_by=id"],
+    )
+
+
+class ManufacturersQueries(Paging, InstrumentsSorting):
     ...
 
 
@@ -88,7 +101,6 @@ async def fetch_manufacturers(query, db):
             e.entities_id AS id
             , e.full_name AS name
             , ARRAY_AGG(DISTINCT (jsonb_build_object('id', i.instruments_id, 'name', i.label))) AS instruments
-            , COUNT(sn.sensor_nodes_id) AS locations_count
             , COUNT(1) OVER() AS found
         FROM 
             sensor_nodes sn
@@ -104,7 +116,6 @@ async def fetch_manufacturers(query, db):
         {query_builder.pagination()};
 
         """
-
 
     response = await db.fetchPage(sql, query_builder.params())
     return response
