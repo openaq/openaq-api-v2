@@ -117,6 +117,7 @@ class InstrumentBase(JsonBase):
     id: int
     name: str
 
+
 class ParameterBase(JsonBase):
     id: int
     name: str
@@ -144,9 +145,6 @@ class Country(CountryBase):
     datetime_first: datetime
     datetime_last: datetime
     parameters: list[ParameterBase]
-    locations_count: int
-    measurements_count: int
-    providers_count: int
 
 
 class Entity(EntityBase):
@@ -168,14 +166,14 @@ class Provider(ProviderBase):
 class Owner(OwnerBase):
     ...
 
+
 class Instrument(InstrumentBase):
-    is_monitor: bool = Field(alias='isMonitor')
+    is_monitor: bool = Field(alias="isMonitor")
     manufacturer: ManufacturerBase
 
 
 class Manufacturer(ManufacturerBase):
     instruments: List[InstrumentBase]
-
 
 
 class Sensor(SensorBase):
@@ -227,8 +225,10 @@ class Trend(JsonBase):
 
 # response classes
 
+
 class InstrumentsResponse(OpenAQResult):
     results: list[Instrument]
+
 
 class LocationsResponse(OpenAQResult):
     results: list[Location]

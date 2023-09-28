@@ -102,9 +102,6 @@ async def fetch_countries(query, db):
     , datetime_first
     , datetime_last
     , parameters
-    , locations_count
-    , measurements_count
-    , providers_count
     {query_builder.total()}
     FROM countries_view_cached
     {query_builder.where()}
