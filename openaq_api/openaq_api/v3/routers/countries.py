@@ -107,6 +107,5 @@ async def fetch_countries(query, db):
     {query_builder.where()}
     {query_builder.pagination()}
     """
-    print(sql)
     response = await db.fetchPage(sql, query_builder.params())
     return response
