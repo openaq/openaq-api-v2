@@ -209,6 +209,7 @@ async def startup_event():
         app.state.counter += 1
     else:
         app.state.counter = 0
+    app.state.redis_client = redis_client
 
 
 @app.on_event("shutdown")

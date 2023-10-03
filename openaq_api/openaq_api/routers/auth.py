@@ -142,7 +142,6 @@ async def check_email(request: Request):
 
 @router.get("/verify/{verification_code}")
 async def verify(request: Request, verification_code: str, db: DB = Depends()):
-    print(f"\n\n\nAPPP: { getattr(request.app.state, 'redis_client')}\n\n")
     query = """
     SELECT
         users.users_id,  users.is_active, users.expires_on, entities.full_name, users.email_address

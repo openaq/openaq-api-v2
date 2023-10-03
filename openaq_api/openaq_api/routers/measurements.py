@@ -32,8 +32,6 @@ router = APIRouter(
 
 
 def meas_csv(rows, includefields):
-    print("ROWS\n\n")
-    print(rows)
     output = io.StringIO()
     writer = csv.writer(output)
     header = [
