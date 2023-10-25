@@ -154,8 +154,17 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
 
     @staticmethod
     def limited_path(route: str) -> bool:
-        allow_list = ["/", "/openapi.json", "/docs", "/register"]
+        allow_list = [
+            "/",
+            "/openapi.json",
+            "/docs",
+            "/register",
+            "/check-email",
+            "/email-key",
+        ]
         if route in allow_list:
+            return False
+        if "/verify/" in route:
             return False
         if "/v2/locations/tiles" in route:
             return False
