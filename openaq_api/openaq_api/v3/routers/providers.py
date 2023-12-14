@@ -11,7 +11,7 @@ from openaq_api.v3.models.queries import (
     CountryIsoQuery,
     MonitorQuery,
     Paging,
-    ParametersQuery,
+    ProvidersParametersQuery,
     QueryBaseModel,
     QueryBuilder,
     RadiusQuery,
@@ -85,7 +85,7 @@ class ProvidersQueries(
     CountryIdQuery,
     CountryIsoQuery,
     MonitorQuery,
-    ParametersQuery,
+    ProvidersParametersQuery,
     ParametersSorting,
 ):
     ...
