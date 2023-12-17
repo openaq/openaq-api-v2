@@ -202,10 +202,10 @@ async def measurements_get(
     sql = f"""
         SELECT sn.id as "locationId"
         , COALESCE(sn.name, 'N/A') as location
-        , get_datetime_object(measurements.datetime, sn.timezone) as date
+        , get_datetime_object(h.datetime, sn.timezone) as date
         , m.measurand as parameter
         , m.units as unit
-        , measurements.value as value
+        , h.value as value
         , json_build_object(
             'latitude', st_y(sn.geom),
              'longitude', st_x(sn.geom)
@@ -218,7 +218,7 @@ async def measurements_get(
                ELSE 'low-cost sensor'
                END as "sensorType"
         , sn.is_analysis
-        FROM measurements
+        FROM measurements h
         JOIN sensors s USING (sensors_id)
         JOIN sensor_systems sy USING (sensor_systems_id)
         JOIN instruments i USING (instruments_id)
