@@ -202,10 +202,10 @@ async def measurements_get(
     sql = f"""
         SELECT sn.id as "locationId"
         , COALESCE(sn.name, 'N/A') as location
-        , get_datetime_object(h.datetime, sn.timezone) as date
+        , get_datetime_object(measurements.datetime, sn.timezone) as date
         , m.measurand as parameter
         , m.units as unit
-        , h.value_avg as value
+        , measurements.value as value
         , json_build_object(
             'latitude', st_y(sn.geom),
              'longitude', st_x(sn.geom)
@@ -218,12 +218,12 @@ async def measurements_get(
                ELSE 'low-cost sensor'
                END as "sensorType"
         , sn.is_analysis
-        FROM hourly_data h
+        FROM measurements
         JOIN sensors s USING (sensors_id)
         JOIN sensor_systems sy USING (sensor_systems_id)
         JOIN instruments i USING (instruments_id)
         JOIN locations_view_cached sn ON (sy.sensor_nodes_id = sn.id)
-        JOIN measurands m ON (m.measurands_id = h.measurands_id)
+        JOIN measurands m ON (m.measurands_id = s.measurands_id)
         WHERE {where}
         {order_clause}
         OFFSET :offset
