@@ -9,3 +9,4 @@ cdk.out/
 openaq_api/openaq_api/templates/*
 openaq_api/openaq_api/static/assets/*
 .python-version
+Pipfile

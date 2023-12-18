@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Path, Query
 from openaq_api.db import DB
 from openaq_api.v3.models.queries import (
     Paging,
-    CountriesParametersQuery,
+    ParametersQuery,
     ProviderQuery,
     QueryBaseModel,
     QueryBuilder,
@@ -61,7 +61,7 @@ class CountriesSorting(SortingBase):
     )
 
 
-class CountriesQueries(Paging, CountriesParametersQuery, ProviderQuery, CountriesSorting):
+class CountriesQueries(Paging, ParametersQuery, ProviderQuery, CountriesSorting):
     ...
 
 

@@ -271,78 +271,6 @@ class Paging(QueryBaseModel):
     def pagination(self) -> str:
         return "LIMIT :limit OFFSET :offset"
     
-class CountriesParametersQuery(QueryBaseModel):
-    """
-    Pydantic query model for filtering countries based on parameter IDs
-
-    Inherits from QueryBaseModel
-
-    Attributes:
-        parameters_id: parameters_id or comma-separated list of parameters_id
-            for filtering results to a parameter or parameters
-    """
-
-    parameters_id: CommaSeparatedList[int] | None = Query(None, description="Filter results to a specific parameter or parameters")
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    def where(self) -> str | None:
-        """Generates SQL condition for filtering by parameters_id within a JSON array"""
-        if self.has("parameters_id"):
-            return """
-            EXISTS (
-                SELECT 1
-                FROM unnest(parameters) AS param
-                WHERE (param->>'id')::int = ANY(:parameters_id)
-            )
-        """
-
-class ProvidersParametersQuery(QueryBaseModel):
-    """
-    Pydantic query model for filtering providers based on parameter IDs
-
-    Inherits from QueryBaseModel
-
-    Attributes:
-        parameters_id: parameters_id or comma-separated list of parameters_id
-            for filtering results to a parameter or parameters
-    """
-
-    parameters_id: CommaSeparatedList[int] | None = Query(None, description="Filter results to a specific parameter or parameters")
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    def where(self) -> str | None:
-        """Generates SQL condition for filtering by parameters_id within a JSON array"""
-        if self.has("parameters_id"):
-            return """
-            EXISTS (
-                SELECT 1
-                FROM unnest(parameters) AS param
-                WHERE (param->>'id')::int = ANY(:parameters_id)
-            )
-        """
-
-
-class LocationsViewParametersQuery(QueryBaseModel):
-    """Pydantic query model for the parameters query parameter
-
-    Inherits from QueryBaseModel
-
-    Attributes:
-        parameters_id: parameters_id or comma separated list of parameters_id
-            for filtering results to a parameter or parameeters
-    """
-
-    parameters_id: CommaSeparatedList[int] | None = Query(None, description="")
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    def where(self) -> str | None:
-        """ """
-        if self.has("parameters_id"):
-            # return "parameters_id = ANY (:parameter_id)"
-            return "parameter_ids && :parameters_id"
 
 class ParametersQuery(QueryBaseModel):
     """Pydantic query model for the parameters query parameter
@@ -361,7 +289,7 @@ class ParametersQuery(QueryBaseModel):
     def where(self) -> str | None:
         """ """
         if self.has("parameters_id"):
-            return "parameters_id = ANY (:parameter_id)"
+            return "parameter_ids && :parameters_id"
 
 
 class MobileQuery(QueryBaseModel):
