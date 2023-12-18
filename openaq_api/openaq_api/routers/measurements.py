@@ -206,10 +206,18 @@ async def measurements_get(
         , m.measurand as parameter
         , m.units as unit
         , h.value as value
+        , CASE WHEN sn.ismobile
+        THEN
         , json_build_object(
             'latitude', st_y(sn.geom),
              'longitude', st_x(sn.geom)
-        ) as coordinates
+        )
+        ELSE
+        , json_build_object(
+            'latitude', st_y(h.geom),
+             'longitude', st_x(h.geom)
+        )
+        END as coordinates
         , sn.country->>'code' as country
         , sn.ismobile as "isMobile"
         , sn.owner->>'type' as entity
