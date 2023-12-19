@@ -270,7 +270,7 @@ class Paging(QueryBaseModel):
 
     def pagination(self) -> str:
         return "LIMIT :limit OFFSET :offset"
-
+    
 
 class ParametersQuery(QueryBaseModel):
     """Pydantic query model for the parameters query parameter
@@ -289,7 +289,7 @@ class ParametersQuery(QueryBaseModel):
     def where(self) -> str | None:
         """ """
         if self.has("parameters_id"):
-            return "parameters_id = ANY (:parameters_id)"
+            return "parameter_ids && :parameters_id"
 
 
 class MobileQuery(QueryBaseModel):
