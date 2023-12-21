@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, Path
 from openaq_api.db import DB
 from openaq_api.v3.models.queries import QueryBaseModel, QueryBuilder
 from openaq_api.v3.models.responses import SensorsResponse
-from openaq_api.v3.routers.measurements import fetch_measurements
 
 logger = logging.getLogger("sensors")
 
@@ -17,13 +16,13 @@ router = APIRouter(
 )
 
 
-class SensorQuery(QueryBaseModel):
+class SensorPathQuery(QueryBaseModel):
     sensors_id: int = Path(
         ..., description="Limit the results to a specific sensors id", ge=1
     )
 
     def where(self):
-        return "m.sensors_id = :sensors_id"
+        return "s.sensors_id = :sensors_id"
 
 
 # class SensorsQueries(Paging, CountryQuery):
@@ -51,7 +50,7 @@ class SensorQuery(QueryBaseModel):
     description="Provides a sensor by sensor ID",
 )
 async def sensor_get(
-    sensors: Annotated[SensorQuery, Depends(SensorQuery.depends())],
+    sensors: Annotated[SensorPathQuery, Depends(SensorPathQuery.depends())],
     db: DB = Depends(),
 ):
     response = await fetch_sensors(sensors, db)
@@ -64,7 +63,7 @@ async def fetch_sensors(q, db):
     sql = f"""
         WITH sensor AS (
         SELECT
-        m.sensors_id
+        s.sensors_id
         , MIN(datetime - '1sec'::interval) as datetime_first
         , MAX(datetime - '1sec'::interval) as datetime_last
         , COUNT(1) as value_count
@@ -78,7 +77,7 @@ async def fetch_sensors(q, db):
         , PERCENTILE_CONT(0.75) WITHIN GROUP(ORDER BY value_avg) as value_p75
         , PERCENTILE_CONT(0.98) WITHIN GROUP(ORDER BY value_avg) as value_p98
         , current_timestamp as calculated_on
-        FROM hourly_data m
+        FROM hourly_data s
         {query.where()}
         GROUP BY 1)
         SELECT c.sensors_id as id
