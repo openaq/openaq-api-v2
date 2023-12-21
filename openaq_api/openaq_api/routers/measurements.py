@@ -196,7 +196,7 @@ async def measurements_get(
 ):
     where = m.where()
     params = m.params()
-    order_clause = f"ORDER BY {m.order_by} {m.sort}"
+    order_clause = f"ORDER BY h.sensors_id, {m.order_by} {m.sort}"
     includes = m.include_fields
 
     sql = f"""
@@ -208,14 +208,14 @@ async def measurements_get(
         , h.value as value
         , CASE WHEN sn.ismobile
         THEN
-        , json_build_object(
+        json_build_object(
             'latitude', st_y(sn.geom),
              'longitude', st_x(sn.geom)
         )
         ELSE
-        , json_build_object(
-            'latitude', st_y(h.geom),
-             'longitude', st_x(h.geom)
+        json_build_object(
+            'latitude', st_y(sn.geom),
+             'longitude', st_x(sn.geom)
         )
         END as coordinates
         , sn.country->>'code' as country
@@ -238,7 +238,7 @@ async def measurements_get(
         LIMIT :limit;
         """
 
-    response = await db.fetchPage(sql, params)
+    response = await db.fetchPage(sql, params, config={"statement_timeout": 6})
 
     if format == "csv":
         return Response(
