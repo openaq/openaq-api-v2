@@ -17,7 +17,7 @@ from .models.responses import Meta, OpenAQResult
 
 logger = logging.getLogger("db")
 
-allowed_config_params = ["work_mem"]
+allowed_config_params = ["work_mem", "statement_timeout"]
 
 
 def default(obj):
@@ -64,7 +64,7 @@ async def db_pool(pool):
         logger.debug("Creating a new pool")
         pool = await asyncpg.create_pool(
             settings.DATABASE_READ_URL,
-            command_timeout=6,
+            command_timeout=15,
             max_inactive_connection_lifetime=15,
             min_size=1,
             max_size=10,
@@ -89,7 +89,7 @@ class DB:
         return self.request.app.state.pool
 
     @cached(settings.API_CACHE_TIMEOUT, **cache_config)
-    async def fetch(self, query, kwargs, config=None):
+    async def fetch(self, query, kwargs, config={"statement_timeout": 6000}):
         pool = await self.pool()
         self.request.state.timer.mark("pooled")
         start = time.time()
@@ -104,7 +104,7 @@ class DB:
                     for param, value in config.items():
                         if param in allowed_config_params:
                             q = f"SELECT set_config('{param}', $1, TRUE)"
-                            s = await con.execute(q, value)
+                            await con.execute(q, str(value))
                 r = await con.fetch(rquery, *args)
                 await tr.commit()
             except asyncpg.exceptions.UndefinedColumnError as e:

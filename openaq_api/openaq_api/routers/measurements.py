@@ -196,7 +196,7 @@ async def measurements_get(
 ):
     where = m.where()
     params = m.params()
-    order_clause = f"ORDER BY {m.order_by} {m.sort}"
+    order_clause = f"ORDER BY h.sensors_id, {m.order_by} {m.sort}"
     includes = m.include_fields
 
     sql = f"""
@@ -205,11 +205,19 @@ async def measurements_get(
         , get_datetime_object(h.datetime, sn.timezone) as date
         , m.measurand as parameter
         , m.units as unit
-        , h.value_avg as value
-        , json_build_object(
+        , h.value as value
+        , CASE WHEN sn.ismobile
+        THEN
+        json_build_object(
             'latitude', st_y(sn.geom),
              'longitude', st_x(sn.geom)
-        ) as coordinates
+        )
+        ELSE
+        json_build_object(
+            'latitude', st_y(sn.geom),
+             'longitude', st_x(sn.geom)
+        )
+        END as coordinates
         , sn.country->>'code' as country
         , sn.ismobile as "isMobile"
         , sn.owner->>'type' as entity
@@ -218,19 +226,19 @@ async def measurements_get(
                ELSE 'low-cost sensor'
                END as "sensorType"
         , sn.is_analysis
-        FROM hourly_data h
+        FROM measurements h
         JOIN sensors s USING (sensors_id)
         JOIN sensor_systems sy USING (sensor_systems_id)
         JOIN instruments i USING (instruments_id)
         JOIN locations_view_cached sn ON (sy.sensor_nodes_id = sn.id)
-        JOIN measurands m ON (m.measurands_id = h.measurands_id)
+        JOIN measurands m ON (m.measurands_id = s.measurands_id)
         WHERE {where}
         {order_clause}
         OFFSET :offset
         LIMIT :limit;
         """
 
-    response = await db.fetchPage(sql, params)
+    response = await db.fetchPage(sql, params, config={"statement_timeout": 14000})
 
     if format == "csv":
         return Response(
