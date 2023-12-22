@@ -238,7 +238,7 @@ async def measurements_get(
         LIMIT :limit;
         """
 
-    response = await db.fetchPage(sql, params, config={"statement_timeout": 6})
+    response = await db.fetchPage(sql, params, config={"statement_timeout": 14000})
 
     if format == "csv":
         return Response(
