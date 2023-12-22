@@ -207,5 +207,18 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
                 content={"message": "Too many requests"},
             )
         request.state.rate_limiter = f"{key}/{limit}/{request.state.counter}"
+        ttl = await self.redis_client.ttl(key)
         response = await call_next(request)
+        response.headers["RateLimit-Limit"] = str(limit)
+        response.headers["RateLimit-Remaining"] = str(request.state.counter)
+        response.headers["RateLimit-Reset"] = str(ttl)
+        rate_time_seconds = int(self.rate_time.total_seconds())
+        if auth:
+            response.headers[
+                "RateLimit-Policy"
+            ] = f"{self.rate_amount_key};w={rate_time_seconds}"
+        else:
+            response.headers[
+                "RateLimit-Policy"
+            ] = f"{self.rate_amount};w={rate_time_seconds}"
         return response
