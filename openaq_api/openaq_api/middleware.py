@@ -212,5 +212,13 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         response.headers["RateLimit-Limit"] = str(limit)
         response.headers["RateLimit-Remaining"] = str(request.state.counter)
         response.headers["RateLimit-Reset"] = str(ttl)
-        response.headers["RateLimit-Policy"] = "300;w=60"
+        rate_time_seconds = int(self.rate_time.total_seconds())
+        if auth:
+            response.headers[
+                "RateLimit-Policy"
+            ] = f"{self.rate_amount_key};w={rate_time_seconds}"
+        else:
+            response.headers[
+                "RateLimit-Policy"
+            ] = f"{self.rate_amount};w={rate_time_seconds}"
         return response
