@@ -18,7 +18,7 @@ from .models.responses import Meta, OpenAQResult
 
 logger = logging.getLogger("db")
 
-allowed_config_params = ["work_mem"]
+allowed_config_params = ["work_mem", "statement_timeout"]
 
 
 DEFAULT_CONNECTION_TIMEOUT = 6

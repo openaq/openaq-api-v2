@@ -178,7 +178,7 @@ class TestParametersQuery:
         mobile_query = ParametersQuery(parameters_id="1,2,3")
         where = mobile_query.where()
         params = mobile_query.model_dump()
-        assert where == "parameters_id = ANY (:parameters_id)"
+        assert where == "parameter_ids && :parameters_id"
         assert params == {"parameters_id": [1, 2, 3]}
 
     def test_no_value(self):
