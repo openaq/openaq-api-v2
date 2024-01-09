@@ -24,6 +24,7 @@ allowed_config_params = ["work_mem", "statement_timeout"]
 DEFAULT_CONNECTION_TIMEOUT = 6
 MAX_CONNECTION_TIMEOUT = 15
 
+
 def default(obj):
     return str(obj)
 
@@ -93,7 +94,9 @@ class DB:
         return self.request.app.state.pool
 
     @cached(settings.API_CACHE_TIMEOUT, **cache_config)
-    async def fetch(self, query, kwargs, timeout=DEFAULT_CONNECTION_TIMEOUT, config=None):
+    async def fetch(
+        self, query, kwargs, timeout=DEFAULT_CONNECTION_TIMEOUT, config=None
+    ):
         pool = await self.pool()
         self.request.state.timer.mark("pooled")
         start = time.time()
@@ -122,7 +125,7 @@ class DB:
             except TimeoutError:
                 raise HTTPException(
                     status_code=408,
-                    detail="Connection timed out",
+                    detail="Connection timed out: Try to provide more specific query parameters or a smaller time frame.",
                 )
             except Exception as e:
                 logger.error(f"Unknown database error: {e}\n{rquery}\n{kwargs}")
@@ -149,7 +152,9 @@ class DB:
             return r[0]
         return None
 
-    async def fetchPage(self, query, kwargs, timeout=DEFAULT_CONNECTION_TIMEOUT, config=None) -> OpenAQResult:
+    async def fetchPage(
+        self, query, kwargs, timeout=DEFAULT_CONNECTION_TIMEOUT, config=None
+    ) -> OpenAQResult:
         page = kwargs.get("page", 1)
         limit = kwargs.get("limit", 1000)
         kwargs["offset"] = abs((page - 1) * limit)
