@@ -18,7 +18,7 @@ from .models.responses import Meta, OpenAQResult
 
 logger = logging.getLogger("db")
 
-allowed_config_params = ["work_mem", "statement_timeout"]
+allowed_config_params = ["work_mem"]
 
 
 DEFAULT_CONNECTION_TIMEOUT = 6
@@ -112,15 +112,18 @@ class DB:
                         if param in allowed_config_params:
                             q = f"SELECT set_config('{param}', $1, TRUE)"
                             s = await con.execute(q, str(value))
+                if not isinstance(timeout, (str, int)):
+                    logger.warning(f"Non int or string timeout value passed - {timeout}")
+                    timeout = DEFAULT_CONNECTION_TIMEOUT
                 r = await wait_for(con.fetch(rquery, *args), timeout=timeout)
                 await tr.commit()
             except asyncpg.exceptions.UndefinedColumnError as e:
-                logger.error(f"Undefined Column Error: {e}\n{rquery}\n{kwargs}")
+                logger.error(f"Undefined Column Error: {e}\n{rquery}\n{args}")
                 raise ValueError(f"{e}") from e
             except asyncpg.exceptions.CharacterNotInRepertoireError as e:
                 raise ValueError(f"{e}") from e
             except asyncpg.exceptions.DataError as e:
-                logger.error(f"Data Error: {e}\n{rquery}\n{kwargs}")
+                logger.error(f"Data Error: {e}\n{rquery}\n{args}")
                 raise ValueError(f"{e}") from e
             except TimeoutError:
                 raise HTTPException(
@@ -128,7 +131,7 @@ class DB:
                     detail="Connection timed out: Try to provide more specific query parameters or a smaller time frame.",
                 )
             except Exception as e:
-                logger.error(f"Unknown database error: {e}\n{rquery}\n{kwargs}")
+                logger.error(f"Unknown database error: {e}\n{rquery}\n{args}")
                 if str(e).startswith("ST_TileEnvelope"):
                     raise HTTPException(status_code=422, detail=f"{e}")
                 raise HTTPException(status_code=500, detail=f"{e}")
