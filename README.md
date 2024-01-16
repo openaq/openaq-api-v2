@@ -5,9 +5,11 @@
 
 
 ## Overview
-This is the main API for the [OpenAQ](https://openaq.org) project. It is a web-accessible API that provides endpoints to query the real-time and historical air quality measurements on the platform.
+This repository contains the source code for the [OpenAQ API](https://api.openaq.org), a publicly-accessible API that provides endpoints to query the real-time and historical air quality measurements on the OpenAQ platform.
 
-The API is accessible at [api.openaq.org](https://api.openaq.org) and documentation can be found at [docs.openaq.org](https://docs.openaq.org/).
+> [!NOTE]  
+> This repository is for setting up and deploying the OpenAQ API. If you just wish to access the public API to query data from the OpenAQ platform visit https://api.openaq.org or https://docs.openaq.org to learn more. 
+
 
 ### Platform Overview
 
@@ -22,9 +24,10 @@ Deployment is managed with Amazon Web Services (AWS) Cloud Development Kit (CDK)
 ### Dependencies
 
 ## Local Development Environment
-There are a few ways to run the API locally
 
-### settings
+In production the OpenAQ API runs on AWS Lambda with the help of the [mangum](https://mangum.io/) library. This allows the application to run in a serverless envionment and take advantage of async Python and FastAPI routing. Despite the serverless deployment, running the API locally as a standard FastAPI application is largely unchanged, making local development much easier. 
+
+### Settings
 Settings can be loaded using `.env` files and multiple files can be kept and used. The easiest way to manage multiple environment files is to add an extension describing your environment. For example, if I wanted to keep a production, staging and local environment I would save them as `.env.production`, `.env.staging` and `.env.local` each with their own settings.
 
 ### uvicorn
@@ -79,13 +82,16 @@ Additional environmnet variables are required for a full deployment to the AWS C
 
 ## Rate limiting
 
-In the production environment rate limiting is handled in two places, AWS WAF and at the application level with [Starlette Middleware](https://www.starlette.io/middleware/). The application rate limiting is configurable via environment variables. The rate limiting middleware requires access to an instance of [redis](https://redis.io/). For local development [docker](https://www.docker.com/) can be a convenient method to set up a local redis instance. With docker, use the following commend:
+In the production environment rate limiting is handled in two places, AWS WAF and at the application level with [Starlette Middleware](https://www.starlette.io/middleware/). The application rate limiting is configurable via environment variables. The rate limiting middleware requires access to an instance of a [redis](https://redis.io/) cluster. For local development, [docker](https://www.docker.com/) can be a convenient method to set up a local redis cluster. With docker, use the following command:
 
 ```sh
-docker run --name redis -p 6379:6379 -d redis:6.2-alpine 
+docker run -e "IP=0.0.0.0" -p 7000-7005:7000-7005 grokzen/redis-cluster:7.0.7
 ```
 
-Now a redis instance will be available at ``` http://localhost:6379 ```. Configure the REDIS_HOST to `localhost` and REDIS_PORT to `6379`. 
+Now a redis instance will be available at ``` http://localhost:7000 ```. Configure the REDIS_HOST to `localhost` and REDIS_PORT to `7000`. 
+
+> [!TIP]
+> On some macOS system port 7000 is used by Airplay which can complicate the mapping of ports from the Docker container. The easiest option is to disable the Airplay reciever in system settings. `System settings -> General -> Airplay receiver (toggle off)`
 
 ### Rate limiting values
 
@@ -96,7 +102,8 @@ Rate limiting can be toggled off for local develop via the `RATE_LIMITING` envir
 
 e.g. `RATE_AMOUNT=5` and `RATE_TIME=1` would allow 5 requests per 1 minute.
 
-N.B. - With AWS WAF rate limiting also occurs at the cloudfront stage. The application level rate limiting should be less than or equal to the value set at AWS WAF.
+> [!NOTE] 
+> With AWS WAF, rate limiting also occurs at the cloudfront stage. The application level rate limiting should be less than or equal to the value set at AWS WAF.
 
 
 ## Contributing
