@@ -91,7 +91,7 @@ docker run -e "IP=0.0.0.0" -p 7000-7005:7000-7005 grokzen/redis-cluster:7.0.7
 Now a redis instance will be available at ``` http://localhost:7000 ```. Configure the REDIS_HOST to `localhost` and REDIS_PORT to `7000`. 
 
 > [!TIP]
-> On some macOS system port 7000 is used by Airplay which can complicate the mapping of ports from the Docker container. The easiest option is to disable the Airplay reciever in system settings. `System settings -> General -> Airplay receiver (toggle off)`
+> On some macOS systems port 7000 is used by Airplay which can complicate the mapping of ports from the Docker container. The easiest option is to disable the Airplay reciever in system settings. `System settings -> General -> Airplay receiver (toggle off)`
 
 ### Rate limiting values
 
