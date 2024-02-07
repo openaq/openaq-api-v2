@@ -3,7 +3,7 @@ from enum import StrEnum
 from fastapi import Request, status
 from humps import camelize
 from pydantic import BaseModel, ConfigDict, Field, computed_field
-
+import re
 
 class LogType(StrEnum):
     SUCCESS = "SUCCESS"
@@ -107,8 +107,8 @@ class HTTPLog(BaseLog):
     @computed_field(return_type=str)
     @property
     def path(self) -> str:
-        """str: returns URL path from request"""
-        return self.request.url.path
+        """str: returns URL path from request but replaces numbers in the path with :id"""
+        return re.sub(r'/[0-9]+', '/:id', self.request.url.path)
 
     @computed_field(return_type=str)
     @property
