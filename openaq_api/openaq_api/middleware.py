@@ -145,21 +145,6 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         else:
             return True
 
-    # async def request_is_limited(self, key: str, limit: int, request: Request) -> bool:
-    #     if await self.redis_client.set(key, limit, nx=True):
-    #         await self.redis_client.expire(key, int(self.rate_time.total_seconds()))
-    #     count = await self.redis_client.get(key)
-    #     if count in ("-1", "-2"):
-    #         logger.error(
-    #             RedisErrorLog(
-    #                 detail=f"redis has an invalid value for limit: {count} for key: {key}"
-    #             )
-    #         )
-    #     if count and int(count) > 0:
-    #         request.state.counter = await self.redis_client.decrby(key, 1)
-    #         return False
-    #     return True
-
     async def check_valid_key(self, key: str) -> bool:
         if await self.redis_client.sismember("keys", key):
             return True
