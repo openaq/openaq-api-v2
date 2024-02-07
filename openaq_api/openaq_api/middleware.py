@@ -136,7 +136,6 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         now = datetime.now()
         k = f"{key}:{now.year}{now.month}{now.day}{now.hour}{now.minute}"
         value = await self.redis_client.get(k)
-        self.redis_client
         if value is None or int(value) < limit:
             async with self.redis_client.pipeline() as pipe:
                 [incr, _] = await pipe.incr(k).expire(k, 60).execute()
