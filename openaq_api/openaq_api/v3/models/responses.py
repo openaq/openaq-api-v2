@@ -73,6 +73,7 @@ class Summary(JsonBase):
     q75: float | None = None
     q98: float | None = None
     max: float | None = None
+    avg: float | None = None
     sd: float | None = None
 
 
@@ -182,7 +183,6 @@ class Sensor(SensorBase):
     datetime_first: DatetimeObject
     datetime_last: DatetimeObject
     coverage: Coverage
-    # period: Period
     latest: Latest
     summary: Summary
 
