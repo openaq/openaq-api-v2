@@ -133,12 +133,10 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         self.rate_time = rate_time
 
     async def request_is_limited(self, key: str, limit: int, request: Request) -> bool:
-        now = datetime.now()
-        k = f"{key}:{now.year}{now.month}{now.day}{now.hour}{now.minute}"
-        value = await self.redis_client.get(k)
+        value = await self.redis_client.get(key)
         if value is None or int(value) < limit:
             async with self.redis_client.pipeline() as pipe:
-                [incr, _] = await pipe.incr(k).expire(k, 60).execute()
+                [incr, _] = await pipe.incr(key).expire(key, 60).execute()
                 request.state.counter = limit - incr
                 return False
         else:
@@ -172,7 +170,8 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         route = request.url.path
         auth = request.headers.get("x-api-key", None)
         limit = self.rate_amount
-        key = request.client.host
+        now = datetime.now()
+        key = f"{request.client.host}:{now.year}{now.month}{now.day}{now.hour}{now.minute}"
 
         if auth:
             valid_key = await self.check_valid_key(auth)
@@ -186,7 +185,7 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     content={"message": "invalid credentials"},
                 )
-            key = auth
+            key = f"{auth}:{now.year}{now.month}{now.day}{now.hour}{now.minute}"
             limit = self.rate_amount_key
         request.state.counter = limit
         limited = False
