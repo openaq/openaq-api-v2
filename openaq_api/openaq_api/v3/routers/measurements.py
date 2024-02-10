@@ -45,14 +45,13 @@ class LocationMeasurementsQueries(
     DateToQuery,
     MeasurementsParametersQuery,
     PeriodNameQuery,
-):
-    ...
+): ...
 
 
 @router.get(
     "/locations/{locations_id}/measurements",
     response_model=MeasurementsResponse,
-    summary="Get measurements by location",
+    summary="Get measurements by location (DEPRECATING - will be removed in future releases)",
     description="Provides a list of measurements by location ID",
 )
 async def measurements_get(
