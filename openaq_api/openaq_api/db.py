@@ -21,6 +21,7 @@ logger = logging.getLogger("db")
 allowed_config_params = ["work_mem"]
 
 
+
 DEFAULT_CONNECTION_TIMEOUT = 6
 MAX_CONNECTION_TIMEOUT = 15
 
@@ -32,6 +33,7 @@ def default(obj):
 # config is required as a placeholder here because of this
 # function is used in the `cached` decorator and without it
 # we will get a number of arguments error
+
 def dbkey(m, f, query, args, timeout=None, config=None):
     j = orjson.dumps(
         args, option=orjson.OPT_OMIT_MICROSECONDS, default=default
