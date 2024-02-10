@@ -1,6 +1,6 @@
 import logging
 import time
-from datetime import timedelta
+from datetime import timedelta, datetime
 from os import environ
 from fastapi import Response, status
 from fastapi.responses import JSONResponse
@@ -133,19 +133,14 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         self.rate_time = rate_time
 
     async def request_is_limited(self, key: str, limit: int, request: Request) -> bool:
-        if await self.redis_client.set(key, limit, nx=True):
-            await self.redis_client.expire(key, int(self.rate_time.total_seconds()))
-        count = await self.redis_client.get(key)
-        if count in ("-1", "-2"):
-            logger.error(
-                RedisErrorLog(
-                    detail=f"redis has an invalid value for limit: {count} for key: {key}"
-                )
-            )
-        if count and int(count) > 0:
-            request.state.counter = await self.redis_client.decrby(key, 1)
-            return False
-        return True
+        value = await self.redis_client.get(key)
+        if value is None or int(value) < limit:
+            async with self.redis_client.pipeline() as pipe:
+                [incr, _] = await pipe.incr(key).expire(key, 60).execute()
+                request.state.counter = limit - incr
+                return False
+        else:
+            return True
 
     async def check_valid_key(self, key: str) -> bool:
         if await self.redis_client.sismember("keys", key):
@@ -175,7 +170,8 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         route = request.url.path
         auth = request.headers.get("x-api-key", None)
         limit = self.rate_amount
-        key = request.client.host
+        now = datetime.now()
+        key = f"{request.client.host}:{now.year}{now.month}{now.day}{now.hour}{now.minute}"
 
         if auth:
             valid_key = await self.check_valid_key(auth)
@@ -189,7 +185,7 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     content={"message": "invalid credentials"},
                 )
-            key = auth
+            key = f"{auth}:{now.year}{now.month}{now.day}{now.hour}{now.minute}"
             limit = self.rate_amount_key
         request.state.counter = limit
         limited = False
@@ -207,5 +203,18 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
                 content={"message": "Too many requests"},
             )
         request.state.rate_limiter = f"{key}/{limit}/{request.state.counter}"
+        ttl = await self.redis_client.ttl(key)
         response = await call_next(request)
+        response.headers["RateLimit-Limit"] = str(limit)
+        response.headers["RateLimit-Remaining"] = str(request.state.counter)
+        response.headers["RateLimit-Reset"] = str(ttl)
+        rate_time_seconds = int(self.rate_time.total_seconds())
+        if auth:
+            response.headers["RateLimit-Policy"] = (
+                f"{self.rate_amount_key};w={rate_time_seconds}"
+            )
+        else:
+            response.headers["RateLimit-Policy"] = (
+                f"{self.rate_amount};w={rate_time_seconds}"
+            )
         return response

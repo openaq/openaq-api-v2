@@ -10,7 +10,6 @@ from openaq_api.v3.models.queries import (
     CommaSeparatedList,
     MobileQuery,
     MonitorQuery,
-    ParametersQuery,
     QueryBaseModel,
     QueryBuilder,
 )
@@ -22,6 +21,16 @@ router = APIRouter(
     tags=["v3-alpha"],
     include_in_schema=False,
 )
+
+
+class TileParametersQuery(QueryBaseModel):
+    parameters_id: CommaSeparatedList[int] | None = Query(
+        None, description="Limit the results to a specific provider or parameters"
+    )
+
+    def where(self) -> str | None:
+        if self.has("parameters_id"):
+            return "parameters_id = ANY (:parameters_id)"
 
 
 class TileProvidersQuery(QueryBaseModel):
@@ -71,7 +80,7 @@ class TileBase(QueryBaseModel):
 
 class Tile(
     TileBase,
-    ParametersQuery,
+    TileParametersQuery,
     TileProvidersQuery,
     MonitorQuery,
     MobileQuery,

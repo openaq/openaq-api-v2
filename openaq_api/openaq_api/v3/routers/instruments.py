@@ -142,7 +142,6 @@ async def fetch_instruments(query, db):
         SELECT 
             instruments_id AS id
             , label AS name
-            , locations_count
             , is_monitor
             , json_build_object('id', e.entities_id, 'name', e.full_name) AS manufacturer         
         FROM 

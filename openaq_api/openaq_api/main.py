@@ -199,8 +199,8 @@ async def openaq_exception_handler(request: Request, exc: ValidationError):
     # return ORJSONResponse(status_code=500, content={"message": "internal server error"})
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
+@app.on_event("startup")
+async def startup_event():
     if not hasattr(app.state, "pool"):
         logger.debug("initializing connection pool")
         app.state.pool = await db_pool(None)
@@ -210,7 +210,11 @@ async def lifespan(app: FastAPI):
         app.state.counter += 1
     else:
         app.state.counter = 0
-    yield
+    app.state.redis_client = redis_client
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
     if hasattr(app.state, "pool") and not settings.USE_SHARED_POOL:
         logger.debug("Closing connection")
         await app.state.pool.close()

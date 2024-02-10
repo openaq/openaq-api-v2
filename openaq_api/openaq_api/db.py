@@ -10,6 +10,7 @@ from aiocache.plugins import HitMissRatioPlugin, TimingPlugin
 from buildpg import render
 from fastapi import HTTPException, Request
 from asyncio.exceptions import TimeoutError
+from asyncio import wait_for
 
 from openaq_api.settings import settings
 
@@ -20,6 +21,11 @@ logger = logging.getLogger("db")
 allowed_config_params = ["work_mem"]
 
 
+
+DEFAULT_CONNECTION_TIMEOUT = 6
+MAX_CONNECTION_TIMEOUT = 15
+
+
 def default(obj):
     return str(obj)
 
@@ -27,7 +33,8 @@ def default(obj):
 # config is required as a placeholder here because of this
 # function is used in the `cached` decorator and without it
 # we will get a number of arguments error
-def dbkey(m, f, query, args, config=None):
+
+def dbkey(m, f, query, args, timeout=None, config=None):
     j = orjson.dumps(
         args, option=orjson.OPT_OMIT_MICROSECONDS, default=default
     ).decode()
@@ -64,7 +71,7 @@ async def db_pool(pool):
         logger.debug("Creating a new pool")
         pool = await asyncpg.create_pool(
             settings.DATABASE_READ_URL,
-            command_timeout=6,
+            command_timeout=MAX_CONNECTION_TIMEOUT,
             max_inactive_connection_lifetime=15,
             min_size=1,
             max_size=10,
@@ -89,7 +96,9 @@ class DB:
         return self.request.app.state.pool
 
     @cached(settings.API_CACHE_TIMEOUT, **cache_config)
-    async def fetch(self, query, kwargs, config=None):
+    async def fetch(
+        self, query, kwargs, timeout=DEFAULT_CONNECTION_TIMEOUT, config=None
+    ):
         pool = await self.pool()
         self.request.state.timer.mark("pooled")
         start = time.time()
@@ -104,24 +113,27 @@ class DB:
                     for param, value in config.items():
                         if param in allowed_config_params:
                             q = f"SELECT set_config('{param}', $1, TRUE)"
-                            s = await con.execute(q, value)
-                r = await con.fetch(rquery, *args)
+                            s = await con.execute(q, str(value))
+                if not isinstance(timeout, (str, int)):
+                    logger.warning(f"Non int or string timeout value passed - {timeout}")
+                    timeout = DEFAULT_CONNECTION_TIMEOUT
+                r = await wait_for(con.fetch(rquery, *args), timeout=timeout)
                 await tr.commit()
             except asyncpg.exceptions.UndefinedColumnError as e:
-                logger.error(f"Undefined Column Error: {e}\n{rquery}\n{kwargs}")
+                logger.error(f"Undefined Column Error: {e}\n{rquery}\n{args}")
                 raise ValueError(f"{e}") from e
             except asyncpg.exceptions.CharacterNotInRepertoireError as e:
                 raise ValueError(f"{e}") from e
             except asyncpg.exceptions.DataError as e:
-                logger.error(f"Data Error: {e}\n{rquery}\n{kwargs}")
+                logger.error(f"Data Error: {e}\n{rquery}\n{args}")
                 raise ValueError(f"{e}") from e
             except TimeoutError:
                 raise HTTPException(
                     status_code=408,
-                    detail="Connection timed out",
+                    detail="Connection timed out: Try to provide more specific query parameters or a smaller time frame.",
                 )
             except Exception as e:
-                logger.error(f"Unknown database error: {e}\n{rquery}\n{kwargs}")
+                logger.error(f"Unknown database error: {e}\n{rquery}\n{args}")
                 if str(e).startswith("ST_TileEnvelope"):
                     raise HTTPException(status_code=422, detail=f"{e}")
                 raise HTTPException(status_code=500, detail=f"{e}")
@@ -145,12 +157,14 @@ class DB:
             return r[0]
         return None
 
-    async def fetchPage(self, query, kwargs, config=None) -> OpenAQResult:
+    async def fetchPage(
+        self, query, kwargs, timeout=DEFAULT_CONNECTION_TIMEOUT, config=None
+    ) -> OpenAQResult:
         page = kwargs.get("page", 1)
         limit = kwargs.get("limit", 1000)
         kwargs["offset"] = abs((page - 1) * limit)
 
-        data = await self.fetch(query, kwargs, config)
+        data = await self.fetch(query, kwargs, timeout, config)
         if len(data) > 0:
             if "found" in data[0].keys():
                 kwargs["found"] = data[0]["found"]

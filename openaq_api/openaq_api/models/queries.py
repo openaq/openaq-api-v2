@@ -363,9 +363,15 @@ def fix_datetime(
     return d
 
 
+def create_default_date() -> str:
+    now = datetime.now()
+    last_week = now - timedelta(days=7)
+    return last_week.strftime("%Y-%m-%d")
+
+
 class DateRange(OBaseModel):
     date_from: datetime | date | str | int | None = Query(
-        fix_datetime("2000-01-01"),
+        fix_datetime(create_default_date()),
         description="From when?",
         examples=["2022-10-01T11:19:38-06:00", "2022-10-01"],
     )

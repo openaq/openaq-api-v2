@@ -102,14 +102,10 @@ async def fetch_countries(query, db):
     , datetime_first
     , datetime_last
     , parameters
-    , locations_count
-    , measurements_count
-    , providers_count
     {query_builder.total()}
     FROM countries_view_cached
     {query_builder.where()}
     {query_builder.pagination()}
     """
-    print(sql)
     response = await db.fetchPage(sql, query_builder.params())
     return response
