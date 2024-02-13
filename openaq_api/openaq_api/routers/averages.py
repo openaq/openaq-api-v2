@@ -147,5 +147,5 @@ async def averages_v2_get(
         {query.pagination()}
     """
 
-    response = await db.fetchPage(sql, query.params(), config)
+    response = await db.fetchPage(sql, query.params(), config=config)
     return response
