@@ -270,7 +270,7 @@ class Paging(QueryBaseModel):
 
     def pagination(self) -> str:
         return "LIMIT :limit OFFSET :offset"
-    
+
 
 class ParametersQuery(QueryBaseModel):
     """Pydantic query model for the parameters query parameter
@@ -449,7 +449,6 @@ class DateFromQuery(QueryBaseModel):
         date_from: date or datetime in ISO-8601 format to filter results to a
         date range.
     """
-
     date_from: datetime | date | None = Query(
         None,
         description="From when?",
@@ -467,6 +466,7 @@ class DateFromQuery(QueryBaseModel):
         Returns:
             string of WHERE clause if `date_from` is set
         """
+
         if self.date_from is None:
             return None
         elif isinstance(self.date_from, datetime):
@@ -536,7 +536,7 @@ class PeriodNameQuery(QueryBaseModel):
     """
 
     period_name: PeriodNames | None = Query(
-        "hour", description="Period to aggregate. Month, day, hour"
+        "hour", description="Period to aggregate. Month, day, hour, hour of day (hod), day of week (dow) and month of year (moy)"
     )
 
 
