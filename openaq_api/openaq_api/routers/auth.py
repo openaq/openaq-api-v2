@@ -220,6 +220,43 @@ async def verify(request: Request, verification_code: str, db: DB = Depends()):
         )
 
 
+@router.post("/regenerate-token")
+async def get_register(
+    request: Request,
+    users_id: int,
+    token: str,
+    db: DB = Depends(),
+):
+    """ """
+    _token = token
+    try:
+        db.get_user_token
+        await db.regenerate_user_token(users_id, _token)
+        token = await db.get_user_token(users_id)
+        redis_client = getattr(request.app.state, "redis_client")
+        if redis_client:
+            await redis_client.srem("keys", _token)
+            await redis_client.sadd("keys", token)
+        return {"success"}
+    except Exception as e:
+        return e
+
+
+@router.post("/send-verification")
+async def get_register(
+    request: Request,
+    users_id: int,
+    db: DB = Depends(),
+):
+    user = db.get_user(users_id=users_id)
+    full_name = user[0]
+    email_address = user[1]
+    verification_code = user[2]
+    response = send_verification_email(verification_code, full_name, email_address)
+    logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
+    return RedirectResponse("/check-email", status_code=status.HTTP_303_SEE_OTHER)
+
+
 @router.get("/register")
 async def get_register(request: Request):
     return templates.TemplateResponse("register/index.html", {"request": request})

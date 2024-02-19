@@ -23,6 +23,7 @@ from openaq_api.db import db_pool
 from openaq_api.middleware import (
     CacheControlMiddleware,
     LoggingMiddleware,
+    PrivatePathsMiddleware,
     RateLimiterMiddleWare,
 )
 from openaq_api.models.logging import (
@@ -47,6 +48,7 @@ from openaq_api.settings import settings
 
 # V3 routers
 from openaq_api.v3.routers import (
+    auth,
     countries,
     instruments,
     locations,
@@ -107,6 +109,11 @@ app = FastAPI(
     docs_url="/docs",
 )
 
+auth_app = FastAPI(
+    default_response_class=ORJSONResponse,
+    docs_url=None,
+)
+
 redis_client = None  # initialize for generalize_schema.py
 
 
@@ -126,6 +133,7 @@ if settings.RATE_LIMITING is True:
             logging.error(
                 InfrastructureErrorLog(detail=f"failed to connect to redis: {e}")
             )
+        print(redis_client)
         logger.debug("Redis connected")
     if redis_client:
         app.add_middleware(
@@ -153,7 +161,7 @@ app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
 app.add_middleware(LoggingMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-app.include_router(auth_router)
+auth_app.add_middleware(PrivatePathsMiddleware)
 
 
 class OpenAQValidationResponseDetail(BaseModel):
@@ -199,8 +207,8 @@ async def openaq_exception_handler(request: Request, exc: ValidationError):
     # return ORJSONResponse(status_code=500, content={"message": "internal server error"})
 
 
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     if not hasattr(app.state, "pool"):
         logger.debug("initializing connection pool")
         app.state.pool = await db_pool(None)
@@ -211,15 +219,57 @@ async def startup_event():
     else:
         app.state.counter = 0
     app.state.redis_client = redis_client
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
+    yield
     if hasattr(app.state, "pool") and not settings.USE_SHARED_POOL:
         logger.debug("Closing connection")
         await app.state.pool.close()
         delattr(app.state, "pool")
         logger.debug("Connection closed")
+
+
+# @app.on_event("startup")
+# async def startup_event():
+#     if not hasattr(app.state, "pool"):
+#         logger.debug("initializing connection pool")
+#         app.state.pool = await db_pool(None)
+#         logger.debug("Connection pool established")
+
+#     if hasattr(app.state, "counter"):
+#         app.state.counter += 1
+#     else:
+#         app.state.counter = 0
+#     app.state.redis_client = redis_client
+
+
+# @app.on_event("shutdown")
+# async def shutdown_event():
+#     if hasattr(app.state, "pool") and not settings.USE_SHARED_POOL:
+#         logger.debug("Closing connection")
+#         await app.state.pool.close()
+#         delattr(app.state, "pool")
+#         logger.debug("Connection closed")
+
+
+# @auth_app.on_event("startup")
+# async def auth_startup_event():
+#     if not hasattr(auth_app.state, "pool"):
+#         logger.debug("initializing connection pool")
+#         auth_app.state.pool = await db_pool(None)
+#         logger.debug("Connection pool established")
+#     if hasattr(auth_app.state, "counter"):
+#         auth_app.state.counter += 1
+#     else:
+#         auth_app.state.counter = 0
+#     auth_app.state.redis_client = redis_client
+
+
+# @auth_app.on_event("shutdown")
+# async def auth_shutdown_event():
+#     if hasattr(auth_app.state, "pool") and not settings.USE_SHARED_POOL:
+#         logger.debug("Closing connection")
+#         await auth_app.state.pool.close()
+#         delattr(auth_app.state, "pool")
+#         logger.debug("Connection closed")
 
 
 @app.get("/ping", include_in_schema=False)
@@ -239,6 +289,7 @@ def favico():
 
 
 # v3
+auth_app.include_router(auth.router)
 app.include_router(instruments.router)
 app.include_router(locations.router)
 app.include_router(parameters.router)
@@ -266,6 +317,9 @@ app.include_router(summary_router)
 
 
 static_dir = Path.joinpath(Path(__file__).resolve().parent, "static")
+
+
+app.mount("/auth", auth_app)
 
 app.mount("/", StaticFiles(directory=str(static_dir), html=True))
 

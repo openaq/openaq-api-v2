@@ -1,7 +1,7 @@
 import logging
 from typing import Annotated
 from enum import StrEnum, auto
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, Path, Query, Request
 
 from openaq_api.db import DB
 from openaq_api.v3.models.queries import (
@@ -78,8 +78,7 @@ class LocationsQueries(
     MobileQuery,
     MonitorQuery,
     LocationsSorting,
-):
-    ...
+): ...
 
 
 @router.get(
@@ -90,8 +89,11 @@ class LocationsQueries(
 )
 async def location_get(
     locations: Annotated[LocationPathQuery, Depends(LocationPathQuery.depends())],
+    request: Request,
     db: DB = Depends(),
 ):
+    print("REQUEST", request.__dict__)
+
     response = await fetch_locations(locations, db)
     return response
 
