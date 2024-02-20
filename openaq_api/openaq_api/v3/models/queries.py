@@ -524,6 +524,7 @@ class PeriodNames(StrEnum):
     hod = "hod"
     dow = "dow"
     moy = "moy"
+    raw = "raw"
 
 
 class PeriodNameQuery(QueryBaseModel):

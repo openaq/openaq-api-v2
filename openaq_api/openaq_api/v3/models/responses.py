@@ -22,9 +22,6 @@ class OpenAQResult(JsonBase):
     results: list[Any] = []
 
 
-#
-
-
 class DatetimeObject(JsonBase):
     utc: str
     local: str
@@ -205,11 +202,12 @@ class Location(JsonBase):
 
 
 class Measurement(JsonBase):
-    period: Period
+    #datetime: DatetimeObject
     value: float
     parameter: ParameterBase
+    period: Period | None = None
     coordinates: Coordinates | None = None
-    summary: Summary | None = None
+    #summary: Summary | None = None
     coverage: Coverage | None = None
 
 
