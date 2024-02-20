@@ -128,6 +128,7 @@ async def fetch_locations(query, db):
     , bbox(geom) as bounds
     , datetime_first
     , datetime_last
+	, licenses
     {query_builder.fields() or ''}
     {query_builder.total()}
     FROM locations_view_cached

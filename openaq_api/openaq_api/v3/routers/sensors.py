@@ -249,7 +249,6 @@ async def fetch_measurements(q, db):
         ORDER BY datetime
         {query.pagination()}
               """
-
     elif q.period_name in ["day", "month"]:
         # Query for the aggregate data
         if q.period_name == "day":
@@ -331,7 +330,6 @@ async def fetch_measurements(q, db):
             {query.pagination()}
         """
     elif q.period_name in ["hod","dow","moy"]:
-
         if q.period_name == "hod":
             q.period_name = "hour"
             period_format = "'HH24'"
