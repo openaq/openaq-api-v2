@@ -122,12 +122,14 @@ class PrivatePathsMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next):
-        auth = request.headers.get("x-api-key", None)
-        if auth != settings.EXPLORER_API_KEY:
-            return JSONResponse(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                content={"message": "invalid credentials"},
-            )
+        route = request.url.path
+        if "/auth" in route:
+            auth = request.headers.get("x-api-key", None)
+            if auth != settings.EXPLORER_API_KEY:
+                return JSONResponse(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    content={"message": "invalid credentials"},
+                )
         response = await call_next(request)
         return response
 
@@ -183,6 +185,7 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
+        print("RATE LIMIT\n\n\n")
         route = request.url.path
         auth = request.headers.get("x-api-key", None)
         if auth == settings.EXPLORER_API_KEY:

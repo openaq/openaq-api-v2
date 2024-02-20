@@ -234,11 +234,22 @@ class DB:
             token = :token
         """
         conn = await asyncpg.connect(settings.DATABASE_WRITE_URL)
-        rquery, args = render(query, **{"users_id": users_id})
+        rquery, args = render(query, **{"users_id": users_id, "token": token})
         await conn.fetch(rquery, *args)
         await conn.close()
 
     async def get_user_token(self, users_id: int) -> str:
+        """ """
+        query = """
+        SELECT token FROM user_keys WHERE users_id = :users_id
+        """
+        conn = await asyncpg.connect(settings.DATABASE_WRITE_URL)
+        rquery, args = render(query, **{"users_id": users_id})
+        api_token = await conn.fetch(rquery, *args)
+        await conn.close()
+        return api_token[0][0]
+
+    async def generate_user_token(self, users_id: int) -> str:
         """
         calls the get_user_token plpgsql function to verify user email and generate API token
         """
