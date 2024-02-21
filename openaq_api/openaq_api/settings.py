@@ -37,6 +37,8 @@ class Settings(BaseSettings):
 
     EMAIL_SENDER: str | None = None
 
+    EXPLORER_API_KEY: str
+
     @computed_field(return_type=str, alias="DATABASE_READ_URL")
     @property
     def DATABASE_READ_URL(self):

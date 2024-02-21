@@ -21,7 +21,6 @@ logger = logging.getLogger("db")
 allowed_config_params = ["work_mem"]
 
 
-
 DEFAULT_CONNECTION_TIMEOUT = 6
 MAX_CONNECTION_TIMEOUT = 15
 
@@ -33,6 +32,7 @@ def default(obj):
 # config is required as a placeholder here because of this
 # function is used in the `cached` decorator and without it
 # we will get a number of arguments error
+
 
 def dbkey(m, f, query, args, timeout=None, config=None):
     j = orjson.dumps(
@@ -115,7 +115,9 @@ class DB:
                             q = f"SELECT set_config('{param}', $1, TRUE)"
                             s = await con.execute(q, str(value))
                 if not isinstance(timeout, (str, int)):
-                    logger.warning(f"Non int or string timeout value passed - {timeout}")
+                    logger.warning(
+                        f"Non int or string timeout value passed - {timeout}"
+                    )
                     timeout = DEFAULT_CONNECTION_TIMEOUT
                 r = await wait_for(con.fetch(rquery, *args), timeout=timeout)
                 await tr.commit()
@@ -193,9 +195,63 @@ class DB:
         await conn.close()
         return verification_token[0][0]
 
-    async def get_user_token(self, users_id: int) -> str:
+    async def get_user(self, users_id: int) -> str:
         """
-        calls the get_user_token plpgsql function to vefiry user email and generate API token
+        gets user info from users table and entities table
+        """
+        query = """
+        SELECT 
+            e.full_name
+            , u.email_address
+            , u.verification_code 
+        FROM 
+            users u
+        JOIN
+            users_entities USING (users_id)
+        JOIN 
+            entities e USING (entities_id)   
+        WHERE 
+            u.users_id = :users_id
+        """
+        conn = await asyncpg.connect(settings.DATABASE_READ_URL)
+        rquery, args = render(query, **{"users_id": users_id})
+        user = await conn.fetch(rquery, *args)
+        await conn.close()
+        return user[0]
+
+    async def regenerate_user_token(self, users_id: int, token: str) -> str:
+        """
+        calls the get_user_token plpgsql function to verify user email and generate API token
+        """
+        query = """
+        UPDATE 
+            user_keys 
+        SET 
+            token = generate_token()
+        WHERE 
+            users_id = :users_id
+        AND 
+            token = :token
+        """
+        conn = await asyncpg.connect(settings.DATABASE_WRITE_URL)
+        rquery, args = render(query, **{"users_id": users_id, "token": token})
+        await conn.fetch(rquery, *args)
+        await conn.close()
+
+    async def get_user_token(self, users_id: int) -> str:
+        """ """
+        query = """
+        SELECT token FROM user_keys WHERE users_id = :users_id
+        """
+        conn = await asyncpg.connect(settings.DATABASE_WRITE_URL)
+        rquery, args = render(query, **{"users_id": users_id})
+        api_token = await conn.fetch(rquery, *args)
+        await conn.close()
+        return api_token[0][0]
+
+    async def generate_user_token(self, users_id: int) -> str:
+        """
+        calls the get_user_token plpgsql function to verify user email and generate API token
         """
         query = """
         SELECT * FROM get_user_token(:users_id)
