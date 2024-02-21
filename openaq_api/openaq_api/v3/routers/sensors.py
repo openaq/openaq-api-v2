@@ -1,7 +1,7 @@
 import logging
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends, Path, HTTPException
 from pydantic import field_validator
 from datetime import date, datetime
 
@@ -59,7 +59,13 @@ class SensorMeasurementsQueries(
     def must_be_date_if_aggregating_to_day(cls, v: Any, values) -> str:
         if values.data.get('period_name') in ['dow','day','moy','month']:
             if isinstance(v, datetime):
-                raise ValueError("only dates can be used when aggregating to day or higher")
+                # this is to deal with the error that is thrown when using ValueError with datetime objects
+                err = [{
+                    "type": "value_error",
+                    "msg": "When aggregating data to daily values or higher you can only use whole dates in the `date_from` and `date_to` parameters. E.g. 2024-01-01, 2024-01-01 00:00:00",
+                    "input": str(v)
+                       }]
+                raise HTTPException(status_code=422, detail=err)
         return v
 
 

@@ -699,13 +699,13 @@ class BboxQuery(QueryBaseModel):
             errors = []
             bbox = [float(x) for x in v.split(",")]
             minx, miny, maxx, maxy = bbox
-            if not minx >= -180 and minx <= 180:
+            if not (minx >= -180 and minx <= 180):
                 errors.append("X min must be between -180 and 180")
-            if not miny >= -90 and miny <= 90:
+            if not (miny >= -90 and miny <= 90):
                 errors.append("Y min must be between -90 and 90")
-            if not maxx >= -180 and maxx <= 180:
+            if not (maxx >= -180 and maxx <= 180):
                 errors.append("X max must be between -180 and 180")
-            if not maxy >= -90 and maxy <= 90:
+            if not (maxy >= -90 and maxy <= 90):
                 errors.append("Y max must be between -90 and 90")
             if minx > maxx:
                 errors.append("X max must be greater than or equal to X min")
