@@ -222,8 +222,8 @@ async def fetch_measurements(q, db):
 	, m.measurands_id
 	, m.measurand
 	, m.units
-	, timezone(tz.tzid, :date_from::timestamp) as datetime_from
-	, timezone(tz.tzid, :date_to::timestamp) as datetime_to
+	, timezone(tz.tzid, :date_from) as datetime_from
+	, timezone(tz.tzid, :date_to) as datetime_to
    FROM sensors s
 	, sensor_systems sy
 	, sensor_nodes sn
@@ -378,8 +378,8 @@ async def fetch_measurements(q, db):
 		, m.measurands_id
 		, m.measurand
 		, m.units
-		, timezone(tz.tzid, :date_from::timestamp) as datetime_from
-		, timezone(tz.tzid, :date_to::timestamp) as datetime_to
+		, timezone(tz.tzid, :date_from) as datetime_from
+		, timezone(tz.tzid, :date_to) as datetime_to
 		FROM sensors s
 		, sensor_systems sy
 		, sensor_nodes sn
