@@ -40,6 +40,9 @@ env:
   RATE_TIME: 1
 
   EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+
+  EXPLORER_API_KEY: ${{ secrets.EXPLORER_API_KEY }}
+
   
 jobs:
   deploy:

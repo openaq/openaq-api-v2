@@ -1,7 +1,9 @@
 import logging
-from typing import Annotated
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends, Path, HTTPException
+from pydantic import field_validator
+from datetime import date, datetime
 
 from openaq_api.db import DB
 from openaq_api.v3.models.queries import (
@@ -35,6 +37,7 @@ class SensorQuery(QueryBaseModel):
     def where(self):
         return "s.sensors_id = :sensors_id"
 
+
 class LocationSensorQuery(QueryBaseModel):
     locations_id: int = Path(
         ..., description="Limit the results to a specific sensors id", ge=1
@@ -43,6 +46,7 @@ class LocationSensorQuery(QueryBaseModel):
     def where(self):
         return "n.sensor_nodes_id = :locations_id"
 
+
 class SensorMeasurementsQueries(
     Paging,
 	SensorQuery,
@@ -50,7 +54,20 @@ class SensorMeasurementsQueries(
     DateToQuery,
     PeriodNameQuery,
 ):
-    ...
+    @field_validator('date_to', 'date_from')
+    @classmethod
+    def must_be_date_if_aggregating_to_day(cls, v: Any, values) -> str:
+        if values.data.get('period_name') in ['dow','day','moy','month']:
+            if isinstance(v, datetime):
+                # this is to deal with the error that is thrown when using ValueError with datetime objects
+                err = [{
+                    "type": "value_error",
+                    "msg": "When aggregating data to daily values or higher you can only use whole dates in the `date_from` and `date_to` parameters. E.g. 2024-01-01, 2024-01-01 00:00:00",
+                    "input": str(v)
+                       }]
+                raise HTTPException(status_code=422, detail=err)
+        return v
+
 
 
 @router.get(
@@ -192,6 +209,63 @@ async def fetch_measurements(q, db):
         ORDER BY datetime
         {query.pagination()}
         """
+    elif q.period_name in ["raw"]:
+        sql = f"""
+	WITH sensor AS (
+		SELECT s.sensors_id
+	, sn.sensor_nodes_id
+  , s.data_averaging_period_seconds
+  , s.data_logging_period_seconds
+  , format('%ssec', s.data_averaging_period_seconds)::interval as averaging_interval
+  , format('%ssec', s.data_logging_period_seconds)::interval as logging_interval
+	, tz.tzid as timezone
+	, m.measurands_id
+	, m.measurand
+	, m.units
+	, timezone(tz.tzid, :date_from::timestamp) as datetime_from
+	, timezone(tz.tzid, :date_to::timestamp) as datetime_to
+   FROM sensors s
+	, sensor_systems sy
+	, sensor_nodes sn
+	, timezones tz
+	, measurands m
+	WHERE s.sensor_systems_id = sy.sensor_systems_id
+	AND sy.sensor_nodes_id = sn.sensor_nodes_id
+	AND sn.timezones_id = tz.gid
+	AND s.sensors_id = :sensors_id
+	AND s.measurands_id = m.measurands_id)
+	  SELECT m.sensors_id
+	   , value
+		, get_datetime_object(m.datetime, s.timezone)
+		, json_build_object(
+		    'id', s.measurands_id
+		  , 'units', s.units
+		  , 'name', s.measurand
+		) as parameter
+    , json_build_object(
+	     'label', 'raw'
+	   , 'interval', s.logging_interval
+	   , 'datetime_from', get_datetime_object(m.datetime - s.logging_interval, s.timezone)
+	   , 'datetime_to', get_datetime_object(m.datetime, s.timezone)
+	  ) as period
+    , json_build_object(
+	     'expected_count', 1
+		, 'observed_count', 1
+	   , 'expected_interval', s.logging_interval
+	   , 'observed_interval', s.averaging_interval
+	   , 'datetime_from', get_datetime_object(m.datetime - s.averaging_interval, s.timezone)
+	   , 'datetime_to', get_datetime_object(m.datetime, s.timezone)
+	   , 'percent_complete', 100
+	   , 'percent_coverage', (s.data_averaging_period_seconds/s.data_logging_period_seconds)*100
+	  ) as coverage
+        FROM measurements m
+        JOIN sensor s USING (sensors_id)
+        WHERE datetime > datetime_from
+			  AND datetime <= datetime_to
+			  AND s.sensors_id = :sensors_id
+        ORDER BY datetime
+        {query.pagination()}
+              """
     elif q.period_name in ["day", "month"]:
         # Query for the aggregate data
         if q.period_name == "day":
@@ -273,36 +347,78 @@ async def fetch_measurements(q, db):
             {query.pagination()}
         """
     elif q.period_name in ["hod","dow","moy"]:
-
-        fmt = ""
         if q.period_name == "hod":
-            fmt = "HH24"
-            dur = "01:00:00"
-            prd = "hour"
+            q.period_name = "hour"
+            period_format = "'HH24'"
+            period_first_offset = "'-1sec'"
+            period_last_offset = "'+1sec'"
         elif q.period_name == "dow":
-            fmt = "ID"
-            dur = "24:00:00"
-            prd = "day"
-        elif q.period_name == "mod":
-            fmt = "MM"
-            dur = "1 month"
-            prd = "month"
+            q.period_name = "day"
+            period_format = "'ID'"
+            period_first_offset = "'0sec'"
+            period_last_offset = "'0sec'"
+        elif q.period_name == "moy":
+            q.period_name = "month"
+            period_format = "'MM'"
+            period_first_offset = "'-1sec'"
+            period_last_offset = "'+1sec'"
 
 
-        q.period_name = prd
         sql = f"""
-WITH trends AS (
-SELECT
-  sn.id
+	-----------------------------------
+	-- start by getting some basic sensor information
+	-- and transforming the timestamps
+	-----------------------------------
+	WITH sensor AS (
+		SELECT s.sensors_id
+	    , sn.sensor_nodes_id
+        , s.data_averaging_period_seconds
+        , s.data_logging_period_seconds
+	    , tz.tzid as timezone
+		, m.measurands_id
+		, m.measurand
+		, m.units
+		, timezone(tz.tzid, :date_from::timestamp) as datetime_from
+		, timezone(tz.tzid, :date_to::timestamp) as datetime_to
+		FROM sensors s
+		, sensor_systems sy
+		, sensor_nodes sn
+		, timezones tz
+		, measurands m
+		WHERE s.sensor_systems_id = sy.sensor_systems_id
+		AND sy.sensor_nodes_id = sn.sensor_nodes_id
+		AND sn.timezones_id = tz.gid
+		AND s.sensors_id = :sensors_id
+		AND s.measurands_id = m.measurands_id
+	--------------------------------
+	-- Then we calculate what we expect to find in the data
+	--------------------------------
+	), expected AS (
+		SELECT to_char(timezone(s.timezone, dd - '1sec'::interval), {period_format}) as factor
+		, s.timezone
+		, COUNT(1) as n
+		, MIN(date_trunc(:period_name, dd + {period_first_offset}::interval)) as period_first
+		, MAX(date_trunc(:period_name, dd + {period_last_offset}::interval)) as period_last
+		FROM sensor s
+		, generate_series(s.datetime_from + '1hour'::interval, s.datetime_to, ('1hour')::interval) dd
+		GROUP BY 1,2
+	------------------------------------
+	-- Then we query what we have in the db
+	-- we join the sensor CTE here so that we have access to the timezone
+	------------------------------------
+	), observed AS (
+		SELECT
+		s.sensors_id
+		, s.data_averaging_period_seconds
+		, s.data_logging_period_seconds
+ , s.timezone
  , s.measurands_id
- , sn.timezone
- , to_char(timezone(sn.timezone, datetime - '1sec'::interval), '{fmt}') as factor
- , AVG(s.data_averaging_period_seconds) as avg_seconds
- , AVG(s.data_logging_period_seconds) as log_seconds
-, MAX(truncate_timestamp(datetime, :period_name, sn.timezone, '1{prd}'::interval)) as last_period
-, MIN(timezone(sn.timezone, datetime - '1sec'::interval)) as first_datetime
-, MAX(timezone(sn.timezone, datetime - '1sec'::interval)) as last_datetime
- , COUNT(1) as value_count
+ , s.measurand
+ , s.units
+ , to_char(timezone(s.timezone, datetime - '1sec'::interval), {period_format}) as factor
+ , MIN(datetime) as coverage_first
+ , MAX(datetime) as coverage_last
+ , COUNT(1) as n
  , AVG(value_avg) as value_avg
  , STDDEV(value_avg) as value_sd
  , MIN(value_avg) as value_min
@@ -314,46 +430,49 @@ SELECT
  , PERCENTILE_CONT(0.98) WITHIN GROUP(ORDER BY value_avg) as value_p98
  , current_timestamp as calculated_on
  FROM hourly_data m
- JOIN sensors s ON (m.sensors_id = s.sensors_id)
- JOIN sensor_systems sy ON (s.sensor_systems_id = sy.sensor_systems_id)
- JOIN locations_view_cached sn ON (sy.sensor_nodes_id = sn.id)
- {query.where()}
- GROUP BY 1, 2, 3, 4)
- SELECT t.id
- , json_build_object(
-	'label', factor
-			   , 'datetime_from', get_datetime_object(first_datetime, t.timezone)
-                , 'datetime_to', get_datetime_object(last_datetime, t.timezone)
-                , 'interval',  '{dur}'
-                ) as period
-            , sig_digits(value_avg, 2) as value
-			, json_build_object(
-		'id', t.measurands_id
-		, 'units', m.units
-		, 'name', m.measurand
- ) as parameter
- , json_build_object(
-    'sd', t.value_sd
-   , 'min', t.value_min
-   , 'q02', t.value_p02
-   , 'q25', t.value_p25
-   , 'median', t.value_p50
-   , 'q75', t.value_p75
-   , 'q98', t.value_p98
-   , 'max', t.value_max
- ) as summary
- , calculate_coverage(
-     t.value_count::int
-   , t.avg_seconds
-   , t.log_seconds
-  , expected_hours(first_datetime, last_datetime, '{prd}', factor) * 3600.0
-)||jsonb_build_object(
-          'datetime_from', get_datetime_object(first_datetime, t.timezone)
-        , 'datetime_to', get_datetime_object(last_datetime, t.timezone)
- ) as coverage
- FROM trends t
- JOIN measurands m ON (t.measurands_id = m.measurands_id)
- {query.pagination()}
+ JOIN sensor s ON (m.sensors_id = s.sensors_id)
+ WHERE datetime > datetime_from
+ AND datetime <= datetime_to
+ AND s.sensors_id = :sensors_id
+ GROUP BY 1, 2, 3, 4, 5, 6, 7, 8)
+-----------------------------------------
+-- And finally we tie it all together
+-----------------------------------------
+	SELECT o.sensors_id
+  , sig_digits(value_avg, 2) as value
+  , json_build_object(
+     'id', o.measurands_id
+   , 'units', o.units
+   , 'name', o.measurand
+  ) as parameter
+  , json_build_object(
+     'sd', o.value_sd
+   , 'min', o.value_min
+   , 'q02', o.value_p02
+   , 'q25', o.value_p25
+   , 'median', o.value_p50
+   , 'q75', o.value_p75
+   , 'q98', o.value_p98
+   , 'max', o.value_max
+     ) as summary
+	, json_build_object(
+	   'label', e.factor
+	 , 'datetime_from', get_datetime_object(e.period_first, o.timezone)
+	 , 'datetime_to', get_datetime_object(e.period_last, o.timezone)
+	 , 'interval', :period_name
+	) as period
+	, calculate_coverage(
+	    o.n::int
+	  , o.data_averaging_period_seconds
+      , o.data_logging_period_seconds
+	  , e.n * 3600.0)||
+	jsonb_build_object(
+	    'datetime_from', get_datetime_object(o.coverage_first, o.timezone)
+	  , 'datetime_to', get_datetime_object(o.coverage_last, o.timezone)
+	) as coverage
+	FROM expected e
+	JOIN observed o ON (e.factor = o.factor)
+    {query.pagination()}
     """
 
     return await db.fetchPage(sql, query.params())
