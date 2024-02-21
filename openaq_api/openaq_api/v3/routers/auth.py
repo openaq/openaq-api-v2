@@ -170,6 +170,53 @@ def send_password_reset_email(verification_code: str, email: str):
     return response
 
 
+def send_password_changed_email(email: str):
+    ses_client = boto3.client("ses")
+    TEXT_EMAIL_CONTENT = """
+        This email confirms you have successfully changed your password for you OpenAQ Explorer account.
+
+        If you believe you have recieved this email in error please reach out to info@openaq.org.
+    """
+    HTML_EMAIL_CONTENT = """
+        <html>
+            <head></head>
+            <body>
+            <table width="100%" border="0" cellpadding="0" cellspacing="0">
+            <tr>
+                <td bgcolor="#FFFFFF" style="padding:30px;">
+                    <h1 style='text-align:center'>OpenAQ password reset</h1>
+                    <p>This email confirms you have successfully changed your password for you OpenAQ Explorer account.</p>
+                    <p>If you believe you have recieved this email in error please reach out to info@openaq.org</p>
+                </td>
+            </tr>
+            </table>
+            </body>
+        </html>
+    """
+    msg = EmailMessage()
+    msg.set_content(TEXT_EMAIL_CONTENT)
+    msg.add_alternative(HTML_EMAIL_CONTENT, subtype="html")
+    msg["Subject"] = "OpenAQ Explorer - Reset password success"
+    msg["From"] = settings.EMAIL_SENDER
+    msg["To"] = email
+    response = ses_client.send_raw_email(
+        Source=settings.EMAIL_SENDER,
+        Destinations=[f"<{email}>"],
+        RawMessage={"Data": msg.as_string()},
+    )
+    logger.info(
+        SESEmailLog(
+            detail=json.dumps(
+                {
+                    "email": email,
+                    "reponse": response,
+                }
+            )
+        ).model_dump_json()
+    )
+    return response
+
+
 class RegenerateTokenBody(JsonBase):
     users_id: int
     token: str
@@ -226,6 +273,15 @@ async def request_password_reset_email(
     email_address = body.email_address
     verification_code = await db.generate_verification_code(email_address)
     response = send_password_reset_email(verification_code, email_address)
+    logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
+
+
+@router.post("/send-password-changed-email")
+async def password_changed_email(
+    body: PasswordResetEmailBody,
+):
+    email_address = body.email_address
+    response = send_password_changed_email(email_address)
     logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
 
 
