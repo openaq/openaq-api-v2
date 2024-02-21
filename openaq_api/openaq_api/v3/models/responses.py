@@ -216,7 +216,7 @@ class Measurement(JsonBase):
     parameter: ParameterBase
     period: Period | None = None
     coordinates: Coordinates | None = None
-    #summary: Summary | None = None
+    summary: Summary | None = None
     coverage: Coverage | None = None
 
 
