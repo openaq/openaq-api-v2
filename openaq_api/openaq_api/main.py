@@ -93,6 +93,8 @@ def default(obj):
         return round(obj, 5)
     if isinstance(obj, datetime.datetime):
         return obj.strptime("%Y-%m-%dT%H:%M:%SZ")
+    if isinstance(obj, datetime.date):
+        return obj.strptime("%Y-%m-%d")
 
 
 class ORJSONResponse(JSONResponse):
@@ -195,31 +197,30 @@ async def openaq_request_validation_exception_handler(
     request: Request, exc: RequestValidationError
 ):
     return ORJSONResponse(status_code=422, content=jsonable_encoder(str(exc)))
-    return PlainTextResponse(str(exc))
-    print("\n\n\n\n\n")
-    print(str(exc))
-    print("\n\n\n\n\n")
-    detail = orjson.loads(str(exc))
-    logger.debug(traceback.format_exc())
-    logger.info(
-        UnprocessableEntityLog(request=request, detail=str(exc)).model_dump_json()
-    )
-    detail = OpenAQValidationResponse(detail=detail)
-    return ORJSONResponse(status_code=422, content=jsonable_encoder(detail))
+    #return PlainTextResponse(str(exc))
+    # print("\n\n\n\n\n")
+    # print(str(exc))
+    # print("\n\n\n\n\n")
+    # detail = orjson.loads(str(exc))
+    # logger.debug(traceback.format_exc())
+    # logger.info(
+    #     UnprocessableEntityLog(request=request, detail=str(exc)).model_dump_json()
+    # )
+    # detail = OpenAQValidationResponse(detail=detail)
+    #return ORJSONResponse(status_code=422, content=jsonable_encoder(detail))
 
 
 @app.exception_handler(ValidationError)
 async def openaq_exception_handler(request: Request, exc: ValidationError):
     return ORJSONResponse(status_code=422, content=jsonable_encoder(str(exc)))
-
-    detail = orjson.loads(exc.model_dump_json())
-    logger.debug(traceback.format_exc())
-    logger.error(
-        ModelValidationError(
-            request=request, detail=exc.jsmodel_dump_jsonon()
-        ).model_dump_json()
-    )
-    return ORJSONResponse(status_code=422, content=jsonable_encoder(detail))
+    # detail = orjson.loads(exc.model_dump_json())
+    # logger.debug(traceback.format_exc())
+    # logger.error(
+    #     ModelValidationError(
+    #         request=request, detail=exc.jsmodel_dump_jsonon()
+    #     ).model_dump_json()
+    # )
+    #return ORJSONResponse(status_code=422, content=jsonable_encoder(detail))
     # return ORJSONResponse(status_code=500, content={"message": "internal server error"})
 
 
