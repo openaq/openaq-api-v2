@@ -170,6 +170,7 @@ def send_password_reset_email(verification_code: str, email: str):
     return response
 
 
+
 def send_password_changed_email(email: str):
     ses_client = boto3.client("ses")
     TEXT_EMAIL_CONTENT = """
@@ -215,7 +216,6 @@ def send_password_changed_email(email: str):
         ).model_dump_json()
     )
     return response
-
 
 class RegenerateTokenBody(JsonBase):
     users_id: int
