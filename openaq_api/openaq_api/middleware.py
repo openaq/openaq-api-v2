@@ -116,6 +116,24 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class PrivatePathsMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware to protect private endpoints with an API key
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        route = request.url.path
+        if "/auth" in route:
+            auth = request.headers.get("x-api-key", None)
+            if auth != settings.EXPLORER_API_KEY:
+                return JSONResponse(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    content={"message": "invalid credentials"},
+                )
+        response = await call_next(request)
+        return response
+
+
 class RateLimiterMiddleWare(BaseHTTPMiddleware):
     def __init__(
         self,
@@ -167,8 +185,12 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
+        print("RATE LIMIT\n\n\n")
         route = request.url.path
         auth = request.headers.get("x-api-key", None)
+        if auth == settings.EXPLORER_API_KEY:
+            response = await call_next(request)
+            return response
         limit = self.rate_amount
         now = datetime.now()
         key = f"{request.client.host}:{now.year}{now.month}{now.day}{now.hour}{now.minute}"

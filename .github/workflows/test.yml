@@ -17,6 +17,7 @@ env:
   DATABASE_DB: "placeholder"
   DATABASE_HOST: "placeholder"
   DATABASE_PORT: 42
+  EXPLORER_API_KEY: "placeholder"
 
 jobs:
   test:

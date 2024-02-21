@@ -1,7 +1,7 @@
 import logging
 from typing import Annotated
 from enum import StrEnum, auto
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, Path, Query, Request
 
 from openaq_api.db import DB
 from openaq_api.v3.models.queries import (
@@ -78,8 +78,7 @@ class LocationsQueries(
     MobileQuery,
     MonitorQuery,
     LocationsSorting,
-):
-    ...
+): ...
 
 
 @router.get(
@@ -90,8 +89,10 @@ class LocationsQueries(
 )
 async def location_get(
     locations: Annotated[LocationPathQuery, Depends(LocationPathQuery.depends())],
+    request: Request,
     db: DB = Depends(),
 ):
+    print("FOO", request.app.state.redis_client)
     response = await fetch_locations(locations, db)
     return response
 
@@ -128,6 +129,7 @@ async def fetch_locations(query, db):
     , bbox(geom) as bounds
     , datetime_first
     , datetime_last
+	, licenses
     {query_builder.fields() or ''}
     {query_builder.total()}
     FROM locations_view_cached

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 from typing import Any, List
 
 from humps import camelize
@@ -20,9 +20,6 @@ class Meta(JsonBase):
 class OpenAQResult(JsonBase):
     meta: Meta = Meta()
     results: list[Any] = []
-
-
-#
 
 
 class DatetimeObject(JsonBase):
@@ -106,6 +103,14 @@ class InstrumentBase(JsonBase):
 class ManufacturerBase(JsonBase):
     id: int
     name: str
+
+
+class LicenseBase(JsonBase):
+	id: int
+	url: str
+	date_from: date
+	date_to: date | None = None
+	description: str | None = None
 
 
 class Latest(JsonBase):
@@ -198,6 +203,7 @@ class Location(JsonBase):
     instruments: list[InstrumentBase]
     sensors: list[SensorBase]
     coordinates: Coordinates
+    licenses: list[LicenseBase] | None = None
     bounds: list[float] = Field(..., min_length=4, max_length=4)
     distance: float | None = None
     datetime_first: DatetimeObject
@@ -205,11 +211,12 @@ class Location(JsonBase):
 
 
 class Measurement(JsonBase):
-    period: Period
+    #datetime: DatetimeObject
     value: float
     parameter: ParameterBase
+    period: Period | None = None
     coordinates: Coordinates | None = None
-    summary: Summary | None = None
+    #summary: Summary | None = None
     coverage: Coverage | None = None
 
 

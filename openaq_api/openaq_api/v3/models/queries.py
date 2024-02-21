@@ -270,7 +270,7 @@ class Paging(QueryBaseModel):
 
     def pagination(self) -> str:
         return "LIMIT :limit OFFSET :offset"
-    
+
 
 class ParametersQuery(QueryBaseModel):
     """Pydantic query model for the parameters query parameter
@@ -449,7 +449,6 @@ class DateFromQuery(QueryBaseModel):
         date_from: date or datetime in ISO-8601 format to filter results to a
         date range.
     """
-
     date_from: datetime | date | None = Query(
         None,
         description="From when?",
@@ -467,6 +466,7 @@ class DateFromQuery(QueryBaseModel):
         Returns:
             string of WHERE clause if `date_from` is set
         """
+
         if self.date_from is None:
             return None
         elif isinstance(self.date_from, datetime):
@@ -524,6 +524,7 @@ class PeriodNames(StrEnum):
     hod = "hod"
     dow = "dow"
     moy = "moy"
+    raw = "raw"
 
 
 class PeriodNameQuery(QueryBaseModel):
@@ -536,7 +537,7 @@ class PeriodNameQuery(QueryBaseModel):
     """
 
     period_name: PeriodNames | None = Query(
-        "hour", description="Period to aggregate. Month, day, hour"
+        "hour", description="Period to aggregate. Month, day, hour, hour of day (hod), day of week (dow) and month of year (moy)"
     )
 
 
@@ -698,13 +699,13 @@ class BboxQuery(QueryBaseModel):
             errors = []
             bbox = [float(x) for x in v.split(",")]
             minx, miny, maxx, maxy = bbox
-            if not minx >= -180 and minx <= 180:
+            if not (minx >= -180 and minx <= 180):
                 errors.append("X min must be between -180 and 180")
-            if not miny >= -90 and miny <= 90:
+            if not (miny >= -90 and miny <= 90):
                 errors.append("Y min must be between -90 and 90")
-            if not maxx >= -180 and maxx <= 180:
+            if not (maxx >= -180 and maxx <= 180):
                 errors.append("X max must be between -180 and 180")
-            if not maxy >= -90 and maxy <= 90:
+            if not (maxy >= -90 and maxy <= 90):
                 errors.append("Y max must be between -90 and 90")
             if minx > maxx:
                 errors.append("X max must be greater than or equal to X min")
