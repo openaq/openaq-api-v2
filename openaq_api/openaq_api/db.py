@@ -219,6 +219,26 @@ class DB:
         await conn.close()
         return user[0]
 
+    async def generate_verification_code(self, email_address: str) -> str:
+        """
+        gets user info from users table and entities table
+        """
+        query = """
+        UPDATE 
+            users
+        SET
+            verification_code = generate_token()
+            , expires_on = (timestamptz (NOW() + INTERVAL '30min')) 
+        WHERE 
+            email_address = :email_address
+        RETURNING verification_code as "verificationCode"
+        """
+        conn = await asyncpg.connect(settings.DATABASE_WRITE_URL)
+        rquery, args = render(query, **{"email_address": email_address})
+        row = await conn.fetch(rquery, *args)
+        await conn.close()
+        return row[0][0]
+
     async def regenerate_user_token(self, users_id: int, token: str) -> str:
         """
         calls the get_user_token plpgsql function to verify user email and generate API token

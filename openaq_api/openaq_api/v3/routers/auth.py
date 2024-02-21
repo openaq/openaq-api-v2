@@ -123,6 +123,53 @@ def send_verification_email(verification_code: str, full_name: str, email: str):
     return response
 
 
+def send_password_reset_email(verification_code: str, email: str):
+    ses_client = boto3.client("ses")
+    TEXT_EMAIL_CONTENT = f"""
+    You have requested a password reset for your OpenAQ Explorer account. Please visit the following link (expires in 30 minutes):
+    https://explore.openaq.org/new-password?code={verification_code}
+    """
+    HTML_EMAIL_CONTENT = f"""
+        <html>
+            <head></head>
+            <body>
+            <table width="100%" border="0" cellpadding="0" cellspacing="0">
+            <tr>
+                <td bgcolor="#FFFFFF" style="padding:30px;">
+                    <h1 style='text-align:center'>OpenAQ password reset requests</h1>
+                    <p>You have requested a password reset for your OpenAQ Explorer account. Please visit the following link (expires in 30 minutes):</p>
+                    <a href="https://explore.openaq.org/new-password?code={verification_code}">https://explore.openaq.org/new-password?code={verification_code}</a>
+                </td>
+            </tr>
+            </table>
+            </body>
+        </html>
+    """
+    msg = EmailMessage()
+    msg.set_content(TEXT_EMAIL_CONTENT)
+    msg.add_alternative(HTML_EMAIL_CONTENT, subtype="html")
+    msg["Subject"] = "OpenAQ Explorer - Reset password request"
+    msg["From"] = settings.EMAIL_SENDER
+    msg["To"] = email
+    response = ses_client.send_raw_email(
+        Source=settings.EMAIL_SENDER,
+        Destinations=[f"<{email}>"],
+        RawMessage={"Data": msg.as_string()},
+    )
+    logger.info(
+        SESEmailLog(
+            detail=json.dumps(
+                {
+                    "email": email,
+                    "verificationCode": verification_code,
+                    "reponse": response,
+                }
+            )
+        ).model_dump_json()
+    )
+    return response
+
+
 class RegenerateTokenBody(JsonBase):
     users_id: int
     token: str
@@ -164,6 +211,21 @@ async def send_verification(
     email_address = user[1]
     verification_code = user[2]
     response = send_verification_email(verification_code, full_name, email_address)
+    logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
+
+
+class PasswordResetEmailBody(JsonBase):
+    email_address: str
+
+
+@router.post("/send-password-email")
+async def request_password_reset_email(
+    body: PasswordResetEmailBody,
+    db: DB = Depends(),
+):
+    email_address = body.email_address
+    verification_code = await db.generate_verification_code(email_address)
+    response = send_password_reset_email(verification_code, email_address)
     logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
 
 
