@@ -1,7 +1,9 @@
 import logging
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Path
+from pydantic import field_validator
+from datetime import date, datetime
 
 from openaq_api.db import DB
 from openaq_api.v3.models.queries import (
@@ -35,6 +37,7 @@ class SensorQuery(QueryBaseModel):
     def where(self):
         return "s.sensors_id = :sensors_id"
 
+
 class LocationSensorQuery(QueryBaseModel):
     locations_id: int = Path(
         ..., description="Limit the results to a specific sensors id", ge=1
@@ -43,6 +46,7 @@ class LocationSensorQuery(QueryBaseModel):
     def where(self):
         return "n.sensor_nodes_id = :locations_id"
 
+
 class SensorMeasurementsQueries(
     Paging,
 	SensorQuery,
@@ -50,7 +54,14 @@ class SensorMeasurementsQueries(
     DateToQuery,
     PeriodNameQuery,
 ):
-    ...
+    @field_validator('date_to', 'date_from')
+    @classmethod
+    def must_be_date_if_aggregating_to_day(cls, v: Any, values) -> str:
+        if values.data.get('period_name') in ['dow','day','moy','month']:
+            if isinstance(v, datetime):
+                raise ValueError("only dates can be used when aggregating to day or higher")
+        return v
+
 
 
 @router.get(
