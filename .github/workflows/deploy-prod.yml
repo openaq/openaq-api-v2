@@ -34,8 +34,8 @@ env:
   VPC_ID: ${{ secrets.VPC_ID }}
 
   RATE_LIMITING: True
-  RATE_AMOUNT: 100
-  RATE_AMOUNT_KEY: 400
+  RATE_AMOUNT: 3
+  RATE_AMOUNT_KEY: 300
   RATE_TIME: 1
   USER_AGENT: ${{ secrets.USER_AGENT }}
   ORIGIN: ${{ secrets.ORIGIN }}
