@@ -256,9 +256,11 @@ async def get_register(
     db: DB = Depends(),
 ):
     user = db.get_user(users_id=users_id)
-    full_name = user[0]
-    email_address = user[1]
-    verification_code = user[2]
+    if not user:
+        return HTTPException(401, "invalid user")
+    full_name = user[0][0]
+    email_address = user[0][1]
+    verification_code = user[0][2]
     response = send_verification_email(verification_code, full_name, email_address)
     logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
     return RedirectResponse("/check-email", status_code=status.HTTP_303_SEE_OTHER)

@@ -170,7 +170,6 @@ def send_password_reset_email(verification_code: str, email: str):
     return response
 
 
-
 def send_password_changed_email(email: str):
     ses_client = boto3.client("ses")
     TEXT_EMAIL_CONTENT = """
@@ -217,6 +216,7 @@ def send_password_changed_email(email: str):
     )
     return response
 
+
 class RegenerateTokenBody(JsonBase):
     users_id: int
     token: str
@@ -254,10 +254,33 @@ async def send_verification(
     db: DB = Depends(),
 ):
     user = await db.get_user(body.users_id)
-    full_name = user[0]
-    email_address = user[1]
-    verification_code = user[2]
+    if not user:
+        return HTTPException(401, "invalid user")
+    full_name = user[0][0]
+    email_address = user[0][1]
+    verification_code = user[0][2]
     response = send_verification_email(verification_code, full_name, email_address)
+    logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
+
+
+class ResendVerificationEmailBody(JsonBase):
+    users_id: int
+    verification_code: str
+
+
+@router.post("/resend-verification-code")
+async def resend_verification_email(
+    body: ResendVerificationEmailBody,
+    db: DB = Depends(),
+):
+    user = await db.get_user(body.users_id)
+    if not user:
+        return HTTPException(401, "invalid user")
+    if user[0][2] != body.verification_code:
+        return HTTPException(401, "invalid verification code")
+    print(user[0][1])
+    verification_code = await db.generate_verification_code(user[0][1])
+    response = send_verification_email(verification_code, user[0][0], user[0][1])
     logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
 
 
@@ -317,7 +340,9 @@ async def change_password_email(
 ):
     """ """
     user = await db.get_user(body.users_id)
-    full_name = user[0]
-    email_address = user[1]
+    if not user:
+        return HTTPException(401, "invalid user")
+    full_name = user[0][0]
+    email_address = user[0][1]
     response = send_change_password_email(full_name, email_address)
     logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())

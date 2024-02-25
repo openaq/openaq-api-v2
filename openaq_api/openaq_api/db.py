@@ -217,7 +217,7 @@ class DB:
         rquery, args = render(query, **{"users_id": users_id})
         user = await conn.fetch(rquery, *args)
         await conn.close()
-        return user[0]
+        return user
 
     async def generate_verification_code(self, email_address: str) -> str:
         """
