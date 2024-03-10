@@ -96,22 +96,21 @@ async def manufacturers_get(
 
 async def fetch_manufacturers(query, db):
     query_builder = QueryBuilder(query)
-    sql = f"""   
-        SELECT 
+    sql = f"""
+        SELECT
             e.entities_id AS id
             , e.full_name AS name
             , ARRAY_AGG(DISTINCT (jsonb_build_object('id', i.instruments_id, 'name', i.label))) AS instruments
             , COUNT(1) OVER() AS found
-        FROM 
+        FROM
             sensor_nodes sn
-        JOIN 
+        JOIN
             sensor_systems ss ON sn.sensor_nodes_id = ss.sensor_nodes_id
-        JOIN 
+        JOIN
             instruments i ON i.instruments_id = ss.instruments_id
-        JOIN 
+        JOIN
             entities e ON e.entities_id = i.manufacturer_entities_id
         {query_builder.where()}
-
         GROUP BY id, name
         {query_builder.pagination()};
 

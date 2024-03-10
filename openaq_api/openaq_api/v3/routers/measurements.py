@@ -152,6 +152,7 @@ async def fetch_measurements(q, db):
             JOIN sensor_nodes sn ON (sy.sensor_nodes_id = sn.sensor_nodes_id)
             JOIN timezones ts ON (sn.timezones_id = ts.gid)
             {query.where()}
+            AND sn.is_public AND s.is_public
             GROUP BY 1, 2, 3, 4)
             SELECT t.sensor_nodes_id
             , json_build_object(
