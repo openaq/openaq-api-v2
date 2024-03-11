@@ -17,20 +17,20 @@ sensor = 393731
 node = 62376
 
 urls = [
-	## v2
+    ## v2
     {"path": "/v3/instruments/3","status": 200},
     {"path": "/v2/averages?locations_id=:node","status": 404},
     {"path": "/v2/locations/:node","status": 404},
     {"path": "/v2/latest/:node","status": 404},
     {"path": "/v2/measurements?location_id=:node","status": 404},
-	## v3
+    ## v3
     {"path": "/v3/latest?location_id=:node","status": 404},
     {"path": "/v3/locations/:node","status": 404}, # after
     {"path": "/v3/locations/:node/measurements","status": 404}, # after
     {"path": "/v3/sensors/:sensor/measurements","status": 404}, # after
     {"path": "/v3/sensors/:sensor","status": 404}, # after
-	# all of the following have an added where clause
-	# and we just want to make sure the sql works
+    # all of the following have an added where clause
+    # and we just want to make sure the sql works
     {"path": "/v2/cities?limit=1","status": 200},
     {"path": "/v2/countries?limit=1","status": 200},
     {"path": "/v2/sources?limit=1","status": 200},
@@ -46,4 +46,9 @@ class TestUrls:
         path = path.replace(':sensor', str(sensor))
         path = path.replace(':node', str(node))
         response = client.get(path)
-        assert response.status_code == url.get('status')
+        code = url.get('status')
+        if code == 404:
+            data = json.loads(response.content)
+            assert len(data['results']) == 0
+        else:
+            assert response.status_code == url.get('status')
