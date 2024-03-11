@@ -99,6 +99,7 @@ async def fetch_owners(query, db):
     FROM entities e
     JOIN sensor_nodes sn ON e.entities_id = sn.owner_entities_id
     {query_builder.where()}
+    AND sn.is_public
     GROUP BY e.entities_id, name
     ORDER BY e.entities_id
     {query_builder.pagination()};

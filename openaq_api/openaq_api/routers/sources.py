@@ -82,6 +82,7 @@ async def sources_get(
     --LEFT JOIN groups_view USING (groups_id, measurands_id)
     --WHERE rollup='total' AND groups_view.type='node'
     WHERE {sources.where()}
+		AND sensors.is_public
     GROUP BY
     1,2,3,4,5
     ORDER BY "{sources.order_by}" {sources.sort}
