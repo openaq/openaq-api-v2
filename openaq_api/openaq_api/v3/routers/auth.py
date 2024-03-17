@@ -217,6 +217,29 @@ def send_password_changed_email(email: str):
     return response
 
 
+class RegisterTokenBody(JsonBase):
+    users_id: int
+
+
+@router.post("/register-token")
+async def get_register(
+    request: Request,
+    body: RegisterTokenBody,
+    db: DB = Depends(),
+):
+    """ """
+    try:
+        user_token = await db.get_user_token(body.users_id)
+        if not user_token:
+            return HTTPException(401)
+        redis_client = getattr(request.app.state, "redis_client")
+        if redis_client:
+            await redis_client.sadd("keys", user_token)
+        return {"message": "success"}
+    except Exception as e:
+        return e
+
+
 class RegenerateTokenBody(JsonBase):
     users_id: int
     token: str
