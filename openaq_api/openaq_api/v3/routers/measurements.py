@@ -122,6 +122,8 @@ async def fetch_measurements(q, db):
             dur = "24:00:00"
         elif q.period_name == "month":
             dur = "1 month"
+        elif q.period_name == "year":
+            dur = "1 year"
 
         sql = f"""
             WITH meas AS (

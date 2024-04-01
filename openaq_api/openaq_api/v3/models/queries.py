@@ -537,7 +537,7 @@ class PeriodNameQuery(QueryBaseModel):
     """
 
     period_name: PeriodNames | None = Query(
-        "hour", description="Period to aggregate. Month, day, hour, hour of day (hod), day of week (dow) and month of year (moy)"
+        "hour", description="Period to aggregate. Year, month, day, hour, hour of day (hod), day of week (dow) and month of year (moy)"
     )
 
 

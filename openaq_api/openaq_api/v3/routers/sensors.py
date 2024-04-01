@@ -57,7 +57,7 @@ class SensorMeasurementsQueries(
     @field_validator('date_to', 'date_from')
     @classmethod
     def must_be_date_if_aggregating_to_day(cls, v: Any, values) -> str:
-        if values.data.get('period_name') in ['dow','day','moy','month']:
+        if values.data.get('period_name') in ['dow','day','moy','month','year']:
             if isinstance(v, datetime):
                 # this is to deal with the error that is thrown when using ValueError with datetime objects
                 err = [{
@@ -161,8 +161,14 @@ async def fetch_sensors(q, db):
 
 async def fetch_measurements(q, db):
     query = QueryBuilder(q)
+
     dur = "01:00:00"
     expected_hours = 1
+    base_query_name = 'hourly_data'
+    interval_seconds = 3600
+
+    #base_query_name = 'daily_data'
+    #interval_seconds = 3600 * 24
 
     if q.period_name in [None, "hour"]:
         # Query for hourly data
@@ -175,7 +181,7 @@ async def fetch_measurements(q, db):
         , 'interval',  '01:00:00'
         ) as period
         , json_build_object(
-        'id', h.measurands_id
+        'id', s.measurands_id
         , 'units', m.units
         , 'name', m.measurand
         ) as parameter
@@ -200,11 +206,11 @@ async def fetch_measurements(q, db):
         , 'datetime_to', get_datetime_object(h.last_datetime, sn.timezone)
         ) as coverage
         {query.fields()}
-        FROM hourly_data h
+        FROM {base_query_name} h
         JOIN sensors s USING (sensors_id)
         JOIN sensor_systems sy USING (sensor_systems_id)
         JOIN locations_view_cached sn ON (sy.sensor_nodes_id = sn.id)
-        JOIN measurands m ON (m.measurands_id = h.measurands_id)
+        JOIN measurands m ON (m.measurands_id = s.measurands_id)
         {query.where()}
         ORDER BY datetime
         {query.pagination()}
@@ -267,12 +273,15 @@ async def fetch_measurements(q, db):
         ORDER BY datetime
         {query.pagination()}
               """
-    elif q.period_name in ["day", "month"]:
+    elif q.period_name in ["day", "month", "year"]:
         # Query for the aggregate data
         if q.period_name == "day":
             dur = "24:00:00"
         elif q.period_name == "month":
-            dur = "1 month"
+            dur = "1month"
+        elif q.period_name == "year":
+            dur = "1year"
+
 
         sql = f"""
             WITH meas AS (
@@ -297,7 +306,7 @@ async def fetch_measurements(q, db):
             , PERCENTILE_CONT(0.75) WITHIN GROUP(ORDER BY value_avg) as value_p75
             , PERCENTILE_CONT(0.98) WITHIN GROUP(ORDER BY value_avg) as value_p98
             , current_timestamp as calculated_on
-            FROM hourly_data m
+            FROM {base_query_name} m
             JOIN sensors s ON (m.sensors_id = s.sensors_id)
             JOIN sensor_systems sy ON (s.sensor_systems_id = sy.sensor_systems_id)
             JOIN locations_view_cached sn ON (sy.sensor_nodes_id = sn.id)
@@ -306,7 +315,7 @@ async def fetch_measurements(q, db):
             SELECT t.sensor_nodes_id
             ----------
             , json_build_object(
-                'label', '1{q.period_name}'
+                'label', '1 {q.period_name}'
                 , 'datetime_from', get_datetime_object(datetime, t.timezone)
                 , 'datetime_to', get_datetime_object(last_period, t.timezone)
                 , 'interval',  '{dur}'
@@ -333,8 +342,8 @@ async def fetch_measurements(q, db):
             --------
             , calculate_coverage(
                 value_count::int
-                , 3600
-                , 3600
+                , {interval_seconds}
+                , {interval_seconds}
                 , EXTRACT(EPOCH FROM last_period - datetime)
             )||jsonb_build_object(
                     'datetime_from', get_datetime_object(first_datetime, t.timezone)
