@@ -11,6 +11,7 @@ from openaq_api.v3.models.queries import (
     DateToQuery,
     Paging,
     PeriodNameQuery,
+    BaseDataQuery,
     QueryBaseModel,
     QueryBuilder,
 )
@@ -52,6 +53,7 @@ class SensorMeasurementsQueries(
     SensorQuery,
     DateFromQuery,
     DateToQuery,
+    BaseDataQuery,
     PeriodNameQuery,
 ):
     @field_validator('date_to', 'date_from')
@@ -167,8 +169,9 @@ async def fetch_measurements(q, db):
     base_query_name = 'hourly_data'
     interval_seconds = 3600
 
-    #base_query_name = 'daily_data'
-    #interval_seconds = 3600 * 24
+    if q.base_data == 'daily':
+        base_query_name = 'daily_data'
+        interval_seconds = 3600 * 24
 
     if q.period_name in [None, "hour"]:
         # Query for hourly data
