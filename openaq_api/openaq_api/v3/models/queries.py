@@ -526,6 +526,10 @@ class PeriodNames(StrEnum):
     moy = "moy"
     raw = "raw"
 
+class BaseData(StrEnum):
+    hour = "hourly"
+    day = "daily"
+
 
 class PeriodNameQuery(QueryBaseModel):
     """Pydantic query model for the `period_name` query parameter.
@@ -538,6 +542,21 @@ class PeriodNameQuery(QueryBaseModel):
 
     period_name: PeriodNames | None = Query(
         "hour", description="Period to aggregate. Year, month, day, hour, hour of day (hod), day of week (dow) and month of year (moy)"
+    )
+
+
+
+class BaseDataQuery(QueryBaseModel):
+    """Pydantic query model for the `base_data` query parameter.
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        base_data: the name of the underlying table to pull data from
+    """
+
+    base_data: BaseData | None = Query(
+        "hourly", description="Base data to pull from. Options are hourly, daily"
     )
 
 
