@@ -45,8 +45,8 @@ class Parameter(BaseModel):
     unit: str
     count: int
     average: float
-    last_value: float = Field(..., alias="lastValue")
     parameter: str
+    last_value: float | None = Field(None, alias="lastValue")
     display_name: str | None = Field(None, alias="displayName")
     last_updated: str = Field(..., alias="lastUpdated")
     parameter_id: int = Field(..., alias="parameterId")
