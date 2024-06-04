@@ -45,14 +45,13 @@ class LocationMeasurementsQueries(
     DateToQuery,
     MeasurementsParametersQuery,
     PeriodNameQuery,
-):
-    ...
+): ...
 
 
 @router.get(
     "/locations/{locations_id}/measurements",
     response_model=MeasurementsResponse,
-    summary="Get measurements by location",
+    summary="Get measurements by location (DEPRECATING - will be removed in future releases)",
     description="Provides a list of measurements by location ID",
 )
 async def measurements_get(
@@ -153,6 +152,7 @@ async def fetch_measurements(q, db):
             JOIN sensor_nodes sn ON (sy.sensor_nodes_id = sn.sensor_nodes_id)
             JOIN timezones ts ON (sn.timezones_id = ts.gid)
             {query.where()}
+            AND sn.is_public AND s.is_public
             GROUP BY 1, 2, 3, 4)
             SELECT t.sensor_nodes_id
             , json_build_object(

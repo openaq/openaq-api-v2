@@ -105,31 +105,32 @@ async def cities_get(
     elif cities.order_by == "locations":
         order_by = "locations"
     q = f"""
-        SELECT 
+        SELECT
             count(*) over () as citiescount,
             c.iso AS country
             , sn.city AS city
             , SUM(sr.value_count) AS "count"
             , COUNT(DISTINCT sn.sensor_nodes_id) AS locations
-			, MIN(sr.datetime_first)::TEXT AS first_updated
-			, MAX(sr.datetime_last)::TEXT AS last_updated
-			, array_agg(DISTINCT m.measurand) AS parameters
+            , MIN(sr.datetime_first)::TEXT AS first_updated
+            , MAX(sr.datetime_last)::TEXT AS last_updated
+            , array_agg(DISTINCT m.measurand) AS parameters
             , COUNT(1) OVER() as found
-        FROM 
+        FROM
             sensors_rollup sr
-        JOIN 
+        JOIN
             sensors s USING (sensors_id)
         JOIN
             sensor_systems ss USING (sensor_systems_id)
         JOIN
             sensor_nodes sn USING (sensor_nodes_id)
-        JOIN 
+        JOIN
             countries c USING (countries_id)
-		JOIN
-			measurands m USING (measurands_id)
+        JOIN
+            measurands m USING (measurands_id)
         WHERE
         {cities.where()}
-        and city is not null
+        AND city is not null
+        AND s.is_public
         GROUP BY c.iso, sn.city
         ORDER BY {order_by} {cities.sort}
         OFFSET :offset
@@ -161,7 +162,7 @@ async def cities_getv1(
     elif cities.order_by == "locations":
         order_by = "locations"
     q = f"""
-        SELECT 
+        SELECT
             count(*) over () as citiescount
             , c.iso AS country
             , sn.city AS "name"
@@ -169,19 +170,20 @@ async def cities_getv1(
             , SUM(sr.value_count) AS "count"
             , COUNT(DISTINCT sn.sensor_nodes_id) AS locations
             , COUNT(1) OVER() as found
-        FROM 
+        FROM
             sensors_rollup sr
-        JOIN 
+        JOIN
             sensors s USING (sensors_id)
         JOIN
             sensor_systems ss USING (sensor_systems_id)
         JOIN
             sensor_nodes sn USING (sensor_nodes_id)
-        JOIN 
+        JOIN
             countries c USING (countries_id)
         WHERE
         {cities.where()}
-        and city is not null
+        AND city is not null
+        AND s.is_public
         GROUP BY c.iso, sn.city
         ORDER BY {order_by} {cities.sort}
         OFFSET :offset

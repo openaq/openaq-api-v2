@@ -6,10 +6,11 @@ from datetime import datetime, timezone
 from email.message import EmailMessage
 
 import boto3
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from fastapi import APIRouter, Body, Depends, Form, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from passlib.hash import pbkdf2_sha256
+from pydantic import BaseModel
 
 from ..db import DB
 from ..forms.register import RegisterForm, UserExistsException
@@ -143,13 +144,13 @@ async def check_email(request: Request):
 @router.get("/verify/{verification_code}")
 async def verify(request: Request, verification_code: str, db: DB = Depends()):
     query = """
-    SELECT 
+    SELECT
         users.users_id,  users.is_active, users.expires_on, entities.full_name, users.email_address
-    FROM 
+    FROM
         users
     JOIN
         users_entities USING (users_id)
-    JOIN 
+    JOIN
         entities USING (entities_id)
     WHERE
         verification_code = :verification_code
@@ -209,8 +210,8 @@ async def verify(request: Request, verification_code: str, db: DB = Depends()):
     else:
         try:
             token = await db.get_user_token(row[0])
-            if request.app.state.redis_client:
-                redis_client = request.app.state.redis_client
+            redis_client = getattr(request.app.state, "redis_client")
+            if redis_client:
                 await redis_client.sadd("keys", token)
             send_api_key_email(token, row[3], row[4])
         except Exception as e:
@@ -218,6 +219,51 @@ async def verify(request: Request, verification_code: str, db: DB = Depends()):
         return templates.TemplateResponse(
             "verify/index.html", {"request": request, "error": False, "verify": True}
         )
+
+
+class RegenerateTokenBody(BaseModel):
+    users_id: int
+    token: str
+
+
+@router.post("/regenerate-token")
+async def regenerate_token(
+    token: int = Body(..., embed=True)
+    # request: Request,
+    # db: DB = Depends(),
+):
+    """ """
+    _token = token
+    print(_token)
+    try:
+        # db.get_user_token
+        # await db.regenerate_user_token(body.users_id, _token)
+        # token = await db.get_user_token(body.users_id)
+        # redis_client = getattr(request.app.state, "redis_client")
+        # print("REDIS", redis_client)
+        # if redis_client:
+        #     await redis_client.srem("keys", _token)
+        #     await redis_client.sadd("keys", token)
+        return {"success"}
+    except Exception as e:
+        return e
+
+
+@router.post("/send-verification")
+async def get_register(
+    request: Request,
+    users_id: int,
+    db: DB = Depends(),
+):
+    user = db.get_user(users_id=users_id)
+    if not user:
+        return HTTPException(401, "invalid user")
+    full_name = user[0][0]
+    email_address = user[0][1]
+    verification_code = user[0][2]
+    response = send_verification_email(verification_code, full_name, email_address)
+    logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
+    return RedirectResponse("/check-email", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.get("/register")

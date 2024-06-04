@@ -1,7 +1,8 @@
+from enum import StrEnum, auto
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends, Path, Query
 
 from openaq_api.db import DB
 from openaq_api.v3.models.queries import (
@@ -10,6 +11,7 @@ from openaq_api.v3.models.queries import (
     ProviderQuery,
     QueryBaseModel,
     QueryBuilder,
+    SortingBase,
 )
 from openaq_api.v3.models.responses import CountriesResponse
 
@@ -47,12 +49,19 @@ class CountryPathQuery(QueryBaseModel):
         return "id = :countries_id"
 
 
-## TODO
-class CountriesQueries(
-    Paging,
-    ParametersQuery,
-    ProviderQuery,
-):
+class CountriesSortFields(StrEnum):
+    ID = auto()
+
+
+class CountriesSorting(SortingBase):
+    order_by: CountriesSortFields | None = Query(
+        "id",
+        description="The field by which to order results",
+        examples=["order_by=id"],
+    )
+
+
+class CountriesQueries(Paging, ParametersQuery, ProviderQuery, CountriesSorting):
     ...
 
 
@@ -93,14 +102,10 @@ async def fetch_countries(query, db):
     , datetime_first
     , datetime_last
     , parameters
-    , locations_count
-    , measurements_count
-    , providers_count
     {query_builder.total()}
     FROM countries_view_cached
     {query_builder.where()}
     {query_builder.pagination()}
     """
-    print(sql)
     response = await db.fetchPage(sql, query_builder.params())
     return response

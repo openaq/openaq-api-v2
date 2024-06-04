@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 from typing import Any, List
 
 from humps import camelize
@@ -20,9 +20,6 @@ class Meta(JsonBase):
 class OpenAQResult(JsonBase):
     meta: Meta = Meta()
     results: list[Any] = []
-
-
-#
 
 
 class DatetimeObject(JsonBase):
@@ -73,6 +70,7 @@ class Summary(JsonBase):
     q75: float | None = None
     q98: float | None = None
     max: float | None = None
+    avg: float | None = None
     sd: float | None = None
 
 
@@ -107,6 +105,14 @@ class ManufacturerBase(JsonBase):
     name: str
 
 
+class LicenseBase(JsonBase):
+	id: int
+	url: str
+	date_from: date
+	date_to: date | None = None
+	description: str | None = None
+
+
 class Latest(JsonBase):
     datetime: DatetimeObject
     value: float
@@ -116,6 +122,7 @@ class Latest(JsonBase):
 class InstrumentBase(JsonBase):
     id: int
     name: str
+
 
 class ParameterBase(JsonBase):
     id: int
@@ -135,8 +142,6 @@ class SensorBase(JsonBase):
 
 class Parameter(ParameterBase):
     description: str | None = None
-    locations_count: int
-    measurements_count: int
 
 
 class Country(CountryBase):
@@ -146,9 +151,6 @@ class Country(CountryBase):
     datetime_first: datetime
     datetime_last: datetime
     parameters: list[ParameterBase]
-    locations_count: int
-    measurements_count: int
-    providers_count: int
 
 
 class Entity(EntityBase):
@@ -163,34 +165,27 @@ class Provider(ProviderBase):
     datetime_first: datetime
     datetime_last: datetime
     owner_entity: EntityBase
-    locations_count: int
-    measurements_count: int
-    countries_count: int
     parameters: list[ParameterBase]
     bbox: GeoJSON | None = None
 
 
 class Owner(OwnerBase):
-    locations_count: int = Field(alias='locationsCount')
+    ...
 
 
 class Instrument(InstrumentBase):
-    locations_count: int = Field(alias='locationsCount')
-    is_monitor: bool = Field(alias='isMonitor')
+    is_monitor: bool = Field(alias="isMonitor")
     manufacturer: ManufacturerBase
 
 
 class Manufacturer(ManufacturerBase):
     instruments: List[InstrumentBase]
-    locations_count: int = Field(alias="locationsCount")
-
 
 
 class Sensor(SensorBase):
     datetime_first: DatetimeObject
     datetime_last: DatetimeObject
     coverage: Coverage
-    # period: Period
     latest: Latest
     summary: Summary
 
@@ -208,6 +203,7 @@ class Location(JsonBase):
     instruments: list[InstrumentBase]
     sensors: list[SensorBase]
     coordinates: Coordinates
+    licenses: list[LicenseBase] | None = None
     bounds: list[float] = Field(..., min_length=4, max_length=4)
     distance: float | None = None
     datetime_first: DatetimeObject
@@ -215,9 +211,10 @@ class Location(JsonBase):
 
 
 class Measurement(JsonBase):
-    period: Period
+    #datetime: DatetimeObject
     value: float
     parameter: ParameterBase
+    period: Period | None = None
     coordinates: Coordinates | None = None
     summary: Summary | None = None
     coverage: Coverage | None = None
@@ -235,8 +232,10 @@ class Trend(JsonBase):
 
 # response classes
 
+
 class InstrumentsResponse(OpenAQResult):
     results: list[Instrument]
+
 
 class LocationsResponse(OpenAQResult):
     results: list[Location]

@@ -148,6 +148,7 @@ async def countries_by_path(
         WHERE
         c.iso IS NOT NULL
         AND c.countries_id = :country_id
+		AND sn.is_public
         GROUP BY code, c.name, c.countries_id
         OFFSET :offset
         LIMIT :limit
@@ -215,6 +216,7 @@ async def countries_get(
         WHERE
         {countries.where()}
         AND c.iso IS NOT NULL
+		AND sn.is_public
         GROUP BY code, c.name
         ORDER BY {order_by} {countries.sort}
         OFFSET :offset
@@ -270,7 +272,9 @@ async def countries_getv1(
         WHERE
         {countries.where()}
         AND
-        c.iso IS NOT NULL
+            c.iso IS NOT NULL
+		AND
+		    sn.is_public
         GROUP BY code, c.name
         ORDER BY {order_by} {countries.sort}
         OFFSET :offset

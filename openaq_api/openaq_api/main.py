@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 import datetime
 import logging
 import time
@@ -22,6 +23,7 @@ from openaq_api.db import db_pool
 from openaq_api.middleware import (
     CacheControlMiddleware,
     LoggingMiddleware,
+    PrivatePathsMiddleware,
     RateLimiterMiddleWare,
 )
 from openaq_api.models.logging import (
@@ -46,6 +48,7 @@ from openaq_api.settings import settings
 
 # V3 routers
 from openaq_api.v3.routers import (
+    auth,
     countries,
     instruments,
     locations,
@@ -90,6 +93,8 @@ def default(obj):
         return round(obj, 5)
     if isinstance(obj, datetime.datetime):
         return obj.strptime("%Y-%m-%dT%H:%M:%SZ")
+    if isinstance(obj, datetime.date):
+        return obj.strptime("%Y-%m-%d")
 
 
 class ORJSONResponse(JSONResponse):
@@ -98,29 +103,57 @@ class ORJSONResponse(JSONResponse):
         return orjson.dumps(content, default=default)
 
 
+redis_client = None  # initialize for generalize_schema.py
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if not hasattr(app.state, "pool"):
+        logger.debug("initializing connection pool")
+        app.state.pool = await db_pool(None)
+        logger.debug("Connection pool established")
+
+    if hasattr(app.state, "counter"):
+        app.state.counter += 1
+    else:
+        app.state.counter = 0
+    app.state.redis_client = redis_client
+    yield
+    if hasattr(app.state, "pool") and not settings.USE_SHARED_POOL:
+        logger.debug("Closing connection")
+        await app.state.pool.close()
+        delattr(app.state, "pool")
+        logger.debug("Connection closed")
+
+
 app = FastAPI(
     title="OpenAQ",
     description="OpenAQ API",
     version="2.0.0",
     default_response_class=ORJSONResponse,
     docs_url="/docs",
+    lifespan=lifespan,
 )
 
-redis_client = None  # initialize for generalize_schema.py
-
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
-app.add_middleware(LoggingMiddleware)
-app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 if settings.RATE_LIMITING is True:
+    if settings.RATE_LIMITING:
+        logger.debug("Connecting to redis")
+        from redis.asyncio.cluster import RedisCluster
+
+        try:
+            redis_client = RedisCluster(
+                host=settings.REDIS_HOST,
+                port=settings.REDIS_PORT,
+                decode_responses=True,
+                socket_timeout=5,
+            )
+        except Exception as e:
+            logging.error(
+                InfrastructureErrorLog(detail=f"failed to connect to redis: {e}")
+            )
+        print(redis_client)
+        logger.debug("Redis connected")
     if redis_client:
         app.add_middleware(
             RateLimiterMiddleWare,
@@ -136,7 +169,17 @@ if settings.RATE_LIMITING is True:
             )
         )
 
-app.include_router(auth_router)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+app.add_middleware(CacheControlMiddleware, cachecontrol="public, max-age=900")
+app.add_middleware(LoggingMiddleware)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.add_middleware(PrivatePathsMiddleware)
 
 
 class OpenAQValidationResponseDetail(BaseModel):
@@ -154,81 +197,31 @@ async def openaq_request_validation_exception_handler(
     request: Request, exc: RequestValidationError
 ):
     return ORJSONResponse(status_code=422, content=jsonable_encoder(str(exc)))
-    return PlainTextResponse(str(exc))
-    print("\n\n\n\n\n")
-    print(str(exc))
-    print("\n\n\n\n\n")
-    detail = orjson.loads(str(exc))
-    logger.debug(traceback.format_exc())
-    logger.info(
-        UnprocessableEntityLog(request=request, detail=str(exc)).model_dump_json()
-    )
-    detail = OpenAQValidationResponse(detail=detail)
-    return ORJSONResponse(status_code=422, content=jsonable_encoder(detail))
+    #return PlainTextResponse(str(exc))
+    # print("\n\n\n\n\n")
+    # print(str(exc))
+    # print("\n\n\n\n\n")
+    # detail = orjson.loads(str(exc))
+    # logger.debug(traceback.format_exc())
+    # logger.info(
+    #     UnprocessableEntityLog(request=request, detail=str(exc)).model_dump_json()
+    # )
+    # detail = OpenAQValidationResponse(detail=detail)
+    #return ORJSONResponse(status_code=422, content=jsonable_encoder(detail))
 
 
 @app.exception_handler(ValidationError)
 async def openaq_exception_handler(request: Request, exc: ValidationError):
     return ORJSONResponse(status_code=422, content=jsonable_encoder(str(exc)))
-
-    detail = orjson.loads(exc.model_dump_json())
-    logger.debug(traceback.format_exc())
-    logger.error(
-        ModelValidationError(
-            request=request, detail=exc.jsmodel_dump_jsonon()
-        ).model_dump_json()
-    )
-    return ORJSONResponse(status_code=422, content=jsonable_encoder(detail))
+    # detail = orjson.loads(exc.model_dump_json())
+    # logger.debug(traceback.format_exc())
+    # logger.error(
+    #     ModelValidationError(
+    #         request=request, detail=exc.jsmodel_dump_jsonon()
+    #     ).model_dump_json()
+    # )
+    #return ORJSONResponse(status_code=422, content=jsonable_encoder(detail))
     # return ORJSONResponse(status_code=500, content={"message": "internal server error"})
-
-
-@app.on_event("startup")
-async def startup_event():
-    """
-    Application startup:
-    register the database
-    """
-    if not hasattr(app.state, "pool"):
-        logger.debug("initializing connection pool")
-        app.state.pool = await db_pool(None)
-        logger.debug("Connection pool established")
-    if not hasattr(app.state, "redis_client"):
-        if settings.RATE_LIMITING:
-            logger.debug("Connecting to redis")
-            from redis.asyncio.cluster import RedisCluster
-
-            try:
-                redis_client = RedisCluster(
-                    host=settings.REDIS_HOST,
-                    port=settings.REDIS_PORT,
-                    decode_responses=True,
-                    socket_timeout=5,
-                )
-                app.state.redis_client = redis_client
-            except Exception as e:
-                logging.error(
-                    InfrastructureErrorLog(detail=f"failed to connect to redis: {e}")
-                )
-            logger.debug("Redis connected")
-    if hasattr(app.state, "counter"):
-        app.state.counter += 1
-    else:
-        app.state.counter = 0
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Application shutdown: de-register the database connection."""
-    if hasattr(app.state, "pool") and not settings.USE_SHARED_POOL:
-        logger.debug("Closing connection")
-        await app.state.pool.close()
-        delattr(app.state, "pool")
-        logger.debug("Connection closed")
-    if hasattr(app.state, "redis_client") and settings.RATE_LIMITING:
-        logger.debug("Closing redis connection")
-        await app.state.redis_client.close()
-        delattr(app.state, "redis_client")
-        logger.debug("redis connection closed")
 
 
 @app.get("/ping", include_in_schema=False)
@@ -248,6 +241,7 @@ def favico():
 
 
 # v3
+app.include_router(auth.router)
 app.include_router(instruments.router)
 app.include_router(locations.router)
 app.include_router(parameters.router)
@@ -275,6 +269,7 @@ app.include_router(summary_router)
 
 
 static_dir = Path.joinpath(Path(__file__).resolve().parent, "static")
+
 
 app.mount("/", StaticFiles(directory=str(static_dir), html=True))
 

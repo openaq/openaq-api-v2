@@ -3,7 +3,7 @@ name: Deploy staging
 on: 
   push:
     branches:
-      - staging
+      - release-*
 
 env:
   ENV: "staging"
@@ -40,13 +40,16 @@ env:
   RATE_TIME: 1
 
   EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+
+  EXPLORER_API_KEY: ${{ secrets.EXPLORER_API_KEY }}
+
   
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Configure aws credentials
         uses: aws-actions/configure-aws-credentials@master
