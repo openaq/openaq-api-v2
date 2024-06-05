@@ -3,6 +3,7 @@ import logging
 import os
 import pathlib
 from email.message import EmailMessage
+import smtplib
 
 import boto3
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
@@ -26,6 +27,25 @@ router = APIRouter(
     include_in_schema=False,
 )
 
+def send_email(destination_email: str, msg: EmailMessage):
+    if settings.USE_SMTP_EMAIL:
+        return send_smtp_email(destination_email, msg)
+    else:
+        return send_ses_email(destination_email, msg)
+
+def send_smpt_email(destination_email: str, msg: EmailMessage):
+    with smtplib.SMTP(settings.SMTP_EMAIL_HOST, 587) as s:
+        s.starttls()
+        s.login(settings.SMTP_EMAIL_USER, settings.SMTP_EMAIL_PASSWORD)
+        return server.sendmail(settings.EMAIL_SENDER, destination_email, msg.as_string())
+
+
+def send_ses_email(destination_email: str, msg: EmailMessage):
+    return ses_client.send_raw_email(
+        Source=settings.EMAIL_SENDER,
+        Destinations=[f"{full_name} <{destination_email}>"],
+        RawMessage={"Data": msg.as_string()},
+    )
 
 def send_change_password_email(full_name: str, email: str):
     ses_client = boto3.client("ses")
@@ -55,11 +75,7 @@ def send_change_password_email(full_name: str, email: str):
     msg["Subject"] = "OpenAQ Explorer - Password changed"
     msg["From"] = settings.EMAIL_SENDER
     msg["To"] = email
-    response = ses_client.send_raw_email(
-        Source=settings.EMAIL_SENDER,
-        Destinations=[f"{full_name} <{email}>"],
-        RawMessage={"Data": msg.as_string()},
-    )
+    response = send_smtp_email(email, msg)
     logger.info(
         SESEmailLog(
             detail=json.dumps(
@@ -103,11 +119,7 @@ def send_verification_email(verification_code: str, full_name: str, email: str):
     msg["Subject"] = "OpenAQ Explorer - Verify your email"
     msg["From"] = settings.EMAIL_SENDER
     msg["To"] = email
-    response = ses_client.send_raw_email(
-        Source=settings.EMAIL_SENDER,
-        Destinations=[f"{full_name} <{email}>"],
-        RawMessage={"Data": msg.as_string()},
-    )
+    response = send_smtp_email(email, msg)
     logger.info(
         SESEmailLog(
             detail=json.dumps(
@@ -151,11 +163,7 @@ def send_password_reset_email(verification_code: str, email: str):
     msg["Subject"] = "OpenAQ Explorer - Reset password request"
     msg["From"] = settings.EMAIL_SENDER
     msg["To"] = email
-    response = ses_client.send_raw_email(
-        Source=settings.EMAIL_SENDER,
-        Destinations=[f"<{email}>"],
-        RawMessage={"Data": msg.as_string()},
-    )
+    response = send_smtp_email(email, msg)
     logger.info(
         SESEmailLog(
             detail=json.dumps(
@@ -199,11 +207,8 @@ def send_password_changed_email(email: str):
     msg["Subject"] = "OpenAQ Explorer - Reset password success"
     msg["From"] = settings.EMAIL_SENDER
     msg["To"] = email
-    response = ses_client.send_raw_email(
-        Source=settings.EMAIL_SENDER,
-        Destinations=[f"<{email}>"],
-        RawMessage={"Data": msg.as_string()},
-    )
+    response = send_smtp_email(email, msg)
+
     logger.info(
         SESEmailLog(
             detail=json.dumps(
