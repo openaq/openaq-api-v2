@@ -33,11 +33,11 @@ def send_email(destination_email: str, msg: EmailMessage):
     else:
         return send_ses_email(destination_email, msg)
 
-def send_smpt_email(destination_email: str, msg: EmailMessage):
-    with smtplib.SMTP(settings.SMTP_EMAIL_HOST, 587) as s:
+def send_smtp_email(destination_email: str, msg: EmailMessage):
+    with smtplib.SMTP_SSL(settings.SMTP_EMAIL_HOST, 465) as s:
         s.starttls()
         s.login(settings.SMTP_EMAIL_USER, settings.SMTP_EMAIL_PASSWORD)
-        return server.sendmail(settings.EMAIL_SENDER, destination_email, msg.as_string())
+        return s.send_message(msg)
 
 
 def send_ses_email(destination_email: str, msg: EmailMessage):
@@ -75,7 +75,7 @@ def send_change_password_email(full_name: str, email: str):
     msg["Subject"] = "OpenAQ Explorer - Password changed"
     msg["From"] = settings.EMAIL_SENDER
     msg["To"] = email
-    response = send_smtp_email(email, msg)
+    response = send_email(email, msg)
     logger.info(
         SESEmailLog(
             detail=json.dumps(
@@ -119,7 +119,7 @@ def send_verification_email(verification_code: str, full_name: str, email: str):
     msg["Subject"] = "OpenAQ Explorer - Verify your email"
     msg["From"] = settings.EMAIL_SENDER
     msg["To"] = email
-    response = send_smtp_email(email, msg)
+    response = send_email(email, msg)
     logger.info(
         SESEmailLog(
             detail=json.dumps(
@@ -163,7 +163,7 @@ def send_password_reset_email(verification_code: str, email: str):
     msg["Subject"] = "OpenAQ Explorer - Reset password request"
     msg["From"] = settings.EMAIL_SENDER
     msg["To"] = email
-    response = send_smtp_email(email, msg)
+    response = send_email(email, msg)
     logger.info(
         SESEmailLog(
             detail=json.dumps(
@@ -207,7 +207,7 @@ def send_password_changed_email(email: str):
     msg["Subject"] = "OpenAQ Explorer - Reset password success"
     msg["From"] = settings.EMAIL_SENDER
     msg["To"] = email
-    response = send_smtp_email(email, msg)
+    response = send_email(email, msg)
 
     logger.info(
         SESEmailLog(
