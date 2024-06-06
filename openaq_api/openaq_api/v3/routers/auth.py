@@ -35,7 +35,6 @@ def send_email(destination_email: str, msg: EmailMessage):
 
 def send_smtp_email(destination_email: str, msg: EmailMessage):
     with smtplib.SMTP_SSL(settings.SMTP_EMAIL_HOST, 465) as s:
-        s.starttls()
         s.login(settings.SMTP_EMAIL_USER, settings.SMTP_EMAIL_PASSWORD)
         return s.send_message(msg)
 
