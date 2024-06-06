@@ -1,6 +1,6 @@
 name: Deploy staging
 
-on: 
+on:
   push:
     branches:
       - release-*
@@ -40,10 +40,13 @@ env:
   RATE_TIME: 1
 
   EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+  SMTP_EMAIL_HOST: ${{ secrets.SMTP_EMAIL_HOST }}
+  SMTP_EMAIL_USER: ${{ secrets.SMTP_EMAIL_USER }}
+  SMTP_EMAIL_PASSWORD: ${{ secrets.SMTP_EMAIL_PASSWORD }}
 
   EXPLORER_API_KEY: ${{ secrets.EXPLORER_API_KEY }}
 
-  
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -80,4 +83,4 @@ jobs:
         working-directory: ./cdk
         run: |
           pip install -r requirements.txt
-          cdk deploy openaq-api-staging --require-approval never 
+          cdk deploy openaq-api-staging --require-approval never
