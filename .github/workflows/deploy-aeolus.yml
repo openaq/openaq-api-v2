@@ -23,7 +23,7 @@ jobs:
         uses: aws-actions/aws-secretsmanager-get-secrets@v2
         with:
           secret-ids: |
-            aeolus, openaq-env/aeolus
+            AEOLUS, openaq-env/aeolus
           name-transformation: uppercase
           parse-json-secrets: true
 
