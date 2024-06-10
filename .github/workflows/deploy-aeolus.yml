@@ -1,0 +1,88 @@
+name: Deploy aeolus
+
+on:
+  push:
+    branches:
+      - versions/aeolus
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Configure aws credentials
+        uses: aws-actions/configure-aws-credentials@master
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_STAGING }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY_STAGING }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Get envionmental values
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          secret-ids: |
+            openaq-env/aeolus
+          name-transformation: uppercase
+          parse-json-secrets: true
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: build pages
+        working-directory: ./pages
+        run: |
+          yarn install
+          yarn run deploy
+
+      - name: Install CDK
+        run: |
+          npm install -g aws-cdk@2.92.0
+
+      - uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+
+      - name: Deploy stack
+        env:
+          ENV: "aeolus"
+          PROJECT: "openaq"
+          DATABASE_READ_USER: ${{ env.DATABASE_READ_USER }}
+          DATABASE_READ_PASSWORD: ${{ env.DATABASE_READ_PASSWORD }}
+          DATABASE_READ_USER: ${{ env.DATABASE_READ_USER }}
+          DATABASE_READ_PASSWORD: ${{ env.DATABASE_READ_PASSWORD }}
+          DATABASE_WRITE_USER: ${{ env.DATABASE_WRITE_USER }}
+          DATABASE_WRITE_PASSWORD: ${{ env.DATABASE_WRITE_PASSWORD }}
+          DATABASE_DB: ${{ env.DATABASE_DB }}
+          DATABASE_HOST: ${{ env.DATABASE_HOST_STAGING }}
+          DATABASE_PORT: ${{ env.STAGING_DATABASE_PORT }}
+          API_LAMBDA_MEMORY_SIZE: ${{ env.API_LAMBDA_MEMORY_SIZE }}
+          HOSTED_ZONE_ID: ${{ env.HOSTED_ZONE_ID }}
+          HOSTED_ZONE_NAME: ${{ env.HOSTED_ZONE_NAME }}
+          DOMAIN_NAME: ${{ env.DOMAIN_NAME }}
+          WEB_ACL_ID: ${{ env.WEB_ACL_ID }}
+          CERTIFICATE_ARN: ${{ env.CERTIFICATE_ARN }}
+
+          CDK_ACCOUNT: ${{ env.CDK_ACCOUNT }}
+          CDK_REGION: ${{ env.CDK_REGION }}
+
+          VPC_ID: ${{ env.VPC_ID }}
+
+          RATE_LIMITING: True
+          RATE_AMOUNT: 10
+          RATE_AMOUNT_KEY: 10
+          RATE_TIME: 1
+
+          EMAIL_SENDER: ${{ env.EMAIL_SENDER }}
+          SMTP_EMAIL_HOST: ${{ env.SMTP_EMAIL_HOST }}
+          SMTP_EMAIL_USER: ${{ env.SMTP_EMAIL_USER }}
+          SMTP_EMAIL_PASSWORD: ${{ env.SMTP_EMAIL_PASSWORD }}
+
+          EXPLORER_API_KEY: ${{ env.EXPLORER_API_KEY }}
+
+        working-directory: ./cdk
+        run: |
+          pip install -r requirements.txt
+          cdk deploy openaq-api-staging --require-approval never
