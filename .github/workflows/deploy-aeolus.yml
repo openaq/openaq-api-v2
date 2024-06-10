@@ -15,8 +15,8 @@ jobs:
       - name: Configure aws credentials
         uses: aws-actions/configure-aws-credentials@master
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_STAGING }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY_STAGING }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_PROD }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY_PROD }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Get envionmental values
@@ -63,8 +63,8 @@ jobs:
           WEB_ACL_ID: ${{ env.WEB_ACL_ID }}
           CERTIFICATE_ARN: ${{ env.CERTIFICATE_ARN }}
 
-          CDK_ACCOUNT: ${{ env.CDK_ACCOUNT }}
-          CDK_REGION: ${{ env.CDK_REGION }}
+          CDK_ACCOUNT: ${{ secrets.CDK_ACCOUNT }}
+          CDK_REGION: ${{ secrets.CDK_REGION }}
 
           VPC_ID: ${{ env.VPC_ID }}
 
