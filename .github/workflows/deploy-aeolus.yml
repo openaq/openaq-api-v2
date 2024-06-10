@@ -68,7 +68,7 @@ jobs:
 
           VPC_ID: ${{ env.AEOLUS_VPC_ID }}
 
-          RATE_LIMITING: True
+          RATE_LIMITING: False
           RATE_AMOUNT: 10
           RATE_AMOUNT_KEY: 10
           RATE_TIME: 1
