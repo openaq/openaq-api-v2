@@ -83,4 +83,4 @@ jobs:
         working-directory: ./cdk
         run: |
           pip install -r requirements.txt
-          cdk deploy openaq-api-staging --require-approval never
+          cdk deploy openaq-api-aeolus --require-approval never
