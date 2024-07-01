@@ -18,8 +18,6 @@ class Settings(BaseSettings):
     ENV: str = "staging"
     PROJECT: str = "openaq"
     API_CACHE_TIMEOUT: int = 900
-    ROLLUP_LAMBDA_TIMEOUT: int = 900
-    ROLLUP_LAMBDA_MEMORY_SIZE: int = 1536
     LOG_LEVEL: str = "INFO"
     HOSTED_ZONE_ID: str | None = None
     HOSTED_ZONE_NAME: str | None = None

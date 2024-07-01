@@ -76,6 +76,8 @@ class LambdaApiStack(Stack):
                 vpc=vpc,
                 allow_all_outbound=True,
             )
+
+
             redis_sec_group = aws_ec2.SecurityGroup(
                 self,
                 f"redis-sec-group_{env_name}",
