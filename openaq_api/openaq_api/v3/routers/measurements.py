@@ -64,6 +64,8 @@ async def measurements_get(
     return response
 
 
+
+
 async def fetch_measurements(q, db):
     query = QueryBuilder(q)
     dur = "01:00:00"
@@ -122,6 +124,8 @@ async def fetch_measurements(q, db):
             dur = "24:00:00"
         elif q.period_name == "month":
             dur = "1 month"
+        elif q.period_name == "year":
+            dur = "1 year"
 
         sql = f"""
             WITH meas AS (
