@@ -119,11 +119,12 @@ class LambdaApiStack(Stack):
                 redis_security_group_id,
                 mutable=False
             )
-            print(redis_security_group)
+            print(f"{redis_security_group} {redis_port}")
             redis_security_group.add_ingress_rule(
                 peer=lambda_sec_group,
                 description="Allow Redis connection",
                 connection=aws_ec2.Port.tcp(redis_port),
+                remote_rule=True,
             )
 
         api = HttpApi(
