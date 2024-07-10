@@ -46,6 +46,7 @@ class LambdaApiStack(Stack):
         api_lambda_memory_size: int,
         api_lambda_timeout: int,
         vpc_id: Union[str, None],
+        redis_port: int,
         redis_security_group_id: str,
         **kwargs,
     ) -> None:
@@ -122,7 +123,7 @@ class LambdaApiStack(Stack):
             redis_security_group.add_ingress_rule(
                 peer=lambda_sec_group,
                 description="Allow Redis connection",
-                connection=aws_ec2.Port.tcp(6379),
+                connection=aws_ec2.Port.tcp(redis_port),
             )
 
         api = HttpApi(
