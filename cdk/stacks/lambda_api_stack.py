@@ -123,7 +123,7 @@ class LambdaApiStack(Stack):
             redis_security_group.add_ingress_rule(
                 peer=lambda_sec_group,
                 description="Allow Redis connection",
-                connection=aws_ec2.Port.tcp(redis_port),
+                connection=aws_ec2.Port.tcp(6379),
                 remote_rule=True,
             )
 
