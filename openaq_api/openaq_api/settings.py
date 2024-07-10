@@ -25,8 +25,8 @@ class Settings(BaseSettings):
     LOG_BUCKET: str | None = None
     DOMAIN_NAME: str | None = None
 
+    REDIS_HOST: str | None = None
     REDIS_PORT: int | None = 6379
-    REDIS_SECURITY_GROUP_ID: int | None = None
 
     RATE_LIMITING: bool = False
     RATE_AMOUNT: int | None = None
