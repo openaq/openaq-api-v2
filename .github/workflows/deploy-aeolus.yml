@@ -57,28 +57,27 @@ jobs:
           DATABASE_HOST: ${{ env.AEOLUS_DATABASE_HOST }}
           DATABASE_PORT: ${{ env.AEOLUS_DATABASE_PORT }}
           API_LAMBDA_MEMORY_SIZE: ${{ env.AEOLUS_API_LAMBDA_MEMORY_SIZE }}
-          HOSTED_ZONE_ID: ${{ env.AEOLUS_HOSTED_ZONE_ID }}
-          HOSTED_ZONE_NAME: ${{ env.AEOLUS_HOSTED_ZONE_NAME }}
-          DOMAIN_NAME: ${{ env.AEOLUS_DOMAIN_NAME }}
-          WEB_ACL_ID: ${{ env.AEOLUS_WEB_ACL_ID }}
-          CERTIFICATE_ARN: ${{ env.AEOLUS_CERTIFICATE_ARN }}
 
           CDK_ACCOUNT: ${{ secrets.CDK_ACCOUNT }}
           CDK_REGION: ${{ secrets.CDK_REGION }}
 
           VPC_ID: ${{ env.AEOLUS_VPC_ID }}
 
-          RATE_LIMITING: False
+          RATE_LIMITING: True
           RATE_AMOUNT: 10
           RATE_AMOUNT_KEY: 10
           RATE_TIME: 1
+          USER_AGENT: ${{ env.AEOLUS_USER_AGENT }}
+          ORIGIN: ${{ env.AEOLUS_ORIGIN }}
+          REDIS_HOST: ${{ env.AEOLUS_REDIS_HOST }}
+          REDIS_PORT: ${{ env.AEOLUS_REDIS_PORT }}
 
           EMAIL_SENDER: ${{ env.AEOLUS_EMAIL_SENDER }}
           SMTP_EMAIL_HOST: ${{ env.AEOLUS_SMTP_EMAIL_HOST }}
           SMTP_EMAIL_USER: ${{ env.AEOLUS_SMTP_EMAIL_USER }}
           SMTP_EMAIL_PASSWORD: ${{ env.AEOLUS_SMTP_EMAIL_PASSWORD }}
 
-          EXPLORER_API_KEY: ${{ env.AEOLUS_EXPLORER_API_KEY }}
+          #EXPLORER_API_KEY: ${{ env.AEOLUS_EXPLORER_API_KEY }}
 
         working-directory: ./cdk
         run: |
