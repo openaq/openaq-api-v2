@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     PROJECT: str = "openaq"
     API_CACHE_TIMEOUT: int = 900
     LOG_LEVEL: str = "INFO"
+    REDIS_PORT: int | None = 6379
     REDIS_SECURITY_GROUP_ID: str | None = None
     API_LAMBDA_MEMORY_SIZE: int = 1536
     API_LAMBDA_TIMEOUT: int = 15  # lambda timeout in seconds
