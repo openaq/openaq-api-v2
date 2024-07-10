@@ -113,13 +113,12 @@ class LambdaApiStack(Stack):
 
         print(f"{redis_security_group_id} - {redis_port}")
         if redis_security_group_id:
-            redis_security_group = aws_ec2.SecurityGroup.from_security_group_id(
+            redis_security_group = aws_ec2.SecurityGroup.from_lookup_by_id(
                 self,
                 "SG",
-                redis_security_group_id,
-                mutable=False
+                security_group_id = redis_security_group_id,
             )
-            print(f"{redis_security_group} {redis_port}")
+            print(f"{redis_security_group.security_group_id} {redis_port}")
             redis_security_group.add_ingress_rule(
                 peer=lambda_sec_group,
                 description="Allow Redis connection",
