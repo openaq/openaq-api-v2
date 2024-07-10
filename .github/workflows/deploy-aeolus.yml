@@ -77,7 +77,7 @@ jobs:
           SMTP_EMAIL_USER: ${{ env.AEOLUS_SMTP_EMAIL_USER }}
           SMTP_EMAIL_PASSWORD: ${{ env.AEOLUS_SMTP_EMAIL_PASSWORD }}
 
-          #EXPLORER_API_KEY: ${{ env.AEOLUS_EXPLORER_API_KEY }}
+          EXPLORER_API_KEY: ${{ env.AEOLUS_EXPLORER_API_KEY }}
 
         working-directory: ./cdk
         run: |
