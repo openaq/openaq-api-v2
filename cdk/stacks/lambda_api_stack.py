@@ -111,7 +111,7 @@ class LambdaApiStack(Stack):
             )
         )
 
-        print(f"SG: {redis_security_group_id}")
+        print(f"{redis_security_group_id} - {redis_port}")
         if redis_security_group_id:
             redis_security_group = aws_ec2.SecurityGroup.from_security_group_id(
                 self,
