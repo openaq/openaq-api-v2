@@ -71,6 +71,7 @@ jobs:
           ORIGIN: ${{ env.AEOLUS_ORIGIN }}
           REDIS_HOST: ${{ env.AEOLUS_REDIS_HOST }}
           REDIS_PORT: ${{ env.AEOLUS_REDIS_PORT }}
+          REDIS_SECURITY_GROUP_ID: ${{ env.AEOLUS_REDIS_SECURITY_GROUP_ID }}
 
           EMAIL_SENDER: ${{ env.AEOLUS_EMAIL_SENDER }}
           SMTP_EMAIL_HOST: ${{ env.AEOLUS_SMTP_EMAIL_HOST }}
