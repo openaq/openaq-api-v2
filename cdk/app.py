@@ -32,6 +32,7 @@ api = LambdaApiStack(
     env_name=settings.ENV,
     lambda_env=lambda_env,
     vpc_id=settings.VPC_ID,
+    redis_security_group_id=settings.REDIS_SECURITY_GROUP_ID,
     api_lambda_timeout=settings.API_LAMBDA_TIMEOUT,
     api_lambda_memory_size=settings.API_LAMBDA_MEMORY_SIZE,
     env=env,

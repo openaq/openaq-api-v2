@@ -19,16 +19,9 @@ class Settings(BaseSettings):
     PROJECT: str = "openaq"
     API_CACHE_TIMEOUT: int = 900
     LOG_LEVEL: str = "INFO"
-    HOSTED_ZONE_ID: str | None = None
-    HOSTED_ZONE_NAME: str | None = None
-    WEB_ACL_ID: str | None = None
-    DOMAIN_NAME: str | None = None
-    LOG_BUCKET: str | None = None
-    CERTIFICATE_ARN: str | None = None
+    REDIS_SECURITY_GROUP_ID: str | None = None
     API_LAMBDA_MEMORY_SIZE: int = 1536
     API_LAMBDA_TIMEOUT: int = 15  # lambda timeout in seconds
-    CF_LOGS_LAMBDA_MEMORY_SIZE: int = 1792
-    CF_LOG_LAMBDA_TIMEOUT: int = 15 * 60  # lambda timeout in seconds
 
     model_config = SettingsConfigDict(
         extra="ignore",

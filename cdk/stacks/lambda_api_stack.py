@@ -46,6 +46,7 @@ class LambdaApiStack(Stack):
         api_lambda_memory_size: int,
         api_lambda_timeout: int,
         vpc_id: Union[str, None],
+        redis_security_group_id: str,
         **kwargs,
     ) -> None:
         """Lambda to handle api requests"""
@@ -108,6 +109,21 @@ class LambdaApiStack(Stack):
                 effect=aws_iam.Effect.ALLOW,
             )
         )
+
+
+        if redis_security_group_id:
+            redis_security_group = aws_ec2.SecurityGroup.from_security_group_id(
+                self,
+                "SG",
+                redis_security_group_id,
+                mutable=False
+            )
+
+            redis_sec_group.add_ingress_rule(
+                peer=lambda_sec_group,
+                description="Allow Redis connection",
+                connection=aws_ec2.Port.tcp(6379),
+            )
 
         api = HttpApi(
             self,
