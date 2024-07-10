@@ -18,9 +18,9 @@ p = os.path.abspath("../openaq_api")
 sys.path.insert(1, p)
 from openaq_api.settings import settings as lambda_env
 
-p = os.path.abspath("../cloudfront_logs")
-sys.path.insert(1, p)
-from cloudfront_logs.settings import settings as cloudfront_logs_lambda_env
+#p = os.path.abspath("../cloudfront_logs")
+#sys.path.insert(1, p)
+#from cloudfront_logs.settings import settings as cloudfront_logs_lambda_env
 
 app = aws_cdk.App()
 
@@ -31,17 +31,9 @@ api = LambdaApiStack(
     f"openaq-api-{settings.ENV}",
     env_name=settings.ENV,
     lambda_env=lambda_env,
-    cloudfront_logs_lambda_env=cloudfront_logs_lambda_env,
     vpc_id=settings.VPC_ID,
-    hosted_zone_name=settings.HOSTED_ZONE_NAME,
-    hosted_zone_id=settings.HOSTED_ZONE_ID,
     api_lambda_timeout=settings.API_LAMBDA_TIMEOUT,
     api_lambda_memory_size=settings.API_LAMBDA_MEMORY_SIZE,
-    cf_logs_lambda_timeout=settings.CF_LOG_LAMBDA_TIMEOUT,
-    cf_logs_lambda_memory_size=settings.CF_LOGS_LAMBDA_MEMORY_SIZE,
-    domain_name=settings.DOMAIN_NAME,
-    cert_arn=settings.CERTIFICATE_ARN,
-    web_acl_id=settings.WEB_ACL_ID,
     env=env,
 )
 
