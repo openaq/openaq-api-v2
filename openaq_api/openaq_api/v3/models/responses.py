@@ -110,16 +110,23 @@ class AttributionEntity(JsonBase):
     url: str
 
 
-class LicenseBase(JsonBase):
+class LocationLicense(JsonBase):
     id: int
     name: str
-    url: str
     date_from: date
     date_to: date | None = None
-    description: str | None = None
 
 
-class License(LicenseBase):
+class ProviderLicense(LocationLicense):
+    id: int
+    name: str
+    date_from: date
+    date_to: date | None = None
+
+
+class License(JsonBase):
+    id: int
+    name: str
     commercial_use_allowed: bool
     attribution_required: bool
     share_alike_required: bool
@@ -176,7 +183,7 @@ class Entity(EntityBase):
 class Provider(ProviderBase):
     source_name: str
     export_prefix: str
-    license: str | None = None
+    licenses: list[ProviderLicense] | None = None
     datetime_added: datetime
     datetime_first: datetime
     datetime_last: datetime
@@ -218,7 +225,7 @@ class Location(JsonBase):
     instruments: list[InstrumentBase]
     sensors: list[SensorBase]
     coordinates: Coordinates
-    licenses: list[LicenseBase] | None = None
+    licenses: list[LocationLicense] | None = None
     bounds: list[float] = Field(..., min_length=4, max_length=4)
     distance: float | None = None
     datetime_first: DatetimeObject
