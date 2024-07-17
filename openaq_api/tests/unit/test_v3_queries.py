@@ -14,6 +14,7 @@ from openaq_api.v3.models.queries import (
     CountryIsoQuery,
     DateFromQuery,
     DateToQuery,
+    InstrumentsQuery,
     MobileQuery,
     MonitorQuery,
     OwnerQuery,
@@ -61,8 +62,7 @@ class TestCommaSeparatedList:
             self.comma_separated_list.validate_python("1,2,foo")
 
 
-class TestPaging:
-    ...
+class TestPaging: ...
 
 
 class TestMobileQuery:
@@ -223,6 +223,15 @@ class TestCountryIsoQuery:
         assert params == {"iso": "us"}
 
 
+class TestInstrumentQuery:
+    def test_instruments_id_string_value(self):
+        instruments_id_query = InstrumentsQuery(instruments_id="1,2,3")
+        where = instruments_id_query.where()
+        params = instruments_id_query.model_dump()
+        assert where == "instruments_ids && :instruments_ids"
+        assert params == {"instruments_id": [1, 2, 3]}
+
+
 class TestOwnerQuery:
     def test_string_value(self):
         owner_query = OwnerQuery(owner_contacts_id="1,2,3")
@@ -379,16 +388,14 @@ class TestBboxQuery:
         assert self.bbox_query.maxy == 38.9955
 
 
-class QueryContainer(CountryIsoQuery, MonitorQuery):
-    ...
+class QueryContainer(CountryIsoQuery, MonitorQuery): ...
 
 
 class SortTestClass(SortingBase):
     order_by: str = "id"
 
 
-class QueryContainerSort(CountryIsoQuery, MonitorQuery, SortTestClass):
-    ...
+class QueryContainerSort(CountryIsoQuery, MonitorQuery, SortTestClass): ...
 
 
 class TestQueryBuilder:
@@ -448,8 +455,7 @@ class TestQueryBuilder:
         assert query_builder.pagination() == ""
 
     def test_pagination_method_with_paging(self):
-        class QueryContainer(Paging, RadiusQuery):
-            ...
+        class QueryContainer(Paging, RadiusQuery): ...
 
         query = QueryContainer(
             coordinates="38.9072,-77.0369", radius=1000, limit=1000, page=42
