@@ -105,12 +105,28 @@ class ManufacturerBase(JsonBase):
     name: str
 
 
+class AttributionEntity(JsonBase):
+    name: str
+    url: str
+
+
 class LicenseBase(JsonBase):
-	id: int
-	url: str
-	date_from: date
-	date_to: date | None = None
-	description: str | None = None
+    id: int
+    name: str
+    url: str
+    date_from: date
+    date_to: date | None = None
+    description: str | None = None
+
+
+class License(LicenseBase):
+    commercial_use_allowed: bool
+    attribution_required: bool
+    share_alike_required: bool
+    modification_alowed: bool
+    redistribution_allowed: bool
+    attribution: AttributionEntity
+    sourceUrl: str
 
 
 class Latest(JsonBase):
@@ -169,8 +185,7 @@ class Provider(ProviderBase):
     bbox: GeoJSON | None = None
 
 
-class Owner(OwnerBase):
-    ...
+class Owner(OwnerBase): ...
 
 
 class Instrument(InstrumentBase):
@@ -211,7 +226,7 @@ class Location(JsonBase):
 
 
 class Measurement(JsonBase):
-    #datetime: DatetimeObject
+    # datetime: DatetimeObject
     value: float
     parameter: ParameterBase
     period: Period | None = None
@@ -247,6 +262,10 @@ class MeasurementsResponse(OpenAQResult):
 
 class TrendsResponse(OpenAQResult):
     results: list[Trend]
+
+
+class LicensesResponse(OpenAQResult):
+    results: list[License]
 
 
 class CountriesResponse(OpenAQResult):
