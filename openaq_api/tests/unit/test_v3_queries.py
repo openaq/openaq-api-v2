@@ -228,7 +228,7 @@ class TestInstrumentQuery:
         instruments_id_query = InstrumentsQuery(instruments_id="1,2,3")
         where = instruments_id_query.where()
         params = instruments_id_query.model_dump()
-        assert where == "instruments_ids && :instruments_ids"
+        assert where == "instrument_ids && :instruments_id"
         assert params == {"instruments_id": [1, 2, 3]}
 
 
