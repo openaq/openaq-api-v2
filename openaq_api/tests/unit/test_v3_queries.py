@@ -14,6 +14,7 @@ from openaq_api.v3.models.queries import (
     CountryIsoQuery,
     DateFromQuery,
     DateToQuery,
+    ManufacturersQuery,
     MobileQuery,
     MonitorQuery,
     OwnerQuery,
@@ -61,8 +62,7 @@ class TestCommaSeparatedList:
             self.comma_separated_list.validate_python("1,2,foo")
 
 
-class TestPaging:
-    ...
+class TestPaging: ...
 
 
 class TestMobileQuery:
@@ -379,16 +379,14 @@ class TestBboxQuery:
         assert self.bbox_query.maxy == 38.9955
 
 
-class QueryContainer(CountryIsoQuery, MonitorQuery):
-    ...
+class QueryContainer(CountryIsoQuery, MonitorQuery): ...
 
 
 class SortTestClass(SortingBase):
     order_by: str = "id"
 
 
-class QueryContainerSort(CountryIsoQuery, MonitorQuery, SortTestClass):
-    ...
+class QueryContainerSort(CountryIsoQuery, MonitorQuery, SortTestClass): ...
 
 
 class TestQueryBuilder:
@@ -448,8 +446,7 @@ class TestQueryBuilder:
         assert query_builder.pagination() == ""
 
     def test_pagination_method_with_paging(self):
-        class QueryContainer(Paging, RadiusQuery):
-            ...
+        class QueryContainer(Paging, RadiusQuery): ...
 
         query = QueryContainer(
             coordinates="38.9072,-77.0369", radius=1000, limit=1000, page=42
@@ -492,3 +489,19 @@ class TestLocationsQueries:
                 coordinates=f"{latitude},{longitude}",
                 radius=radius,
             )
+
+
+class TestManufacturersQueries:
+    def test_has_value(self):
+        manufacturers_query = ManufacturersQuery(manufacturers_id="1,2,3")
+        where = manufacturers_query.where()
+        params = manufacturers_query.model_dump()
+        assert where == "manufacturer_ids && :manufacturers_id"
+        assert params == {"manufacturers_id": [1, 2, 3]}
+
+    def test_no_value(self):
+        manufacturers_query = ManufacturersQuery()
+        where = manufacturers_query.where()
+        params = manufacturers_query.model_dump()
+        assert where is None
+        assert params == {"manufacturers_id": None}
