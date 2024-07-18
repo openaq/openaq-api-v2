@@ -8,6 +8,7 @@ from openaq_api.v3.models.queries import (
     BboxQuery,
     CountryIdQuery,
     CountryIsoQuery,
+    ManufacturersQuery,
     MobileQuery,
     MonitorQuery,
     OwnerQuery,
@@ -78,6 +79,7 @@ class LocationsQueries(
     MobileQuery,
     MonitorQuery,
     LocationsSorting,
+    ManufacturersQuery,
 ): ...
 
 
