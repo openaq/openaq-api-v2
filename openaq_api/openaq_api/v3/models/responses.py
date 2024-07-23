@@ -2,7 +2,9 @@ from datetime import datetime, date
 from typing import Any, List
 
 from humps import camelize
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from .utils import fix_date
 
 
 class JsonBase(BaseModel):
@@ -23,8 +25,8 @@ class OpenAQResult(JsonBase):
 
 
 class DatetimeObject(JsonBase):
-    utc: str
-    local: str
+    utc: datetime
+    local: datetime
 
 
 class Coordinates(JsonBase):
@@ -113,8 +115,16 @@ class AttributionEntity(JsonBase):
 class LocationLicense(JsonBase):
     id: int
     name: str
-    date_from: date
+    date_from: date | None = None
     date_to: date | None = None
+
+    @field_validator(
+        "date_from",
+        "date_to",
+        mode='before'
+    )
+    def check_dates(cls, v):
+        return fix_date(v)
 
 
 class ProviderLicense(LocationLicense):
@@ -228,8 +238,8 @@ class Location(JsonBase):
     licenses: list[LocationLicense] | None = None
     bounds: list[float] = Field(..., min_length=4, max_length=4)
     distance: float | None = None
-    datetime_first: DatetimeObject
-    datetime_last: DatetimeObject
+    datetime_first: DatetimeObject | None = None
+    datetime_last: DatetimeObject | None = None
 
 
 class Measurement(JsonBase):

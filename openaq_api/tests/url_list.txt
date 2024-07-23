@@ -18,3 +18,4 @@
 /v2/latest
 /v2/locations?limit=100&page=1&offset=0&sort=desc&parameter=pm10&parameter=pm25&radius=1000&order_by=lastUpdated
 /v2/locations?page=3662&parameter=pm25&limit=1
+/v3/locations
