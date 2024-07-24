@@ -15,6 +15,7 @@ from openaq_api.v3.models.queries import (
     DateFromQuery,
     DateToQuery,
     ManufacturersQuery,
+    InstrumentsQuery,
     MobileQuery,
     MonitorQuery,
     OwnerQuery,
@@ -221,6 +222,15 @@ class TestCountryIsoQuery:
         params = country_iso_query.model_dump()
         assert where == "country->>'code' = :iso"
         assert params == {"iso": "us"}
+
+
+class TestInstrumentQuery:
+    def test_instruments_id_string_value(self):
+        instruments_id_query = InstrumentsQuery(instruments_id="1,2,3")
+        where = instruments_id_query.where()
+        params = instruments_id_query.model_dump()
+        assert where == "instrument_ids && :instruments_id"
+        assert params == {"instruments_id": [1, 2, 3]}
 
 
 class TestOwnerQuery:

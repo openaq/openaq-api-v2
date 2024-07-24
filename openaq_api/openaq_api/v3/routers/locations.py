@@ -9,6 +9,7 @@ from openaq_api.v3.models.queries import (
     CountryIdQuery,
     CountryIsoQuery,
     ManufacturersQuery,
+    InstrumentsQuery,
     MobileQuery,
     MonitorQuery,
     OwnerQuery,
@@ -68,18 +69,19 @@ class LocationPathQuery(QueryBaseModel):
 
 
 class LocationsQueries(
-    Paging,
-    RadiusQuery,
     BboxQuery,
-    ParametersQuery,
-    ProviderQuery,
-    OwnerQuery,
     CountryIdQuery,
     CountryIsoQuery,
+    InstrumentsQuery,
     MobileQuery,
     MonitorQuery,
     LocationsSorting,
     ManufacturersQuery,
+    OwnerQuery,
+    Paging,
+    ParametersQuery,
+    ProviderQuery,
+    RadiusQuery,
 ): ...
 
 

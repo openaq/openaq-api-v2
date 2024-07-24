@@ -693,6 +693,26 @@ class RadiusQuery(QueryBaseModel):
             return f"ST_DWithin(ST_MakePoint(:lon, :lat)::geography, {geometry_field}, :radius)"
 
 
+class InstrumentsQuery(QueryBaseModel):
+    """Pydantic query model for the instruments query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        instruments_id: instruments_id or comma separated list of instruments_id
+            for filtering results to an instrument or instruments
+    """
+
+    instruments_id: CommaSeparatedList[int] | None = Query(None, description="")
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def where(self) -> str | None:
+        """ """
+        if self.has("instruments_id"):
+            return "instrument_ids && :instruments_id"
+
+
 class BboxQuery(QueryBaseModel):
     """Pydantic query model for the `bbox` query parameter.
 
