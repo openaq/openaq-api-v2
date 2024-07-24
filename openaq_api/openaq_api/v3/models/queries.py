@@ -449,6 +449,7 @@ class DateFromQuery(QueryBaseModel):
         date_from: date or datetime in ISO-8601 format to filter results to a
         date range.
     """
+
     date_from: datetime | date | None = Query(
         None,
         description="From when?",
@@ -537,7 +538,8 @@ class PeriodNameQuery(QueryBaseModel):
     """
 
     period_name: PeriodNames | None = Query(
-        "hour", description="Period to aggregate. Month, day, hour, hour of day (hod), day of week (dow) and month of year (moy)"
+        "hour",
+        description="Period to aggregate. Month, day, hour, hour of day (hod), day of week (dow) and month of year (moy)",
     )
 
 
@@ -671,6 +673,26 @@ class RadiusQuery(QueryBaseModel):
             return f"ST_DWithin(ST_MakePoint(:lon, :lat)::geography, {geometry_field}, :radius)"
 
 
+class InstrumentsQuery(QueryBaseModel):
+    """Pydantic query model for the instruments query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        instruments_id: instruments_id or comma separated list of instruments_id
+            for filtering results to an instrument or instruments
+    """
+
+    instruments_id: CommaSeparatedList[int] | None = Query(None, description="")
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def where(self) -> str | None:
+        """ """
+        if self.has("instruments_id"):
+            return "instrument_ids && :instruments_id"
+
+
 class BboxQuery(QueryBaseModel):
     """Pydantic query model for the `bbox` query parameter.
 
@@ -767,8 +789,7 @@ class BboxQuery(QueryBaseModel):
             return "ST_MakeEnvelope(:minx, :miny, :maxx, :maxy, 4326) && geom"
 
 
-class MeasurementsQueries(Paging, ParametersQuery):
-    ...
+class MeasurementsQueries(Paging, ParametersQuery): ...
 
 
 class QueryBuilder(object):
