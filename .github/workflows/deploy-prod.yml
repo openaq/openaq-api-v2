@@ -1,6 +1,6 @@
 name: Deploy prod
 
-on: 
+on:
   push:
     branches:
       - main
@@ -41,6 +41,9 @@ env:
   ORIGIN: ${{ secrets.ORIGIN }}
 
   EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+  SMTP_EMAIL_HOST: ${{ secrets.SMTP_EMAIL_HOST }}
+  SMTP_EMAIL_USER: ${{ secrets.SMTP_EMAIL_USER }}
+  SMTP_EMAIL_PASSWORD: ${{ secrets.SMTP_EMAIL_PASSWORD }}
 
   EXPLORER_API_KEY: ${{ secrets.EXPLORER_API_KEY }}
 
@@ -68,7 +71,7 @@ jobs:
         run: |
           yarn install
           yarn run deploy
-          
+
       - name: Install CDK
         run: |
           npm install -g aws-cdk@2.92.0
@@ -81,7 +84,7 @@ jobs:
         working-directory: ./cdk
         run: |
           pip install -r requirements.txt
-          cdk deploy openaq-api-prod --require-approval never 
+          cdk deploy openaq-api-prod --require-approval never
 
   update-docs:
     needs: deploy
@@ -93,7 +96,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: "18"
-          
+
       - uses: actions/setup-python@v3
         with:
           python-version: '3.11'

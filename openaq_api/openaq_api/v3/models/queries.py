@@ -292,6 +292,26 @@ class ParametersQuery(QueryBaseModel):
             return "parameter_ids && :parameters_id"
 
 
+class ManufacturersQuery(QueryBaseModel):
+    """Pydantic query model for the manufacturers_id query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        manufacturers_id: manufacturers_id or comma separated list of manufacturers_id
+            for filtering results to a manufacturer or manufacturers
+    """
+
+    manufacturers_id: CommaSeparatedList[int] | None = Query(None, description="")
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def where(self) -> str | None:
+        """ """
+        if self.has("manufacturers_id"):
+            return "manufacturer_ids && :manufacturers_id"
+
+
 class MobileQuery(QueryBaseModel):
     """Pydantic query model for the `mobile` query parameter
 
@@ -449,6 +469,7 @@ class DateFromQuery(QueryBaseModel):
         date_from: date or datetime in ISO-8601 format to filter results to a
         date range.
     """
+
     date_from: datetime | date | None = Query(
         None,
         description="From when?",
@@ -556,7 +577,8 @@ class BaseDataQuery(QueryBaseModel):
     """
 
     base_data: BaseData | None = Query(
-        "hourly", description="Base data to pull from. Options are hourly, daily"
+        "hourly",
+        description="Base data to pull from. Options are hourly, daily"
     )
 
 
@@ -690,6 +712,26 @@ class RadiusQuery(QueryBaseModel):
             return f"ST_DWithin(ST_MakePoint(:lon, :lat)::geography, {geometry_field}, :radius)"
 
 
+class InstrumentsQuery(QueryBaseModel):
+    """Pydantic query model for the instruments query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        instruments_id: instruments_id or comma separated list of instruments_id
+            for filtering results to an instrument or instruments
+    """
+
+    instruments_id: CommaSeparatedList[int] | None = Query(None, description="")
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def where(self) -> str | None:
+        """ """
+        if self.has("instruments_id"):
+            return "instrument_ids && :instruments_id"
+
+
 class BboxQuery(QueryBaseModel):
     """Pydantic query model for the `bbox` query parameter.
 
@@ -786,8 +828,7 @@ class BboxQuery(QueryBaseModel):
             return "ST_MakeEnvelope(:minx, :miny, :maxx, :maxy, 4326) && geom"
 
 
-class MeasurementsQueries(Paging, ParametersQuery):
-    ...
+class MeasurementsQueries(Paging, ParametersQuery): ...
 
 
 class QueryBuilder(object):

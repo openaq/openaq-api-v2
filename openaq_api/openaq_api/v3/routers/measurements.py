@@ -154,7 +154,7 @@ async def fetch_measurements(q, db):
             JOIN sensors s ON (m.sensors_id = s.sensors_id)
             JOIN sensor_systems sy ON (s.sensor_systems_id = sy.sensor_systems_id)
             JOIN sensor_nodes sn ON (sy.sensor_nodes_id = sn.sensor_nodes_id)
-            JOIN timezones ts ON (sn.timezones_id = ts.gid)
+            JOIN timezones ts ON (sn.timezones_id = ts.timezones_id)
             {query.where()}
             AND sn.is_public AND s.is_public
             GROUP BY 1, 2, 3, 4)
@@ -193,7 +193,7 @@ async def fetch_measurements(q, db):
             {query.total()}
             FROM meas t
             --JOIN sensor_nodes sn ON (t.sensor_nodes_id = sn.sensor_nodes_id)
-            --JOIN timezones ts ON (sn.timezones_id = ts.gid)
+            --JOIN timezones ts ON (sn.timezones_id = ts.timezones_id)
             JOIN measurands m ON (t.measurands_id = m.measurands_id)
             {query.pagination()}
     """

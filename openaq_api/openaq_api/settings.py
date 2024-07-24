@@ -37,6 +37,10 @@ class Settings(BaseSettings):
 
     EMAIL_SENDER: str | None = None
 
+    SMTP_EMAIL_HOST: str | None = None
+    SMTP_EMAIL_USER: str | None = None
+    SMTP_EMAIL_PASSWORD: str | None = None
+
     EXPLORER_API_KEY: str
 
     @computed_field(return_type=str, alias="DATABASE_READ_URL")
@@ -48,6 +52,11 @@ class Settings(BaseSettings):
     @property
     def DATABASE_WRITE_URL(self):
         return f"postgresql://{self.DATABASE_WRITE_USER}:{self.DATABASE_WRITE_PASSWORD}@{self.DATABASE_HOST}:{self.DATABASE_PORT}/{self.DATABASE_DB}"
+
+    @computed_field(return_type=str, alias="DATABASE_WRITE_URL")
+    @property
+    def USE_SMTP_EMAIL(self):
+        return None not in [self.SMTP_EMAIL_HOST, self.SMTP_EMAIL_USER, self.SMTP_EMAIL_PASSWORD]
 
     model_config = SettingsConfigDict(extra="ignore", env_file=get_env())
 

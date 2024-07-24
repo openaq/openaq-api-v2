@@ -45,8 +45,8 @@ class Parameter(BaseModel):
     unit: str
     count: int
     average: float
-    last_value: float = Field(..., alias="lastValue")
     parameter: str
+    last_value: float | None = Field(None, alias="lastValue")
     display_name: str | None = Field(None, alias="displayName")
     last_updated: str = Field(..., alias="lastUpdated")
     parameter_id: int = Field(..., alias="parameterId")
@@ -228,7 +228,7 @@ class LocationsRowV1(BaseModel):
     last_updated: str = Field(..., alias="lastUpdated")
     parameters: list[str]
     counts_by_measurement: list[CountsByMeasurementItem] = Field(
-        ..., alias="countsByMeasurement"
+        alias="countsByMeasurement"
     )
     count: int
 
@@ -251,14 +251,14 @@ class LocationsRow(BaseModel):
     sources: list[Source] | Source = None
     is_mobile: bool = Field(..., alias="isMobile")
     is_analysis: bool | None = Field(None, alias="isAnalysis")
-    parameters: list[Parameter]
+    parameters: list[Parameter] | None = None
     sensor_type: str | None = Field(None, alias="sensorType")
     coordinates: Coordinates | None = None
-    last_updated: str = Field(..., alias="lastUpdated")
-    first_updated: str = Field(..., alias="firstUpdated")
+    last_updated: str | None = Field(None, alias="lastUpdated")
+    first_updated: str | None = Field(None, alias="firstUpdated")
     measurements: int
-    bounds: list[float] | float = None
-    manufacturers: list[Manufacturer] | Manufacturer = None
+    bounds: list[float] | None = None
+    manufacturers: list[Manufacturer] | None = None
 
     model_config = ConfigDict(protected_namespaces=())
 
