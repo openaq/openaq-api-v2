@@ -292,6 +292,26 @@ class ParametersQuery(QueryBaseModel):
             return "parameter_ids && :parameters_id"
 
 
+class ManufacturersQuery(QueryBaseModel):
+    """Pydantic query model for the manufacturers_id query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        manufacturers_id: manufacturers_id or comma separated list of manufacturers_id
+            for filtering results to a manufacturer or manufacturers
+    """
+
+    manufacturers_id: CommaSeparatedList[int] | None = Query(None, description="")
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def where(self) -> str | None:
+        """ """
+        if self.has("manufacturers_id"):
+            return "manufacturer_ids && :manufacturers_id"
+
+
 class MobileQuery(QueryBaseModel):
     """Pydantic query model for the `mobile` query parameter
 

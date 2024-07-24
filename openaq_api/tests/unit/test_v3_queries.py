@@ -14,6 +14,7 @@ from openaq_api.v3.models.queries import (
     CountryIsoQuery,
     DateFromQuery,
     DateToQuery,
+    ManufacturersQuery,
     InstrumentsQuery,
     MobileQuery,
     MonitorQuery,
@@ -498,3 +499,19 @@ class TestLocationsQueries:
                 coordinates=f"{latitude},{longitude}",
                 radius=radius,
             )
+
+
+class TestManufacturersQueries:
+    def test_has_value(self):
+        manufacturers_query = ManufacturersQuery(manufacturers_id="1,2,3")
+        where = manufacturers_query.where()
+        params = manufacturers_query.model_dump()
+        assert where == "manufacturer_ids && :manufacturers_id"
+        assert params == {"manufacturers_id": [1, 2, 3]}
+
+    def test_no_value(self):
+        manufacturers_query = ManufacturersQuery()
+        where = manufacturers_query.where()
+        params = manufacturers_query.model_dump()
+        assert where is None
+        assert params == {"manufacturers_id": None}
