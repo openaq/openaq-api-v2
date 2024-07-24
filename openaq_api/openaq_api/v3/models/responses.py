@@ -183,8 +183,8 @@ class Manufacturer(ManufacturerBase):
 
 
 class Sensor(SensorBase):
-    datetime_first: DatetimeObject
-    datetime_last: DatetimeObject
+    datetime_first: DatetimeObject | None = None
+    datetime_last: DatetimeObject | None = None
     coverage: Coverage
     latest: Latest
     summary: Summary

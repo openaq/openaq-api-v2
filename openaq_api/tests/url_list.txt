@@ -10,7 +10,6 @@
 /v2/measurements
 /v2/countries
 /v2/locations
-/v2/projects
 /v2/locations/6
 /v2/locations?page=3237&parameter=pm25&limit=1
 /v1/locations
