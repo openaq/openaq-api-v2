@@ -12,23 +12,22 @@ def client():
     with TestClient(app) as c:
         yield c
 
-# purple air sensor and node
-sensor = 393731
-node = 62376
+# mock sensor and node
+sensor = 1
+node = 1
 
 urls = [
     ## v2
     {"path": "/v3/instruments/3","status": 200},
-    {"path": "/v2/averages?locations_id=:node","status": 404},
-    {"path": "/v2/locations/:node","status": 404},
-    {"path": "/v2/latest/:node","status": 404},
-    {"path": "/v2/measurements?location_id=:node","status": 404},
+    {"path": "/v2/averages?locations_id=:node","status": 200},
+    {"path": "/v2/locations/:node","status": 200},
+    {"path": "/v2/latest/:node","status": 200},
+    {"path": "/v2/measurements?location_id=:node","status": 200},
     ## v3
-    {"path": "/v3/latest?location_id=:node","status": 404},
-    {"path": "/v3/locations/:node","status": 404}, # after
-    {"path": "/v3/locations/:node/measurements","status": 404}, # after
-    {"path": "/v3/sensors/:sensor/measurements","status": 404}, # after
-    {"path": "/v3/sensors/:sensor","status": 404}, # after
+    {"path": "/v3/locations/:node","status": 200}, # after
+    {"path": "/v3/locations/:node/measurements","status": 200}, # after
+    {"path": "/v3/sensors/:sensor/measurements","status": 200}, # after
+    {"path": "/v3/sensors/:sensor","status": 200}, # after
     # all of the following have an added where clause
     # and we just want to make sure the sql works
     {"path": "/v2/cities?limit=1","status": 200},
