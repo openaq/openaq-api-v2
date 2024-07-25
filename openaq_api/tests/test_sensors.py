@@ -35,6 +35,8 @@ urls = [
     {"path": "/v2/sources?limit=1","status": 200},
     {"path": "/v3/manufacturers?limit=1","status": 200},
     {"path": "/v3/locations?limit=1","status": 200},
+    {"path": "/v3/licenses", "status": 200 },
+    {"path": "/v3/licenses/:node", "status": 200 },
 ]
 
 
