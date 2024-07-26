@@ -106,11 +106,11 @@ class ManufacturerBase(JsonBase):
 
 
 class LicenseBase(JsonBase):
-	id: int
-	url: str
-	date_from: date
-	date_to: date | None = None
-	description: str | None = None
+    id: int
+    url: str
+    date_from: date
+    date_to: date | None = None
+    description: str | None = None
 
 
 class Latest(JsonBase):
@@ -148,9 +148,9 @@ class Country(CountryBase):
     id: int
     code: str
     name: str
-    datetime_first: datetime
-    datetime_last: datetime
-    parameters: list[ParameterBase]
+    datetime_first: datetime | None = None
+    datetime_last: datetime | None = None
+    parameters: list[ParameterBase] | None = None
 
 
 class Entity(EntityBase):
@@ -169,8 +169,7 @@ class Provider(ProviderBase):
     bbox: GeoJSON | None = None
 
 
-class Owner(OwnerBase):
-    ...
+class Owner(OwnerBase): ...
 
 
 class Instrument(InstrumentBase):
@@ -211,7 +210,7 @@ class Location(JsonBase):
 
 
 class Measurement(JsonBase):
-    #datetime: DatetimeObject
+    # datetime: DatetimeObject
     value: float
     parameter: ParameterBase
     period: Period | None = None
