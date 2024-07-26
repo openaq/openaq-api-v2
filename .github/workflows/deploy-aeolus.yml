@@ -3,7 +3,7 @@ name: Deploy aeolus
 on:
   push:
     branches:
-      - versions/aeolus
+      - main
 
 jobs:
   deploy:
