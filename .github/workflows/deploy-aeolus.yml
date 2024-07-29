@@ -65,7 +65,7 @@ jobs:
 
           RATE_LIMITING: True
           RATE_AMOUNT: 10
-          RATE_AMOUNT_KEY: 10
+          RATE_AMOUNT_KEY: 60
           RATE_TIME: 1
           USER_AGENT: ${{ env.AEOLUS_USER_AGENT }}
           ORIGIN: ${{ env.AEOLUS_ORIGIN }}
