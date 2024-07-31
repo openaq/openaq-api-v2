@@ -88,6 +88,13 @@ async def instruments_get(
     response = await fetch_licenses(licenses, db)
     return response
 
+    commercial_use_allowed: bool
+    attribution_required: bool
+    share_alike_required: bool
+    modification_allowed: bool
+    redistribution_allowed: bool
+    sourceUrl: str
+
 
 async def fetch_licenses(query, db):
     query_builder = QueryBuilder(query)
@@ -95,18 +102,18 @@ async def fetch_licenses(query, db):
         SELECT 
             licenses_id AS id
             , name
-            , url AS source_url
             , attribution_required
             , share_alike_required
             , commercial_use_allowed
             , redistribution_allowed
             , modification_allowed
-        FROM licenses
+            , url AS source_url
+
+        FROM licenses l 
             {query_builder.where()}
         ORDER BY 
             licenses_id
         {query_builder.pagination()};
-
         """
 
     response = await db.fetchPage(sql, query_builder.params())

@@ -109,20 +109,17 @@ class ManufacturerBase(JsonBase):
 
 class AttributionEntity(JsonBase):
     name: str
-    url: str
+    url: str | None = None
 
 
 class LocationLicense(JsonBase):
     id: int
     name: str
+    attribution: AttributionEntity
     date_from: date | None = None
     date_to: date | None = None
 
-    @field_validator(
-        "date_from",
-        "date_to",
-        mode='before'
-    )
+    @field_validator("date_from", "date_to", mode="before")
     def check_dates(cls, v):
         return fix_date(v)
 
@@ -140,10 +137,9 @@ class License(JsonBase):
     commercial_use_allowed: bool
     attribution_required: bool
     share_alike_required: bool
-    modification_alowed: bool
+    modification_allowed: bool
     redistribution_allowed: bool
-    attribution: AttributionEntity
-    sourceUrl: str
+    source_url: str
 
 
 class Latest(JsonBase):
