@@ -92,7 +92,7 @@ async def instruments_get(
 async def fetch_licenses(query, db):
     query_builder = QueryBuilder(query)
     sql = f"""
-        SELECT 
+        SELECT
             licenses_id AS id
             , name
             , attribution_required
@@ -101,9 +101,9 @@ async def fetch_licenses(query, db):
             , redistribution_allowed
             , modification_allowed
             , url AS source_url
-        FROM licenses l 
+        FROM licenses l
             {query_builder.where()}
-        ORDER BY 
+        ORDER BY
             licenses_id
         {query_builder.pagination()};
         """
