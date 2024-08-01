@@ -152,9 +152,14 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
 
     async def request_is_limited(self, key: str, limit: int, request: Request) -> bool:
         value = await self.redis_client.get(key)
-        if value is None or int(value) < limit:
+        if value is None:
             async with self.redis_client.pipeline() as pipe:
                 [incr, _] = await pipe.incr(key).expire(key, 60).execute()
+                request.state.counter = limit - incr
+                return False
+        if int(value) < limit:
+            async with self.redis_client.pipeline() as pipe:
+                [incr] = await pipe.incr(key).execute()
                 request.state.counter = limit - incr
                 return False
         else:
@@ -185,7 +190,6 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
-        print("RATE LIMIT\n\n\n")
         route = request.url.path
         auth = request.headers.get("x-api-key", None)
         if auth == settings.EXPLORER_API_KEY:
@@ -211,8 +215,10 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
             limit = self.rate_amount_key
         request.state.counter = limit
         limited = False
+        ttl = 0
         if self.limited_path(route):
             limited = await self.request_is_limited(key, limit, request)
+            ttl = await self.redis_client.ttl(key)
         if self.limited_path(route) and limited:
             logging.info(
                 TooManyRequestsLog(
@@ -220,23 +226,19 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
                     rate_limiter=f"{key}/{limit}/{request.state.counter}",
                 ).model_dump_json()
             )
-            return JSONResponse(
+            response = JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 content={"message": "Too many requests"},
             )
+            response.headers["x-ratelimit-limit"] = str(limit)
+            response.headers["x-ratelimit-remaining"] = "0"
+            response.headers["x-ratelimit-used"] = str(limit)
+            response.headers["x-ratelimit-reset"] = str(ttl)
+            return response
         request.state.rate_limiter = f"{key}/{limit}/{request.state.counter}"
-        ttl = await self.redis_client.ttl(key)
         response = await call_next(request)
-        response.headers["RateLimit-Limit"] = str(limit)
-        response.headers["RateLimit-Remaining"] = str(request.state.counter)
-        response.headers["RateLimit-Reset"] = str(ttl)
-        rate_time_seconds = int(self.rate_time.total_seconds())
-        if auth:
-            response.headers["RateLimit-Policy"] = (
-                f"{self.rate_amount_key};w={rate_time_seconds}"
-            )
-        else:
-            response.headers["RateLimit-Policy"] = (
-                f"{self.rate_amount};w={rate_time_seconds}"
-            )
+        response.headers["x-ratelimit-limit"] = str(limit)
+        response.headers["x-ratelimit-remaining"] = str(request.state.counter)
+        response.headers["x-ratelimit-used"] = str(limit - request.state.counter)
+        response.headers["x-ratelimit-reset"] = str(ttl)
         return response
