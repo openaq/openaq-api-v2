@@ -2,7 +2,9 @@ from datetime import datetime, date
 from typing import Any, List
 
 from humps import camelize
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from .utils import fix_date
 
 
 class JsonBase(BaseModel):
@@ -23,8 +25,8 @@ class OpenAQResult(JsonBase):
 
 
 class DatetimeObject(JsonBase):
-    utc: str
-    local: str
+    utc: datetime
+    local: datetime
 
 
 class Coordinates(JsonBase):
@@ -105,12 +107,39 @@ class ManufacturerBase(JsonBase):
     name: str
 
 
-class LicenseBase(JsonBase):
-	id: int
-	url: str
-	date_from: date
-	date_to: date | None = None
-	description: str | None = None
+class AttributionEntity(JsonBase):
+    name: str
+    url: str | None = None
+
+
+class LocationLicense(JsonBase):
+    id: int
+    name: str
+    attribution: AttributionEntity
+    date_from: date | None = None
+    date_to: date | None = None
+
+    @field_validator("date_from", "date_to", mode="before")
+    def check_dates(cls, v):
+        return fix_date(v)
+
+
+class ProviderLicense(LocationLicense):
+    id: int
+    name: str
+    date_from: date
+    date_to: date | None = None
+
+
+class License(JsonBase):
+    id: int
+    name: str
+    commercial_use_allowed: bool
+    attribution_required: bool
+    share_alike_required: bool
+    modification_allowed: bool
+    redistribution_allowed: bool
+    source_url: str
 
 
 class Latest(JsonBase):
@@ -160,7 +189,7 @@ class Entity(EntityBase):
 class Provider(ProviderBase):
     source_name: str
     export_prefix: str
-    license: str | None = None
+    licenses: list[ProviderLicense] | None = None
     datetime_added: datetime
     datetime_first: datetime
     datetime_last: datetime
@@ -169,8 +198,7 @@ class Provider(ProviderBase):
     bbox: GeoJSON | None = None
 
 
-class Owner(OwnerBase):
-    ...
+class Owner(OwnerBase): ...
 
 
 class Instrument(InstrumentBase):
@@ -203,15 +231,15 @@ class Location(JsonBase):
     instruments: list[InstrumentBase]
     sensors: list[SensorBase]
     coordinates: Coordinates
-    licenses: list[LicenseBase] | None = None
+    licenses: list[LocationLicense] | None = None
     bounds: list[float] = Field(..., min_length=4, max_length=4)
     distance: float | None = None
-    datetime_first: DatetimeObject
-    datetime_last: DatetimeObject
+    datetime_first: DatetimeObject | None = None
+    datetime_last: DatetimeObject | None = None
 
 
 class Measurement(JsonBase):
-    #datetime: DatetimeObject
+    # datetime: DatetimeObject
     value: float
     parameter: ParameterBase
     period: Period | None = None
@@ -286,6 +314,10 @@ class AnnualDataResponse(OpenAQResult):
 
 class TrendsResponse(OpenAQResult):
     results: list[Trend]
+
+
+class LicensesResponse(OpenAQResult):
+    results: list[License]
 
 
 class CountriesResponse(OpenAQResult):
