@@ -60,6 +60,7 @@ from openaq_api.v3.routers import (
     sensors,
     tiles,
     trends,
+    licenses,
 )
 
 logging.basicConfig(
@@ -244,6 +245,7 @@ def favico():
 app.include_router(auth.router)
 app.include_router(instruments.router)
 app.include_router(locations.router)
+app.include_router(licenses.router)
 app.include_router(parameters.router)
 app.include_router(tiles.router)
 app.include_router(countries.router)
