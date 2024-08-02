@@ -1,0 +1,86 @@
+name: Deploy aeolus
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Configure aws credentials
+        uses: aws-actions/configure-aws-credentials@master
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_PROD }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY_PROD }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Get envionmental values
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          secret-ids: |
+            AEOLUS, openaq-env/aeolus
+          name-transformation: uppercase
+          parse-json-secrets: true
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: build pages
+        working-directory: ./pages
+        run: |
+          yarn install
+          yarn run deploy
+
+      - name: Install CDK
+        run: |
+          npm install -g aws-cdk@2.92.0
+
+      - uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+
+      - name: Deploy stack
+        env:
+          ENV: "aeolus"
+          PROJECT: "openaq"
+          DATABASE_READ_USER: ${{ env.AEOLUS_DATABASE_READ_USER }}
+          DATABASE_READ_PASSWORD: ${{ env.AEOLUS_DATABASE_READ_PASSWORD }}
+          DATABASE_WRITE_USER: ${{ env.AEOLUS_DATABASE_WRITE_USER }}
+          DATABASE_WRITE_PASSWORD: ${{ env.AEOLUS_DATABASE_WRITE_PASSWORD }}
+          DATABASE_DB: ${{ env.AEOLUS_DATABASE_DB }}
+          DATABASE_HOST: ${{ env.AEOLUS_DATABASE_HOST }}
+          DATABASE_PORT: ${{ env.AEOLUS_DATABASE_PORT }}
+          API_LAMBDA_MEMORY_SIZE: ${{ env.AEOLUS_API_LAMBDA_MEMORY_SIZE }}
+
+          CDK_ACCOUNT: ${{ secrets.CDK_ACCOUNT }}
+          CDK_REGION: ${{ secrets.CDK_REGION }}
+
+          VPC_ID: ${{ env.AEOLUS_VPC_ID }}
+
+          RATE_LIMITING: True
+          RATE_AMOUNT: 10
+          RATE_AMOUNT_KEY: 60
+          RATE_TIME: 1
+          USER_AGENT: ${{ env.AEOLUS_USER_AGENT }}
+          ORIGIN: ${{ env.AEOLUS_ORIGIN }}
+          REDIS_HOST: ${{ env.AEOLUS_REDIS_HOST }}
+          REDIS_PORT: ${{ env.AEOLUS_REDIS_PORT }}
+          REDIS_SECURITY_GROUP_ID: ${{ env.AEOLUS_REDIS_SECURITY_GROUP_ID }}
+
+          EMAIL_SENDER: ${{ env.AEOLUS_EMAIL_SENDER }}
+          SMTP_EMAIL_HOST: ${{ env.AEOLUS_SMTP_EMAIL_HOST }}
+          SMTP_EMAIL_USER: ${{ env.AEOLUS_SMTP_EMAIL_USER }}
+          SMTP_EMAIL_PASSWORD: ${{ env.AEOLUS_SMTP_EMAIL_PASSWORD }}
+
+          EXPLORER_API_KEY: ${{ env.AEOLUS_EXPLORER_API_KEY }}
+
+        working-directory: ./cdk
+        run: |
+          pip install -r requirements.txt
+          cdk deploy openaq-api-aeolus --require-approval never

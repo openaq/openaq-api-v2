@@ -177,9 +177,9 @@ class Country(CountryBase):
     id: int
     code: str
     name: str
-    datetime_first: datetime
-    datetime_last: datetime
-    parameters: list[ParameterBase]
+    datetime_first: datetime | None = None
+    datetime_last: datetime | None = None
+    parameters: list[ParameterBase] | None = None
 
 
 class Entity(EntityBase):

@@ -36,7 +36,6 @@ class Settings(BaseSettings):
     ORIGIN: str | None = None
 
     EMAIL_SENDER: str | None = None
-
     SMTP_EMAIL_HOST: str | None = None
     SMTP_EMAIL_USER: str | None = None
     SMTP_EMAIL_PASSWORD: str | None = None
