@@ -216,6 +216,10 @@ class QueryBaseModel(ABC, BaseModel):
         """ """
         return parameter_dependency_from_model("depends", cls)
 
+    def map(self, key: str, default: str | None = None):
+        cols = getattr(self, '__column_map__', {})
+        return cols.get(key, default)
+
     def has(self, field_name: str) -> bool:
         """ """
         return hasattr(self, field_name) and getattr(self, field_name) is not None
@@ -487,16 +491,18 @@ class DateFromQuery(QueryBaseModel):
         Returns:
             string of WHERE clause if `date_from` is set
         """
+        tz = self.map('timezone', 'timezone')
+        dt = self.map('datetime', 'datetime')
 
         if self.date_from is None:
             return None
         elif isinstance(self.date_from, datetime):
             if self.date_from.tzinfo is None:
-                return "datetime > (:date_from::timestamp AT TIME ZONE timezone)"
+                return f"{dt} > (:date_from::timestamp AT TIME ZONE {tz})"
             else:
-                return "datetime > :date_from"
+                return f"{dt} > :date_from"
         elif isinstance(self.date_from, date):
-            return "datetime > (:date_from::timestamp AT TIME ZONE timezone)"
+            return f"{dt} > (:date_from::timestamp AT TIME ZONE {tz})"
 
 
 class DateToQuery(QueryBaseModel):
@@ -515,7 +521,7 @@ class DateToQuery(QueryBaseModel):
         examples=["2022-10-01T11:19:38-06:00", "2022-10-01"],
     )
 
-    def where(self) -> str:
+    def where(self, q = None) -> str:
         """Generates SQL condition for filtering to datetime.
 
         Overrides the base QueryBaseModel `where` method
@@ -875,6 +881,13 @@ class QueryBuilder(object):
         else:
             return None
 
+    def set_column_map(self, m: dict):
+        """
+        Provide a dictionary that can be used later in the where methods
+        to dynamically set a query field name.
+        """
+        setattr(self, '__column_map__', m)
+
     def fields(self) -> str:
         """
         loops through all ancestor classes and calls
@@ -931,8 +944,10 @@ class QueryBuilder(object):
         bases = self._bases()
         for base in bases:
             if callable(getattr(base, "where", None)):
-                if base.where(self.query):
-                    where.append(base.where(self.query))
+                setattr(self.query, '__column_map__', getattr(self, '__column_map__', {}))
+                clause = base.where(self.query)
+                if clause:
+                    where.append(clause)
         if len(where):
             where = list(set(where))
             where.sort()  # ensure the order is consistent for testing
