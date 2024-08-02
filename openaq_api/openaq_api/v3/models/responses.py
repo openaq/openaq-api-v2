@@ -189,11 +189,10 @@ class Entity(EntityBase):
 class Provider(ProviderBase):
     source_name: str
     export_prefix: str
-    licenses: list[ProviderLicense] | None = None
     datetime_added: datetime
     datetime_first: datetime
     datetime_last: datetime
-    owner_entity: EntityBase
+    entities_id: int
     parameters: list[ParameterBase]
     bbox: GeoJSON | None = None
 
