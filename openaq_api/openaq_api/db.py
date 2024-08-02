@@ -200,17 +200,17 @@ class DB:
         gets user info from users table and entities table
         """
         query = """
-        SELECT 
+        SELECT
             e.full_name
             , u.email_address
-            , u.verification_code 
-        FROM 
+            , u.verification_code
+        FROM
             users u
         JOIN
             users_entities USING (users_id)
-        JOIN 
-            entities e USING (entities_id)   
-        WHERE 
+        JOIN
+            entities e USING (entities_id)
+        WHERE
             u.users_id = :users_id
         """
         conn = await asyncpg.connect(settings.DATABASE_READ_URL)
@@ -224,12 +224,12 @@ class DB:
         gets user info from users table and entities table
         """
         query = """
-        UPDATE 
+        UPDATE
             users
         SET
             verification_code = generate_token()
-            , expires_on = (timestamptz (NOW() + INTERVAL '30min')) 
-        WHERE 
+            , expires_on = (timestamptz (NOW() + INTERVAL '30min'))
+        WHERE
             email_address = :email_address
         RETURNING verification_code as "verificationCode"
         """
@@ -244,13 +244,13 @@ class DB:
         calls the get_user_token plpgsql function to verify user email and generate API token
         """
         query = """
-        UPDATE 
-            user_keys 
-        SET 
+        UPDATE
+            user_keys
+        SET
             token = generate_token()
-        WHERE 
+        WHERE
             users_id = :users_id
-        AND 
+        AND
             token = :token
         """
         conn = await asyncpg.connect(settings.DATABASE_WRITE_URL)

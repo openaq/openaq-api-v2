@@ -149,7 +149,7 @@ async def fetch_sensors(q, db):
     FROM sensors s
     JOIN sensor_systems sy ON (s.sensor_systems_id = sy.sensor_systems_id)
     JOIN sensor_nodes n ON (sy.sensor_nodes_id = n.sensor_nodes_id)
-    JOIN timezones t ON (n.timezones_id = t.gid)
+    JOIN timezones t ON (n.timezones_id = t.timezones_id)
     JOIN measurands m ON (s.measurands_id = m.measurands_id)
     LEFT JOIN sensors_rollup r ON (s.sensors_id = r.sensors_id)
     {query.where()} AND n.is_public AND s.is_public
@@ -231,7 +231,7 @@ async def fetch_measurements(q, db):
     , measurands m
     WHERE s.sensor_systems_id = sy.sensor_systems_id
     AND sy.sensor_nodes_id = sn.sensor_nodes_id
-    AND sn.timezones_id = tz.gid
+    AND sn.timezones_id = tz.timezones_id
     AND s.sensors_id = :sensors_id
     AND s.measurands_id = m.measurands_id
     AND sn.is_public AND s.is_public)
@@ -386,7 +386,7 @@ async def fetch_measurements(q, db):
         , measurands m
         WHERE s.sensor_systems_id = sy.sensor_systems_id
         AND sy.sensor_nodes_id = sn.sensor_nodes_id
-        AND sn.timezones_id = tz.gid
+        AND sn.timezones_id = tz.timezones_id
         AND s.sensors_id = :sensors_id
         AND s.measurands_id = m.measurands_id
         AND sn.is_public AND s.is_public
