@@ -193,6 +193,7 @@ class OpenAQValidationResponse(BaseModel):
     detail: list[OpenAQValidationResponseDetail] | None = None
 
 
+
 @app.exception_handler(RequestValidationError)
 async def openaq_request_validation_exception_handler(
     request: Request, exc: RequestValidationError

@@ -464,6 +464,89 @@ class CountryIsoQuery(QueryBaseModel):
             return "country->>'code' = :iso"
 
 
+class DatetimeFromQuery(QueryBaseModel):
+    """Pydantic query model for the `datetime_from` query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        datetime_from: date or datetime in ISO-8601 format to filter results to a
+        date range.
+    """
+
+    datetime_from: datetime | date | None = Query(
+        None,
+        description="From when?",
+        examples=["2022-10-01T11:19:38-06:00", "2022-10-01"],
+    )
+
+
+    def where(self) -> str:
+        """Generates SQL condition for filtering to datetime.
+
+        Overrides the base QueryBaseModel `where` method
+
+        If `datetime_from` is a `date` or `datetime` without a timezone a timezone
+        is added as UTC.
+
+        Returns:
+            string of WHERE clause if `datetime_from` is set
+        """
+        tz = self.map('timezone', 'timezone')
+        dt = self.map('datetime', 'datetime')
+
+        if self.datetime_from is None:
+            return None
+        elif isinstance(self.datetime_from, datetime):
+            if self.datetime_from.tzinfo is None:
+                return f"{dt} > (:datetime_from::timestamp AT TIME ZONE {tz})"
+            else:
+                return f"{dt} > :datetime_from"
+        elif isinstance(self.datetime_from, date):
+            return f"{dt} > (:datetime_from::timestamp AT TIME ZONE {tz})"
+
+
+class DatetimeToQuery(QueryBaseModel):
+    """Pydantic query model for the `date_to` query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        date_to: date or datetime in ISO-8601 format to filter results to a
+        date range.
+    """
+
+    datetime_to: datetime | date | None = Query(
+        None,
+        description="To when?",
+        examples=["2022-10-01T11:19:38-06:00", "2022-10-01"],
+    )
+
+    def where(self) -> str:
+        """Generates SQL condition for filtering to datetime.
+
+        Overrides the base QueryBaseModel `where` method
+
+        If `datetime_to` is a `date` or `datetime` without a timezone a timezone
+        is added as UTC.
+
+        Returns:
+            string of WHERE clause if `datetime_to` is set
+        """
+        tz = self.map('timezone', 'timezone')
+        dt = self.map('datetime', 'datetime')
+
+        if self.datetime_to is None:
+            return None
+        elif isinstance(self.datetime_to, datetime):
+            if self.datetime_to.tzinfo is None:
+                return f"{dt} <= (:datetime_to::timestamp AT TIME ZONE {tz})"
+            else:
+                return f"{dt} <= :datetime_to"
+        elif isinstance(self.datetime_to, date):
+            return f"{dt} <= (:datetime_to::timestamp AT TIME ZONE {tz})"
+
+
 class DateFromQuery(QueryBaseModel):
     """Pydantic query model for the `date_from` query parameter
 
@@ -480,6 +563,7 @@ class DateFromQuery(QueryBaseModel):
         examples=["2022-10-01T11:19:38-06:00", "2022-10-01"],
     )
 
+
     def where(self) -> str:
         """Generates SQL condition for filtering to datetime.
 
@@ -491,18 +575,14 @@ class DateFromQuery(QueryBaseModel):
         Returns:
             string of WHERE clause if `date_from` is set
         """
-        tz = self.map('timezone', 'timezone')
         dt = self.map('datetime', 'datetime')
 
         if self.date_from is None:
             return None
         elif isinstance(self.date_from, datetime):
-            if self.date_from.tzinfo is None:
-                return f"{dt} > (:date_from::timestamp AT TIME ZONE {tz})"
-            else:
-                return f"{dt} > :date_from"
+            return f"{dt} >= :date_from::date"
         elif isinstance(self.date_from, date):
-            return f"{dt} > (:date_from::timestamp AT TIME ZONE {tz})"
+            return f"{dt} >= :date_from"
 
 
 class DateToQuery(QueryBaseModel):
@@ -521,7 +601,7 @@ class DateToQuery(QueryBaseModel):
         examples=["2022-10-01T11:19:38-06:00", "2022-10-01"],
     )
 
-    def where(self, q = None) -> str:
+    def where(self) -> str:
         """Generates SQL condition for filtering to datetime.
 
         Overrides the base QueryBaseModel `where` method
@@ -532,15 +612,14 @@ class DateToQuery(QueryBaseModel):
         Returns:
             string of WHERE clause if `date_to` is set
         """
+        dt = self.map('datetime', 'datetime')
+
         if self.date_to is None:
             return None
         elif isinstance(self.date_to, datetime):
-            if self.date_to.tzinfo is None:
-                return "datetime <= (:date_to::timestamp AT TIME ZONE timezone)"
-            else:
-                return "datetime <= :date_to"
+            return f"{dt} <= :date_to::date"
         elif isinstance(self.date_to, date):
-            return "datetime <= (:date_to::timestamp AT TIME ZONE timezone)"
+            return f"{dt} <= :date_to"
 
 
 class PeriodNames(StrEnum):
@@ -553,9 +632,6 @@ class PeriodNames(StrEnum):
     moy = "moy"
     raw = "raw"
 
-class BaseData(StrEnum):
-    hour = "hourly"
-    day = "daily"
 
 
 class PeriodNameQuery(QueryBaseModel):
@@ -571,21 +647,6 @@ class PeriodNameQuery(QueryBaseModel):
         "hour", description="Period to aggregate. Year, month, day, hour, hour of day (hod), day of week (dow) and month of year (moy)"
     )
 
-
-
-class BaseDataQuery(QueryBaseModel):
-    """Pydantic query model for the `base_data` query parameter.
-
-    Inherits from QueryBaseModel
-
-    Attributes:
-        base_data: the name of the underlying table to pull data from
-    """
-
-    base_data: BaseData | None = Query(
-        "hourly",
-        description="Base data to pull from. Options are hourly, daily"
-    )
 
 
 class TemporalQuery(QueryBaseModel):

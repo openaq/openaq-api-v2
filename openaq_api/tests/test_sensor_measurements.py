@@ -11,41 +11,176 @@ def client():
         yield c
 
 
-sensors_id = 7223
+sensors_id = 1
 
 class TestMeasurements:
-    def test_measurements_raw_good(self, client):
+    def test_default_good(self, client):
         response = client.get(f"/v3/sensors/{sensors_id}/measurements")
         assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        assert len(data) > 0
 
-    def test_measurements_raw_aggregated_hourly_good(self, client):
+    def test_aggregated_hourly_good(self, client):
         response = client.get(f"/v3/sensors/{sensors_id}/measurements/hourly")
         assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        assert len(data) > 0
 
-    def test_measurements_raw_aggregated_daily_good(self, client):
+    def test_aggregated_daily_good(self, client):
         response = client.get(f"/v3/sensors/{sensors_id}/measurements/daily")
         assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        assert len(data) > 0
 
-    def test_measurements_hours_good(self, client):
+
+class TestHours:
+    def test_default_good(self, client):
         response = client.get(f"/v3/sensors/{sensors_id}/hours")
         assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        assert len(data) > 0
 
-    def test_measurements_hours_aggregated_daily_good(self, client):
-        response = client.get(f"/v3/sensors/{sensors_id}/hours/daily?date_to=2024-02-01&date_from=2024-01-01")
+    def test_aggregated_daily_good(self, client):
+        response = client.get(f"/v3/sensors/{sensors_id}/hours/daily")
         assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        assert len(data) > 0
 
-    def test_measurements_hours_aggregated_yearly_good(self, client):
-        response = client.get(f"/v3/sensors/{sensors_id}/hours/yearly?date_to=2020-01-01&date_from=2024-01-01")
+    def test_aggregated_daily_reversed_dates_bad(self, client):
+        response = client.get(f"/v3/sensors/{sensors_id}/hours/daily?datetime_from=2023-03-06&datetime_to=2023-03-05")
+        assert response.status_code == 422
+
+    def test_aggregated_daily_dates_good(self, client):
+        response = client.get(f"/v3/sensors/{sensors_id}/hours/daily?datetime_from=2023-03-05&datetime_to=2023-03-06")
         assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        assert len(data) > 0
 
-    def test_measurements_days_good(self, client):
+    def test_aggregated_monthly_good(self, client):
+        response = client.get(f"/v3/sensors/{sensors_id}/hours/monthly")
+        assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        assert len(data) > 0
+
+    def test_aggregated_yearly_good(self, client):
+        response = client.get(f"/v3/sensors/{sensors_id}/hours/yearly")
+        assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        assert len(data) > 0
+
+    def test_aggregated_yearly_good_with_dates(self, client):
+        response = client.get(f"/v3/sensors/{sensors_id}/hours/yearly?datetime_from=2022-01-01&datetime_to=2023-01-01")
+        assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        assert len(data) == 1
+        row = data[0]
+        assert row.get('coverage', {}).get('expectedCount') == (365 * 24)
+        assert row.get('coverage', {}).get('observedCount') == 365
+
+    def test_aggregated_hod_good(self, client):
+        response = client.get(f"/v3/sensors/{sensors_id}/hours/hourofday")
+        assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        assert len(data) == 24
+
+    def test_aggregated_dow_good(self, client):
+        response = client.get(f"/v3/sensors/{sensors_id}/hours/dayofweek")
+        assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        assert len(data) == 7
+
+    def test_aggregated_moy_good(self, client):
+        response = client.get(f"/v3/sensors/{sensors_id}/hours/monthofyear?datetime_from=2022-01-01")
+        assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        assert len(data) == 12
+
+
+class TestDays:
+
+    def test_default_good(self, client):
         response = client.get(f"/v3/sensors/{sensors_id}/days")
         assert response.status_code == 200
 
-    def test_measurements_days_aggregated_yearly_good(self, client):
-        response = client.get(f"/v3/sensors/{sensors_id}/days/yearly")
+    def test_good_with_dates(self, client):
+        response = client.get(f"/v3/sensors/{sensors_id}/days?date_from=2023-03-05&limit=1")
+        assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        assert len(data) == 1
+        row = data[0]
+        assert row['coverage']['expectedCount'] == 24
+        assert row['coverage']['observedCount'] == 24
+        assert row['coverage']['percentComplete'] == 100
+        assert row['coverage']['percentComplete'] == row['coverage']['percentCoverage']
+
+    def test_aggregated_monthly_good(self, client):
+        response = client.get(f"/v3/sensors/{sensors_id}/days/monthly?date_from=2022-01-01&date_to=2022-12-31")
+        assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        assert len(data) == 12
+        row = data[0]
+        assert row['coverage']['expectedCount'] == 31
+        assert row['coverage']['observedCount'] == 31
+        assert row['coverage']['percentComplete'] == 100
+        assert row['coverage']['percentComplete'] == row['coverage']['percentCoverage']
+
+    def test_aggregated_yearly_good(self, client):
+        response = client.get(f"/v3/sensors/{sensors_id}/days/yearly?date_from=2022-01-01&date_to=2022-12-31")
+        assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        for d in data:
+            print(d.get('period'))
+        # dates should mean only one year is returned
+        assert len(data) == 1
+        row = data[0]
+        # we should expect 365 days
+        assert row['coverage']['expectedCount'] == 365
+        assert row['coverage']['observedCount'] == 365
+        assert row['coverage']['percentComplete'] == 100
+        assert row['coverage']['percentComplete'] == row['coverage']['percentCoverage']
+
+
+    def test_aggregated_dow_good(self, client):
+        response = client.get(f"/v3/sensors/{sensors_id}/days/dayofweek?date_from=2022-01-01&date_to=2022-12-31")
+        assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        assert len(data) == 7
+        row = data[0]
+        period = row['period']['label']
+        # just in case we are out of order
+        expected = 53 if period == '6' else 52
+        assert row['coverage']['expectedCount'] == expected
+        assert row['coverage']['observedCount'] == expected
+        assert row['coverage']['percentComplete'] == 100
+        assert row['coverage']['percentComplete'] == row['coverage']['percentCoverage']
+
+
+    def test_aggregated_moy_good(self, client):
+        response = client.get(f"/v3/sensors/{sensors_id}/days/monthofyear?date_from=2022-01-01")
+        assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        assert len(data) == 12
+        row = data[0]
+        assert row['coverage']['expectedCount'] == 31
+        assert row['coverage']['observedCount'] == 31
+        assert row['coverage']['percentComplete'] == 100
+        assert row['coverage']['percentComplete'] == row['coverage']['percentCoverage']
+
+
+class TestYears:
+
+    def test_default_good(self, client):
+        response = client.get(f"/v3/sensors/{sensors_id}/years")
+        data = json.loads(response.content).get('results', [])
         assert response.status_code == 200
 
-   # def test_measurements_years_good(self, client):
-   #     response = client.get(f"/v3/sensors/{sensors_id}/years")
-   #     assert response.status_code == 200
+
+    def test_good_with_dates(self, client):
+        response = client.get(f"/v3/sensors/{sensors_id}/years?date_from=2022-01-01&limit=1")
+        data = json.loads(response.content).get('results', [])
+        assert len(data) == 1
+        row = data[0]
+        assert row['coverage']['expectedCount'] == 8760
+        assert row['coverage']['observedCount'] == 365
+        assert row['coverage']['percentComplete'] == 4
+        assert row['coverage']['percentComplete'] == row['coverage']['percentCoverage']

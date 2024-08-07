@@ -9,8 +9,8 @@ from openaq_api.v3.models.responses import TrendsResponse
 logger = logging.getLogger("trends")
 
 from openaq_api.v3.models.queries import (
-    DateFromQuery,
-    DateToQuery,
+    DatetimeFromQuery,
+    DatetimeToQuery,
     Paging,
     PeriodNameQuery,
     QueryBaseModel,
@@ -44,8 +44,8 @@ class LocationTrendsQueries(
     Paging,
     LocationPathQuery,
     ParameterPathQuery,
-    DateFromQuery,
-    DateToQuery,
+    DatetimeFromQuery,
+    DatetimeToQuery,
     PeriodNameQuery,
 ):
     ...
