@@ -156,11 +156,14 @@ class TestDays:
 
 
     def test_aggregated_moy_good(self, client):
-        response = client.get(f"/v3/sensors/{sensors_id}/days/monthofyear?date_from=2022-01-01")
+        response = client.get(f"/v3/sensors/{sensors_id}/days/monthofyear?date_from=2022-01-01&date_to=2022-12-31")
         assert response.status_code == 200
         data = json.loads(response.content).get('results', [])
         assert len(data) == 12
         row = data[0]
+        period = row['period']['label']
+        print(row)
+
         assert row['coverage']['expectedCount'] == 31
         assert row['coverage']['observedCount'] == 31
         assert row['coverage']['percentComplete'] == 100

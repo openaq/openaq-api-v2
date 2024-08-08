@@ -718,8 +718,10 @@ async def fetch_aggregate_trends(base_data_table, aggregate_to, query, db):
 
     if base_data_table == "hourly_data":
         dur = "01:00:00"
+        interval_seconds = 3600
     elif base_data_table == "daily_data":
         dur = "24:00:00"
+        interval_seconds = 3600 * 24
 
 
     params = query.params()
@@ -780,7 +782,7 @@ async def fetch_aggregate_trends(base_data_table, aggregate_to, query, db):
         , MIN(date_trunc(:aggregate_to, dd + {period_first_offset}::interval)) as period_first
         , MAX(date_trunc(:aggregate_to, dd + {period_last_offset}::interval)) as period_last
         FROM sensor s
-        , generate_series(s.datetime_from + '1hour'::interval, s.datetime_to, ('1hour')::interval) dd
+        , generate_series(s.datetime_from + '{dur}'::interval, s.datetime_to, '{dur}'::interval) dd
         GROUP BY 1,2
     ------------------------------------
     -- Then we query what we have in the db
@@ -811,9 +813,7 @@ async def fetch_aggregate_trends(base_data_table, aggregate_to, query, db):
  , current_timestamp as calculated_on
  FROM {base_data_table} m
  JOIN sensor s ON (m.sensors_id = s.sensors_id)
- WHERE datetime > datetime_from
- AND datetime <= datetime_to
- AND s.sensors_id = :sensors_id
+ {query.where()}
  GROUP BY 1, 2, 3, 4, 5, 6, 7, 8)
 -----------------------------------------
 -- And finally we tie it all together
@@ -844,15 +844,17 @@ async def fetch_aggregate_trends(base_data_table, aggregate_to, query, db):
     ) as period
     , calculate_coverage(
         o.n::int
-      , o.data_averaging_period_seconds
-      , o.data_logging_period_seconds
-      , e.n * 3600.0)||
+      , {interval_seconds}
+      , {interval_seconds}
+      , e.n * {interval_seconds}
+           )||
     jsonb_build_object(
         'datetime_from', get_datetime_object(o.coverage_first, o.timezone)
       , 'datetime_to', get_datetime_object(o.coverage_last, o.timezone)
     ) as coverage
     FROM expected e
     JOIN observed o ON (e.factor = o.factor)
+    ORDER BY e.factor
     """
 
     return await db.fetchPage(sql, params)
