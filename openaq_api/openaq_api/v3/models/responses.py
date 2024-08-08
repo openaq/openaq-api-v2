@@ -247,6 +247,36 @@ class Measurement(JsonBase):
     coverage: Coverage | None = None
 
 
+class HourlyData(JsonBase):
+    #datetime: DatetimeObject
+    value: float
+    parameter: ParameterBase
+    period: Period | None = None
+    coordinates: Coordinates | None = None
+    summary: Summary | None = None
+    coverage: Coverage | None = None
+
+
+class DailyData(JsonBase):
+    #datetime: DatetimeObject
+    value: float
+    parameter: ParameterBase
+    period: Period | None = None
+    coordinates: Coordinates | None = None
+    summary: Summary | None = None
+    coverage: Coverage | None = None
+
+
+class AnnualData(JsonBase):
+    #datetime: DatetimeObject
+    value: float
+    parameter: ParameterBase
+    period: Period | None = None
+    coordinates: Coordinates | None = None
+    summary: Summary | None = None
+    coverage: Coverage | None = None
+
+
 # Similar to measurement but without timestamps
 class Trend(JsonBase):
     factor: Factor
@@ -270,6 +300,15 @@ class LocationsResponse(OpenAQResult):
 
 class MeasurementsResponse(OpenAQResult):
     results: list[Measurement]
+
+class HourlyDataResponse(OpenAQResult):
+    results: list[HourlyData]
+
+class DailyDataResponse(OpenAQResult):
+    results: list[DailyData]
+
+class AnnualDataResponse(OpenAQResult):
+    results: list[AnnualData]
 
 
 class TrendsResponse(OpenAQResult):
