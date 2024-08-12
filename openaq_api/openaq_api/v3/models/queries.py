@@ -582,7 +582,7 @@ class DateFromQuery(QueryBaseModel):
         elif isinstance(self.date_from, datetime):
             return f"{dt} >= :date_from::date"
         elif isinstance(self.date_from, date):
-            return f"{dt} >= :date_from"
+            return f"{dt} >= :date_from::date"
 
 
 class DateToQuery(QueryBaseModel):
@@ -619,7 +619,7 @@ class DateToQuery(QueryBaseModel):
         elif isinstance(self.date_to, datetime):
             return f"{dt} <= :date_to::date"
         elif isinstance(self.date_to, date):
-            return f"{dt} <= :date_to"
+            return f"{dt} <= :date_to::date"
 
 
 class PeriodNames(StrEnum):

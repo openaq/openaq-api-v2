@@ -18,7 +18,7 @@ class TestMeasurements:
         response = client.get(f"/v3/sensors/{sensors_id}/measurements")
         assert response.status_code == 200
         data = json.loads(response.content).get('results', [])
-        assert len(data) > 0
+        assert len(data) > 0, "response did not have at least one record"
 
     def test_aggregated_hourly_good(self, client):
         response = client.get(f"/v3/sensors/{sensors_id}/measurements/hourly")
@@ -90,10 +90,18 @@ class TestHours:
         assert len(data) == 7
 
     def test_aggregated_moy_good(self, client):
-        response = client.get(f"/v3/sensors/{sensors_id}/hours/monthofyear?datetime_from=2022-01-01")
+        response = client.get(f"/v3/sensors/{sensors_id}/hours/monthofyear?datetime_from=2022-01-01&datetime_to=2023-01-01")
         assert response.status_code == 200
         data = json.loads(response.content).get('results', [])
         assert len(data) == 12
+
+        row = data[0]
+        # hours are time ending
+        assert row['coverage']['datetimeFrom']['local'] == '2022-01-02T00:00:00-10:00'
+        assert row['coverage']['datetimeTo']['local'] == '2022-02-01T00:00:00-10:00'
+        assert row['period']['datetimeFrom']['local'] == '2022-01-01T00:00:00-10:00'
+        assert row['period']['datetimeTo']['local'] == '2022-02-01T00:00:00-10:00'
+
 
 
 class TestDays:
@@ -139,6 +147,10 @@ class TestDays:
         assert row['coverage']['percentComplete'] == 100
         assert row['coverage']['percentComplete'] == row['coverage']['percentCoverage']
 
+        assert row['coverage']['datetimeFrom']['local'] == '2022-01-01T00:00:00-10:00'
+        assert row['coverage']['datetimeTo']['local'] == '2023-01-01T00:00:00-10:00'
+        assert row['period']['datetimeFrom']['local'] == '2022-01-01T00:00:00-10:00'
+        assert row['period']['datetimeTo']['local'] == '2023-01-01T00:00:00-10:00'
 
     def test_aggregated_dow_good(self, client):
         response = client.get(f"/v3/sensors/{sensors_id}/days/dayofweek?date_from=2022-01-01&date_to=2022-12-31")
@@ -162,7 +174,11 @@ class TestDays:
         assert len(data) == 12
         row = data[0]
         period = row['period']['label']
-        print(row)
+
+        assert row['coverage']['datetimeFrom']['local'] == '2022-01-01T00:00:00-10:00'
+        assert row['coverage']['datetimeTo']['local'] == '2022-02-01T00:00:00-10:00'
+        assert row['period']['datetimeFrom']['local'] == '2022-01-01T00:00:00-10:00'
+        assert row['period']['datetimeTo']['local'] == '2022-02-01T00:00:00-10:00'
 
         assert row['coverage']['expectedCount'] == 31
         assert row['coverage']['observedCount'] == 31

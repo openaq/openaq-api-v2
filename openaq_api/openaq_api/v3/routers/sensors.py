@@ -123,7 +123,7 @@ async def sensor_measurements_aggregated_get(
 ):
     aggregate_to = 'hour'
     query = QueryBuilder(sensors)
-    response = await fetch_aggregate_measurements(query, aggregate_to, db)
+    response = await fetch_measurements_aggregated(query, aggregate_to, db)
     return response
 
 @router.get(
@@ -138,7 +138,7 @@ async def sensor_measurements_aggregated_get(
 ):
     aggregate_to = 'day'
     query = QueryBuilder(sensors)
-    response = await fetch_aggregate_measurements(query, aggregate_to, db)
+    response = await fetch_measurements_aggregated(query, aggregate_to, db)
     return response
 
 
@@ -169,7 +169,7 @@ async def sensor_hourly_measurements_aggregate_to_day_get(
 ):
     aggregate_to = 'day'
     query = QueryBuilder(sensors)
-    response = await fetch_aggregate_hours(query, aggregate_to, db)
+    response = await fetch_hours_aggregated(query, aggregate_to, db)
     return response
 
 
@@ -185,7 +185,7 @@ async def sensor_hourly_measurements_aggregate_to_month_get(
 ):
     aggregate_to = 'month'
     query = QueryBuilder(sensors)
-    response = await fetch_aggregate_hours(query, aggregate_to, db)
+    response = await fetch_hours_aggregated(query, aggregate_to, db)
     return response
 
 
@@ -201,7 +201,7 @@ async def sensor_hourly_measurements_aggregate_to_year_get(
 ):
     aggregate_to = 'year'
     query = QueryBuilder(sensors)
-    response = await fetch_aggregate_hours(query, aggregate_to, db)
+    response = await fetch_hours_aggregated(query, aggregate_to, db)
     return response
 
 
@@ -217,7 +217,7 @@ async def sensor_hourly_measurements_aggregate_to_hod_get(
 ):
     aggregate_to = 'hod'
     query = QueryBuilder(sensors)
-    response = await fetch_aggregate_trends('hourly_data', aggregate_to, query, db)
+    response = await fetch_hours_trends(aggregate_to, query, db)
     return response
 
 @router.get(
@@ -232,7 +232,7 @@ async def sensor_hourly_measurements_aggregate_to_dow_get(
 ):
     aggregate_to = 'dow'
     query = QueryBuilder(sensors)
-    response = await fetch_aggregate_trends('hourly_data', aggregate_to, query, db)
+    response = await fetch_hours_trends(aggregate_to, query, db)
     return response
 
 @router.get(
@@ -247,7 +247,7 @@ async def sensor_hourly_measurements_aggregate_to_moy_get(
 ):
     aggregate_to = 'moy'
     query = QueryBuilder(sensors)
-    response = await fetch_aggregate_trends('hourly_data', aggregate_to, query, db)
+    response = await fetch_hours_trends(aggregate_to, query, db)
     return response
 
 
@@ -263,7 +263,7 @@ async def sensor_daily_measurements_aggregate_to_dow_get(
 ):
     aggregate_to = 'dow'
     query = QueryBuilder(sensors)
-    response = await fetch_aggregate_trends('daily_data', aggregate_to, query, db)
+    response = await fetch_days_trends(aggregate_to, query, db)
     return response
 
 
@@ -279,7 +279,7 @@ async def sensor_daily_measurements_aggregate_to_moy_get(
 ):
     aggregate_to = 'moy'
     query = QueryBuilder(sensors)
-    response = await fetch_aggregate_trends('daily_data', aggregate_to, query, db)
+    response = await fetch_days_trends(aggregate_to, query, db)
     return response
 
 
@@ -310,7 +310,7 @@ async def sensor_daily_aggregate_to_month_get(
 ):
     aggregate_to = 'month'
     query = QueryBuilder(sensors)
-    response = await fetch_aggregate_days(query, aggregate_to, db)
+    response = await fetch_days_aggregated(query, aggregate_to, db)
     return response
 
 
@@ -326,7 +326,7 @@ async def sensor_daily_aggregate_to_year_get(
 ):
     aggregate_to = 'year'
     query = QueryBuilder(sensors)
-    response = await fetch_aggregate_days(query, aggregate_to, db)
+    response = await fetch_days_aggregated(query, aggregate_to, db)
     return response
 
 
@@ -465,7 +465,7 @@ async def fetch_measurements(query, db):
 
 
 
-async def fetch_aggregate_measurements(query, aggregate_to, db):
+async def fetch_measurements_aggregated(query, aggregate_to, db):
     if aggregate_to == 'hour':
         dur = "01:00:00"
         expected_hours = 1
@@ -602,7 +602,7 @@ async def fetch_hours(query, db):
         return await db.fetchPage(sql, query.params())
 
 
-async def fetch_aggregate_hours(query, aggregate_to, db):
+async def fetch_hours_aggregated(query, aggregate_to, db):
     if aggregate_to == 'year':
         dur = "1year"
     elif aggregate_to == 'month':
@@ -694,7 +694,153 @@ async def fetch_aggregate_hours(query, aggregate_to, db):
 
 
 
-async def fetch_aggregate_trends(base_data_table, aggregate_to, query, db):
+async def fetch_days_trends(aggregate_to, query, db):
+
+    if aggregate_to == "dow":
+        period_name = "day"
+        period_format = "'ID'"
+        period_first_offset = "'0sec'"
+        period_last_offset = "'0sec'"
+        aggregate_to = "day"
+    elif aggregate_to == "moy":
+        period_name = "month"
+        period_format = "'MM'"
+        period_first_offset = "'-1sec'"
+        period_last_offset = "'+1sec'"
+        aggregate_to = "month"
+
+    dur = "24:00:00"
+    interval_seconds = 3600 * 24
+
+
+    params = query.params()
+    params['aggregate_to'] = aggregate_to
+
+    datetime_field_name = 'date'
+    if params.get('date_to') is None:
+        params['date_to'] = date.today()
+
+    if params.get('date_from') is None:
+        dt = params.get('date_to')
+        params['date_from'] = dt - timedelta(days=365)
+
+
+    sql = f"""
+    -----------------------------------
+    -- start by getting some basic sensor information
+    -- and transforming the timestamps
+    -----------------------------------
+    WITH sensor AS (
+        SELECT s.sensors_id
+        , sn.sensor_nodes_id
+        , s.data_averaging_period_seconds
+        , s.data_logging_period_seconds
+        , tz.tzid as timezone
+        , m.measurands_id
+        , m.measurand
+        , m.units
+        , as_timestamptz(:date_from, tz.tzid) as datetime_from
+        , as_timestamptz(:date_to, tz.tzid) as datetime_to
+        FROM sensors s
+        , sensor_systems sy
+        , sensor_nodes sn
+        , timezones tz
+        , measurands m
+        WHERE s.sensor_systems_id = sy.sensor_systems_id
+        AND sy.sensor_nodes_id = sn.sensor_nodes_id
+        AND sn.timezones_id = tz.timezones_id
+        AND s.sensors_id = :sensors_id
+        AND s.measurands_id = m.measurands_id
+        AND sn.is_public AND s.is_public
+    --------------------------------
+    -- Then we calculate what we expect to find in the data
+    --------------------------------
+    ), expected AS (
+        SELECT to_char(dd, {period_format}) as factor
+        , s.timezone
+        , COUNT(1) as n
+        , MIN(dd) as period_first
+        , MAX(dd) as period_last
+        FROM sensor s
+        , generate_series(s.datetime_from, s.datetime_to, '1day'::interval) dd
+        GROUP BY 1,2
+    ------------------------------------
+    -- Then we query what we have in the db
+    -- we join the sensor CTE here so that we have access to the timezone
+    ------------------------------------
+    ), observed AS (
+        SELECT
+        s.sensors_id
+        , s.data_averaging_period_seconds
+        , s.data_logging_period_seconds
+ , s.timezone
+ , s.measurands_id
+ , s.measurand
+ , s.units
+ , to_char(datetime, {period_format}) as factor
+ , MIN(datetime) as coverage_first
+ , MAX(datetime) as coverage_last
+ , COUNT(1) as n
+ , AVG(value_avg) as value_avg
+ , STDDEV(value_avg) as value_sd
+ , MIN(value_avg) as value_min
+ , MAX(value_avg) as value_max
+ , PERCENTILE_CONT(0.02) WITHIN GROUP(ORDER BY value_avg) as value_p02
+ , PERCENTILE_CONT(0.25) WITHIN GROUP(ORDER BY value_avg) as value_p25
+ , PERCENTILE_CONT(0.5) WITHIN GROUP(ORDER BY value_avg) as value_p50
+ , PERCENTILE_CONT(0.75) WITHIN GROUP(ORDER BY value_avg) as value_p75
+ , PERCENTILE_CONT(0.98) WITHIN GROUP(ORDER BY value_avg) as value_p98
+ , current_timestamp as calculated_on
+ FROM daily_data m
+ JOIN sensor s ON (m.sensors_id = s.sensors_id)
+ {query.where()}
+ GROUP BY 1, 2, 3, 4, 5, 6, 7, 8)
+-----------------------------------------
+-- And finally we tie it all together
+-----------------------------------------
+    SELECT o.sensors_id
+  , sig_digits(value_avg, 2) as value
+  , json_build_object(
+     'id', o.measurands_id
+   , 'units', o.units
+   , 'name', o.measurand
+  ) as parameter
+  , json_build_object(
+     'avg', o.value_avg
+    , 'sd', o.value_sd
+    , 'min', o.value_min
+   , 'q02', o.value_p02
+   , 'q25', o.value_p25
+   , 'median', o.value_p50
+   , 'q75', o.value_p75
+   , 'q98', o.value_p98
+   , 'max', o.value_max
+     ) as summary
+    , json_build_object(
+       'label', e.factor
+     , 'datetime_from', get_datetime_object(e.period_first::date, o.timezone)
+     , 'datetime_to', get_datetime_object(e.period_last::date + '1day'::interval, o.timezone)
+     , 'interval', :aggregate_to::text
+    ) as period
+    , calculate_coverage(
+        o.n::int
+      , {interval_seconds}
+      , {interval_seconds}
+      , e.n * {interval_seconds}
+           )||
+    jsonb_build_object(
+        'datetime_from', get_datetime_object(o.coverage_first::timestamp, o.timezone)
+      , 'datetime_to', get_datetime_object(o.coverage_last + '1day'::interval, o.timezone)
+    ) as coverage
+    FROM expected e
+    JOIN observed o ON (e.factor = o.factor)
+    ORDER BY e.factor
+    """
+
+    return await db.fetchPage(sql, params)
+
+
+async def fetch_hours_trends(aggregate_to, query, db):
 
     if aggregate_to == "hod":
         period_name = "hour"
@@ -716,33 +862,20 @@ async def fetch_aggregate_trends(base_data_table, aggregate_to, query, db):
         aggregate_to = "month"
 
 
-    if base_data_table == "hourly_data":
-        dur = "01:00:00"
-        interval_seconds = 3600
-    elif base_data_table == "daily_data":
-        dur = "24:00:00"
-        interval_seconds = 3600 * 24
+    dur = "01:00:00"
+    interval_seconds = 3600
 
 
     params = query.params()
     params['aggregate_to'] = aggregate_to
 
-    if base_data_table in ['hourly_data']:
-        datetime_field_name = 'datetime'
-        if params.get('datetime_to') is None:
-            params['datetime_to'] = date.today()
+    datetime_field_name = 'datetime'
+    if params.get('datetime_to') is None:
+        params['datetime_to'] = date.today()
 
-        if params.get('datetime_from') is None:
-            dt = params.get('datetime_to')
-            params['datetime_from'] = dt - timedelta(days=365)
-    else:
-        datetime_field_name = 'date'
-        if params.get('date_to') is None:
-            params['date_to'] = date.today()
-
-        if params.get('date_from') is None:
-            dt = params.get('date_to')
-            params['date_from'] = dt - timedelta(days=365)
+    if params.get('datetime_from') is None:
+        dt = params.get('datetime_to')
+        params['datetime_from'] = dt - timedelta(days=365)
 
 
     sql = f"""
@@ -811,7 +944,7 @@ async def fetch_aggregate_trends(base_data_table, aggregate_to, query, db):
  , PERCENTILE_CONT(0.75) WITHIN GROUP(ORDER BY value_avg) as value_p75
  , PERCENTILE_CONT(0.98) WITHIN GROUP(ORDER BY value_avg) as value_p98
  , current_timestamp as calculated_on
- FROM {base_data_table} m
+ FROM hourly_data m
  JOIN sensor s ON (m.sensors_id = s.sensors_id)
  {query.where()}
  GROUP BY 1, 2, 3, 4, 5, 6, 7, 8)
@@ -838,8 +971,8 @@ async def fetch_aggregate_trends(base_data_table, aggregate_to, query, db):
      ) as summary
     , json_build_object(
        'label', e.factor
-     , 'datetime_from', get_datetime_object(e.period_first, o.timezone)
-     , 'datetime_to', get_datetime_object(e.period_last, o.timezone)
+     , 'datetime_from', get_datetime_object(e.period_first::timestamp, o.timezone)
+     , 'datetime_to', get_datetime_object(e.period_last::timestamp, o.timezone)
      , 'interval', :aggregate_to
     ) as period
     , calculate_coverage(
@@ -860,7 +993,7 @@ async def fetch_aggregate_trends(base_data_table, aggregate_to, query, db):
     return await db.fetchPage(sql, params)
 
 
-async def fetch_aggregate_days(query, aggregate_to, db):
+async def fetch_days_aggregated(query, aggregate_to, db):
     if aggregate_to == 'year':
         dur = "1year"
         interval_seconds = 3600 * 24 * 365.24
@@ -881,8 +1014,10 @@ async def fetch_aggregate_days(query, aggregate_to, db):
         , AVG(s.data_averaging_period_seconds) as avg_seconds
         , AVG(s.data_logging_period_seconds) as log_seconds
         , MAX(date_trunc(:aggregate_to, datetime + '1{aggregate_to}'::interval)) as last_period
-        , MIN(timezone(sn.timezone, datetime - '1sec'::interval)) as datetime_first
-        , MAX(timezone(sn.timezone, datetime - '1sec'::interval)) as datetime_last
+        --, MIN(timezone(sn.timezone, datetime - '1sec'::interval)) as datetime_first
+        --, MAX(timezone(sn.timezone, datetime - '1sec'::interval)) as datetime_last
+        , MIN(datetime) as datetime_first
+        , MAX(datetime) as datetime_last
         , COUNT(1) as value_count
         , AVG(value_avg) as value_avg
         , STDDEV(value_avg) as value_sd
@@ -904,7 +1039,7 @@ async def fetch_aggregate_days(query, aggregate_to, db):
         ----------
         , json_build_object(
             'label', '1 {aggregate_to}'
-            , 'datetime_from', get_datetime_object(datetime, t.timezone)
+            , 'datetime_from', get_datetime_object(datetime::date, t.timezone)
             , 'datetime_to', get_datetime_object(last_period, t.timezone)
             , 'interval',  '{dur}'
             ) as period
@@ -936,7 +1071,7 @@ async def fetch_aggregate_days(query, aggregate_to, db):
             , EXTRACT(EPOCH FROM last_period - datetime)
         )||jsonb_build_object(
                 'datetime_from', get_datetime_object(datetime_first, t.timezone)
-                , 'datetime_to', get_datetime_object(datetime_last, t.timezone)
+                , 'datetime_to', get_datetime_object(datetime_last + '1day'::interval, t.timezone)
                 ) as coverage
         {query.total()}
         FROM meas t
