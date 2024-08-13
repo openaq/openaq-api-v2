@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, Path, Query
 from openaq_api.db import DB
 from openaq_api.v3.models.queries import (
     CommaSeparatedList,
-    DateFromQuery,
-    DateToQuery,
+    DatetimeFromQuery,
+    DatetimeToQuery,
     Paging,
     PeriodNameQuery,
     QueryBaseModel,
@@ -41,8 +41,8 @@ class MeasurementsParametersQuery(QueryBaseModel):
 class LocationMeasurementsQueries(
     Paging,
     LocationPathQuery,
-    DateFromQuery,
-    DateToQuery,
+    DatetimeFromQuery,
+    DatetimeToQuery,
     MeasurementsParametersQuery,
     PeriodNameQuery,
 ): ...
@@ -62,6 +62,8 @@ async def measurements_get(
 ):
     response = await fetch_measurements(measurements, db)
     return response
+
+
 
 
 async def fetch_measurements(q, db):
@@ -101,8 +103,8 @@ async def fetch_measurements(q, db):
         , s.data_logging_period_seconds
         , {expected_hours} * 3600
         )||jsonb_build_object(
-          'datetime_from', get_datetime_object(h.first_datetime, sn.timezone)
-        , 'datetime_to', get_datetime_object(h.last_datetime, sn.timezone)
+          'datetime_from', get_datetime_object(h.datetime_first, sn.timezone)
+        , 'datetime_to', get_datetime_object(h.datetime_last, sn.timezone)
         ) as coverage
         {query.fields()}
         FROM hourly_data h
@@ -122,6 +124,8 @@ async def fetch_measurements(q, db):
             dur = "24:00:00"
         elif q.period_name == "month":
             dur = "1 month"
+        elif q.period_name == "year":
+            dur = "1 year"
 
         sql = f"""
             WITH meas AS (

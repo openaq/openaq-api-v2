@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, date
 from zoneinfo import ZoneInfo
 
 import fastapi
@@ -12,6 +12,8 @@ from openaq_api.v3.models.queries import (
     CommaSeparatedList,
     CountryIdQuery,
     CountryIsoQuery,
+    DatetimeFromQuery,
+    DatetimeToQuery,
     DateFromQuery,
     DateToQuery,
     ManufacturersQuery,
@@ -98,20 +100,96 @@ class TestMonitorQuery:
         assert params == {"monitor": None}
 
 
-class TestDateFromQuery:
+class TestDatetimeFromQuery:
     def test_has_value_datetime(self):
-        date_from_query = DateFromQuery(date_from="2022-10-01T14:47:27-00:00")
+        datetime_from_query = DatetimeFromQuery(datetime_from="2022-10-01T14:47:27-00:00")
+        params = datetime_from_query.model_dump()
+        assert params == {
+            "datetime_from": datetime(
+                2022, 10, 1, 14, 47, 27, tzinfo=ZoneInfo("UTC")
+            )
+        }
+
+    def test_has_value_date(self):
+        datetime_from_query = DatetimeFromQuery(datetime_from="2022-10-01")
+        params = datetime_from_query.model_dump()
+        assert params == {"datetime_from": date(2022, 10, 1)}
+
+    def test_no_value(self):
+        datetime_from_query = DatetimeFromQuery()
+        where = datetime_from_query.where()
+        params = datetime_from_query.model_dump()
+        assert where is None
+        assert params == {"datetime_from": None}
+
+    def test_date_where(self):
+        datetime_from_query = DatetimeFromQuery(datetime_from="2022-10-01")
+        where = datetime_from_query.where()
+        assert where == "datetime > (:datetime_from::timestamp AT TIME ZONE timezone)"
+
+    def test_datetime_tz_where(self):
+        datetime_from_query = DatetimeFromQuery(datetime_from="2022-10-01T14:47:27-00:00")
+        where = datetime_from_query.where()
+        assert where == "datetime > :datetime_from"
+
+    def test_datetime_notz_where(self):
+        datetime_from_query = DatetimeFromQuery(datetime_from="2022-10-01T14:47:27")
+        where = datetime_from_query.where()
+        assert where == "datetime > (:datetime_from::timestamp AT TIME ZONE timezone)"
+
+
+class TestDatetimeToQuery:
+    def test_has_value_datetime(self):
+        datetime_to_query = DatetimeToQuery(datetime_to="2022-10-01T14:47:27-00:00")
+        params = datetime_to_query.model_dump()
+        assert params == {
+            "datetime_to": datetime(
+                2022, 10, 1, 14, 47, 27, tzinfo=ZoneInfo("UTC")
+            )
+        }
+
+    def test_has_value_date(self):
+        datetime_to_query = DatetimeToQuery(datetime_to="2022-10-01")
+        params = datetime_to_query.model_dump()
+        assert params == {"datetime_to": date(2022, 10, 1)}
+
+    def test_no_value(self):
+        datetime_to_query = DatetimeToQuery()
+        where = datetime_to_query.where()
+        params = datetime_to_query.model_dump()
+        assert where is None
+        assert params == {"datetime_to": None}
+
+    def test_date_where(self):
+        datetime_to_query = DatetimeToQuery(datetime_to="2022-10-01")
+        where = datetime_to_query.where()
+        assert where == "datetime <= (:datetime_to::timestamp AT TIME ZONE timezone)"
+
+    def test_datetime_tz_where(self):
+        datetime_to_query = DatetimeToQuery(datetime_to="2022-10-01T14:47:27-00:00")
+        where = datetime_to_query.where()
+        assert where == "datetime <= :datetime_to"
+
+    def test_datetime_notz_where(self):
+        datetime_to_query = DatetimeToQuery(datetime_to="2022-10-01T14:47:27")
+        where = datetime_to_query.where()
+        assert where == "datetime <= (:datetime_to::timestamp AT TIME ZONE timezone)"
+
+
+class TestDateFromQuery:
+    def test_has_value_date(self):
+        date_from_query = DateFromQuery(date_from="2022-10-01")
         params = date_from_query.model_dump()
         assert params == {
-            "date_from": datetime.datetime(
-                2022, 10, 1, 14, 47, 27, tzinfo=ZoneInfo("UTC")
+            "date_from": date(
+                2022, 10, 1
             )
         }
 
     def test_has_value_date(self):
         date_from_query = DateFromQuery(date_from="2022-10-01")
         params = date_from_query.model_dump()
-        assert params == {"date_from": datetime.date(2022, 10, 1)}
+        assert params == {"date_from": date(2022, 10, 1)}
 
     def test_no_value(self):
         date_from_query = DateFromQuery()
@@ -123,25 +201,25 @@ class TestDateFromQuery:
     def test_date_where(self):
         date_from_query = DateFromQuery(date_from="2022-10-01")
         where = date_from_query.where()
-        assert where == "datetime > (:date_from::timestamp AT TIME ZONE timezone)"
+        assert where == "datetime >= :date_from"
 
-    def test_datetime_tz_where(self):
+    def test_date_tz_where(self):
         date_from_query = DateFromQuery(date_from="2022-10-01T14:47:27-00:00")
         where = date_from_query.where()
-        assert where == "datetime > :date_from"
+        assert where == "datetime >= :date_from::date"
 
-    def test_datetime_notz_where(self):
+    def test_date_notz_where(self):
         date_from_query = DateFromQuery(date_from="2022-10-01T14:47:27")
         where = date_from_query.where()
-        assert where == "datetime > (:date_from::timestamp AT TIME ZONE timezone)"
+        assert where == "datetime >= :date_from::date"
 
 
 class TestDateToQuery:
-    def test_has_value_datetime(self):
+    def test_has_value_date(self):
         date_to_query = DateToQuery(date_to="2022-10-01T14:47:27-00:00")
         params = date_to_query.model_dump()
         assert params == {
-            "date_to": datetime.datetime(
+            "date_to": date(
                 2022, 10, 1, 14, 47, 27, tzinfo=ZoneInfo("UTC")
             )
         }
@@ -149,7 +227,7 @@ class TestDateToQuery:
     def test_has_value_date(self):
         date_to_query = DateToQuery(date_to="2022-10-01")
         params = date_to_query.model_dump()
-        assert params == {"date_to": datetime.date(2022, 10, 1)}
+        assert params == {"date_to": date(2022, 10, 1)}
 
     def test_no_value(self):
         date_to_query = DateToQuery()
@@ -159,19 +237,19 @@ class TestDateToQuery:
         assert params == {"date_to": None}
 
     def test_date_where(self):
-        date_to_query = DateToQuery(date_to="2022-10-01")
-        where = date_to_query.where()
-        assert where == "datetime <= (:date_to::timestamp AT TIME ZONE timezone)"
-
-    def test_datetime_tz_where(self):
-        date_to_query = DateToQuery(date_to="2022-10-01T14:47:27-00:00")
-        where = date_to_query.where()
+        date_from_query = DateToQuery(date_to="2022-10-01")
+        where = date_from_query.where()
         assert where == "datetime <= :date_to"
 
-    def test_datetime_notz_where(self):
+    def test_date_tz_where(self):
+        date_to_query = DateToQuery(date_to="2022-10-01T14:47:27-00:00")
+        where = date_to_query.where()
+        assert where == "datetime <= :date_to::date"
+
+    def test_date_notz_where(self):
         date_to_query = DateToQuery(date_to="2022-10-01T14:47:27")
         where = date_to_query.where()
-        assert where == "datetime <= (:date_to::timestamp AT TIME ZONE timezone)"
+        assert where == "datetime <= :date_to::date"
 
 
 class TestParametersQuery:
