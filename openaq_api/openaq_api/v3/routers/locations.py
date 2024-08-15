@@ -10,6 +10,7 @@ from openaq_api.v3.models.queries import (
     CountryIsoQuery,
     ManufacturersQuery,
     InstrumentsQuery,
+    LicenseQuery,
     MobileQuery,
     MonitorQuery,
     OwnerQuery,
@@ -75,6 +76,7 @@ class LocationsQueries(
     InstrumentsQuery,
     MobileQuery,
     MonitorQuery,
+    LicenseQuery,
     LocationsSorting,
     ManufacturersQuery,
     OwnerQuery,
@@ -133,9 +135,8 @@ async def fetch_locations(query, db):
     , bbox(geom) as bounds
     , datetime_first
     , datetime_last
-	, licenses
+    , licenses
     {query_builder.fields() or ''}
-    {query_builder.total()}
     FROM locations_view_cached
     {query_builder.where()}
     {query_builder.order_by()}
