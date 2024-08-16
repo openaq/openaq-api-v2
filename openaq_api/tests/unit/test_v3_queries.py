@@ -18,6 +18,7 @@ from openaq_api.v3.models.queries import (
     DateToQuery,
     ManufacturersQuery,
     InstrumentsQuery,
+    LicenseQuery,
     MobileQuery,
     MonitorQuery,
     OwnerQuery,
@@ -102,12 +103,12 @@ class TestMonitorQuery:
 
 class TestDatetimeFromQuery:
     def test_has_value_datetime(self):
-        datetime_from_query = DatetimeFromQuery(datetime_from="2022-10-01T14:47:27-00:00")
+        datetime_from_query = DatetimeFromQuery(
+            datetime_from="2022-10-01T14:47:27-00:00"
+        )
         params = datetime_from_query.model_dump()
         assert params == {
-            "datetime_from": datetime(
-                2022, 10, 1, 14, 47, 27, tzinfo=ZoneInfo("UTC")
-            )
+            "datetime_from": datetime(2022, 10, 1, 14, 47, 27, tzinfo=ZoneInfo("UTC"))
         }
 
     def test_has_value_date(self):
@@ -128,7 +129,9 @@ class TestDatetimeFromQuery:
         assert where == "datetime > (:datetime_from::timestamp AT TIME ZONE timezone)"
 
     def test_datetime_tz_where(self):
-        datetime_from_query = DatetimeFromQuery(datetime_from="2022-10-01T14:47:27-00:00")
+        datetime_from_query = DatetimeFromQuery(
+            datetime_from="2022-10-01T14:47:27-00:00"
+        )
         where = datetime_from_query.where()
         assert where == "datetime > :datetime_from"
 
@@ -143,9 +146,7 @@ class TestDatetimeToQuery:
         datetime_to_query = DatetimeToQuery(datetime_to="2022-10-01T14:47:27-00:00")
         params = datetime_to_query.model_dump()
         assert params == {
-            "datetime_to": datetime(
-                2022, 10, 1, 14, 47, 27, tzinfo=ZoneInfo("UTC")
-            )
+            "datetime_to": datetime(2022, 10, 1, 14, 47, 27, tzinfo=ZoneInfo("UTC"))
         }
 
     def test_has_value_date(self):
@@ -180,11 +181,7 @@ class TestDateFromQuery:
     def test_has_value_date(self):
         date_from_query = DateFromQuery(date_from="2022-10-01")
         params = date_from_query.model_dump()
-        assert params == {
-            "date_from": date(
-                2022, 10, 1
-            )
-        }
+        assert params == {"date_from": date(2022, 10, 1)}
 
     def test_has_value_date(self):
         date_from_query = DateFromQuery(date_from="2022-10-01")
@@ -219,9 +216,7 @@ class TestDateToQuery:
         date_to_query = DateToQuery(date_to="2022-10-01T14:47:27-00:00")
         params = date_to_query.model_dump()
         assert params == {
-            "date_to": date(
-                2022, 10, 1, 14, 47, 27, tzinfo=ZoneInfo("UTC")
-            )
+            "date_to": date(2022, 10, 1, 14, 47, 27, tzinfo=ZoneInfo("UTC"))
         }
 
     def test_has_value_date(self):
@@ -254,9 +249,9 @@ class TestDateToQuery:
 
 class TestParametersQuery:
     def test_has_value(self):
-        mobile_query = ParametersQuery(parameters_id="1,2,3")
-        where = mobile_query.where()
-        params = mobile_query.model_dump()
+        parameters_query = ParametersQuery(parameters_id="1,2,3")
+        where = parameters_query.where()
+        params = parameters_query.model_dump()
         assert where == "parameter_ids && :parameters_id"
         assert params == {"parameters_id": [1, 2, 3]}
 
@@ -266,6 +261,22 @@ class TestParametersQuery:
         params = parameters_query.model_dump()
         assert where is None
         assert params == {"parameters_id": None}
+
+
+class TestLicensesQuery:
+    def test_has_value(self):
+        licenses_query = LicenseQuery(licenses_id="1,2,3")
+        where = licenses_query.where()
+        params = licenses_query.model_dump()
+        assert where == "license_ids && :licenses_id"
+        assert params == {"licenses_id": [1, 2, 3]}
+
+    def test_no_value(self):
+        licenses_query = LicenseQuery()
+        where = licenses_query.where()
+        params = licenses_query.model_dump()
+        assert where is None
+        assert params == {"licenses_id": None}
 
 
 class TestProviderQuery:
