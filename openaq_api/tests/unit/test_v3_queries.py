@@ -198,7 +198,7 @@ class TestDateFromQuery:
     def test_date_where(self):
         date_from_query = DateFromQuery(date_from="2022-10-01")
         where = date_from_query.where()
-        assert where == "datetime >= :date_from"
+        assert where == "datetime >= :date_from::date"
 
     def test_date_tz_where(self):
         date_from_query = DateFromQuery(date_from="2022-10-01T14:47:27-00:00")
@@ -234,7 +234,7 @@ class TestDateToQuery:
     def test_date_where(self):
         date_from_query = DateToQuery(date_to="2022-10-01")
         where = date_from_query.where()
-        assert where == "datetime <= :date_to"
+        assert where == "datetime <= :date_to::date"
 
     def test_date_tz_where(self):
         date_to_query = DateToQuery(date_to="2022-10-01T14:47:27-00:00")
