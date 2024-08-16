@@ -217,7 +217,7 @@ class QueryBaseModel(ABC, BaseModel):
         return parameter_dependency_from_model("depends", cls)
 
     def map(self, key: str, default: str | None = None):
-        cols = getattr(self, '__column_map__', {})
+        cols = getattr(self, "__column_map__", {})
         return cols.get(key, default)
 
     def has(self, field_name: str) -> bool:
@@ -334,6 +334,26 @@ class MobileQuery(QueryBaseModel):
         """ """
         if self.has("mobile"):
             return "ismobile = :mobile"
+
+
+class LicenseQuery(QueryBaseModel):
+    """Pydantic query model for the `licenses_id` query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        licenses_id:  licenses_id or comma separated list of licenses_id
+            for filtering results to a license or multiple licenses
+    """
+
+    licenses_id: CommaSeparatedList[int] | None = Query(None, description="")
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def where(self) -> str | None:
+        """ """
+        if self.has("licenses_id"):
+            return "license_ids && :licenses_id"
 
 
 class MonitorQuery(QueryBaseModel):
@@ -480,7 +500,6 @@ class DatetimeFromQuery(QueryBaseModel):
         examples=["2022-10-01T11:19:38-06:00", "2022-10-01"],
     )
 
-
     def where(self) -> str:
         """Generates SQL condition for filtering to datetime.
 
@@ -492,8 +511,8 @@ class DatetimeFromQuery(QueryBaseModel):
         Returns:
             string of WHERE clause if `datetime_from` is set
         """
-        tz = self.map('timezone', 'timezone')
-        dt = self.map('datetime', 'datetime')
+        tz = self.map("timezone", "timezone")
+        dt = self.map("datetime", "datetime")
 
         if self.datetime_from is None:
             return None
@@ -533,8 +552,8 @@ class DatetimeToQuery(QueryBaseModel):
         Returns:
             string of WHERE clause if `datetime_to` is set
         """
-        tz = self.map('timezone', 'timezone')
-        dt = self.map('datetime', 'datetime')
+        tz = self.map("timezone", "timezone")
+        dt = self.map("datetime", "datetime")
 
         if self.datetime_to is None:
             return None
@@ -563,7 +582,6 @@ class DateFromQuery(QueryBaseModel):
         examples=["2022-10-01T11:19:38-06:00", "2022-10-01"],
     )
 
-
     def where(self) -> str:
         """Generates SQL condition for filtering to datetime.
 
@@ -575,7 +593,7 @@ class DateFromQuery(QueryBaseModel):
         Returns:
             string of WHERE clause if `date_from` is set
         """
-        dt = self.map('datetime', 'datetime')
+        dt = self.map("datetime", "datetime")
 
         if self.date_from is None:
             return None
@@ -612,7 +630,7 @@ class DateToQuery(QueryBaseModel):
         Returns:
             string of WHERE clause if `date_to` is set
         """
-        dt = self.map('datetime', 'datetime')
+        dt = self.map("datetime", "datetime")
 
         if self.date_to is None:
             return None
@@ -633,7 +651,6 @@ class PeriodNames(StrEnum):
     raw = "raw"
 
 
-
 class PeriodNameQuery(QueryBaseModel):
     """Pydantic query model for the `period_name` query parameter.
 
@@ -644,9 +661,9 @@ class PeriodNameQuery(QueryBaseModel):
     """
 
     period_name: PeriodNames | None = Query(
-        "hour", description="Period to aggregate. Year, month, day, hour, hour of day (hod), day of week (dow) and month of year (moy)"
+        "hour",
+        description="Period to aggregate. Year, month, day, hour, hour of day (hod), day of week (dow) and month of year (moy)",
     )
-
 
 
 class TemporalQuery(QueryBaseModel):
@@ -947,7 +964,7 @@ class QueryBuilder(object):
         Provide a dictionary that can be used later in the where methods
         to dynamically set a query field name.
         """
-        setattr(self, '__column_map__', m)
+        setattr(self, "__column_map__", m)
 
     def fields(self) -> str:
         """
@@ -1005,7 +1022,9 @@ class QueryBuilder(object):
         bases = self._bases()
         for base in bases:
             if callable(getattr(base, "where", None)):
-                setattr(self.query, '__column_map__', getattr(self, '__column_map__', {}))
+                setattr(
+                    self.query, "__column_map__", getattr(self, "__column_map__", {})
+                )
                 clause = base.where(self.query)
                 if clause:
                     where.append(clause)

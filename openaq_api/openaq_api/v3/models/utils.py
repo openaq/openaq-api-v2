@@ -1,6 +1,6 @@
 from dateutil.parser import parse
 from dateutil.tz import UTC
-from datetime import date
+from datetime import date, datetime
 
 
 def fix_date(
@@ -9,9 +9,9 @@ def fix_date(
     if isinstance(d, date):
         pass
     elif isinstance(d, str):
-        if d == 'infinity':
+        if d == "infinity":
             d = None
-        elif d == '-infinity':
+        elif d == "-infinity":
             d = None
         else:
             d = parse(d).date()

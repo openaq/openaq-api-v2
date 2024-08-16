@@ -2,8 +2,8 @@ aiocache==0.11.1
 annotated-types==0.5.0
 anyio==3.6.1
 asgiref==3.5.2
-async-timeout==4.0.2
-asyncpg==0.28.0
+async-timeout==4.0.3
+asyncpg==0.29.0
 attrs==22.1.0
 bcrypt==4.0.1
 boto3==1.26.101
