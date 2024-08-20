@@ -111,8 +111,8 @@ class Measurements(
         description="Filter by sensor type (i,e. reference grade, low-cost sensor) e.g. ?sensorType=reference%20grade",
         examples=["reference%20grade"],
     )
-    value_from: float | None = Query(None, description="", example="")
-    value_to: float | None = Query(None, description="", example="")
+    value_from: float | None = Query(None, description="", examples=[""])
+    value_to: float | None = Query(None, description="", examples=[""])
     include_fields: str | None = Query(
         None,
         description="Additional fields to include in response e.g. ?include_fields=sourceName",

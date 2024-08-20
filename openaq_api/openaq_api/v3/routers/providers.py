@@ -87,8 +87,7 @@ class ProvidersQueries(
     MonitorQuery,
     ParametersQuery,
     ParametersSorting,
-):
-    ...
+): ...
 
 
 @router.get(
@@ -129,9 +128,8 @@ async def fetch_providers(query, db):
     , datetime_first
     , datetime_last
     , datetime_added
-    , owner_entity
+    , owner_entity->>'id' AS entities_id
     , parameters
-    , license
     , st_asgeojson(extent)::json as bbox
     {query_builder.total()}
     FROM providers_view_cached

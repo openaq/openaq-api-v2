@@ -216,6 +216,10 @@ class QueryBaseModel(ABC, BaseModel):
         """ """
         return parameter_dependency_from_model("depends", cls)
 
+    def map(self, key: str, default: str | None = None):
+        cols = getattr(self, "__column_map__", {})
+        return cols.get(key, default)
+
     def has(self, field_name: str) -> bool:
         """ """
         return hasattr(self, field_name) and getattr(self, field_name) is not None
@@ -292,6 +296,26 @@ class ParametersQuery(QueryBaseModel):
             return "parameter_ids && :parameters_id"
 
 
+class ManufacturersQuery(QueryBaseModel):
+    """Pydantic query model for the manufacturers_id query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        manufacturers_id: manufacturers_id or comma separated list of manufacturers_id
+            for filtering results to a manufacturer or manufacturers
+    """
+
+    manufacturers_id: CommaSeparatedList[int] | None = Query(None, description="")
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def where(self) -> str | None:
+        """ """
+        if self.has("manufacturers_id"):
+            return "manufacturer_ids && :manufacturers_id"
+
+
 class MobileQuery(QueryBaseModel):
     """Pydantic query model for the `mobile` query parameter
 
@@ -310,6 +334,26 @@ class MobileQuery(QueryBaseModel):
         """ """
         if self.has("mobile"):
             return "ismobile = :mobile"
+
+
+class LicenseQuery(QueryBaseModel):
+    """Pydantic query model for the `licenses_id` query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        licenses_id:  licenses_id or comma separated list of licenses_id
+            for filtering results to a license or multiple licenses
+    """
+
+    licenses_id: CommaSeparatedList[int] | None = Query(None, description="")
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def where(self) -> str | None:
+        """ """
+        if self.has("licenses_id"):
+            return "license_ids && :licenses_id"
 
 
 class MonitorQuery(QueryBaseModel):
@@ -440,6 +484,88 @@ class CountryIsoQuery(QueryBaseModel):
             return "country->>'code' = :iso"
 
 
+class DatetimeFromQuery(QueryBaseModel):
+    """Pydantic query model for the `datetime_from` query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        datetime_from: date or datetime in ISO-8601 format to filter results to a
+        date range.
+    """
+
+    datetime_from: datetime | date | None = Query(
+        None,
+        description="From when?",
+        examples=["2022-10-01T11:19:38-06:00", "2022-10-01"],
+    )
+
+    def where(self) -> str:
+        """Generates SQL condition for filtering to datetime.
+
+        Overrides the base QueryBaseModel `where` method
+
+        If `datetime_from` is a `date` or `datetime` without a timezone a timezone
+        is added as UTC.
+
+        Returns:
+            string of WHERE clause if `datetime_from` is set
+        """
+        tz = self.map("timezone", "timezone")
+        dt = self.map("datetime", "datetime")
+
+        if self.datetime_from is None:
+            return None
+        elif isinstance(self.datetime_from, datetime):
+            if self.datetime_from.tzinfo is None:
+                return f"{dt} > (:datetime_from::timestamp AT TIME ZONE {tz})"
+            else:
+                return f"{dt} > :datetime_from"
+        elif isinstance(self.datetime_from, date):
+            return f"{dt} > (:datetime_from::timestamp AT TIME ZONE {tz})"
+
+
+class DatetimeToQuery(QueryBaseModel):
+    """Pydantic query model for the `date_to` query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        date_to: date or datetime in ISO-8601 format to filter results to a
+        date range.
+    """
+
+    datetime_to: datetime | date | None = Query(
+        None,
+        description="To when?",
+        examples=["2022-10-01T11:19:38-06:00", "2022-10-01"],
+    )
+
+    def where(self) -> str:
+        """Generates SQL condition for filtering to datetime.
+
+        Overrides the base QueryBaseModel `where` method
+
+        If `datetime_to` is a `date` or `datetime` without a timezone a timezone
+        is added as UTC.
+
+        Returns:
+            string of WHERE clause if `datetime_to` is set
+        """
+        tz = self.map("timezone", "timezone")
+        dt = self.map("datetime", "datetime")
+
+        if self.datetime_to is None:
+            return None
+        elif isinstance(self.datetime_to, datetime):
+            if self.datetime_to.tzinfo is None:
+                return f"{dt} <= (:datetime_to::timestamp AT TIME ZONE {tz})"
+            else:
+                return f"{dt} <= :datetime_to"
+        elif isinstance(self.datetime_to, date):
+            return f"{dt} <= (:datetime_to::timestamp AT TIME ZONE {tz})"
+
+
 class DateFromQuery(QueryBaseModel):
     """Pydantic query model for the `date_from` query parameter
 
@@ -449,6 +575,7 @@ class DateFromQuery(QueryBaseModel):
         date_from: date or datetime in ISO-8601 format to filter results to a
         date range.
     """
+
     date_from: datetime | date | None = Query(
         None,
         description="From when?",
@@ -466,16 +593,14 @@ class DateFromQuery(QueryBaseModel):
         Returns:
             string of WHERE clause if `date_from` is set
         """
+        dt = self.map("datetime", "datetime")
 
         if self.date_from is None:
             return None
         elif isinstance(self.date_from, datetime):
-            if self.date_from.tzinfo is None:
-                return "datetime > (:date_from::timestamp AT TIME ZONE timezone)"
-            else:
-                return "datetime > :date_from"
+            return f"{dt} >= :date_from::date"
         elif isinstance(self.date_from, date):
-            return "datetime > (:date_from::timestamp AT TIME ZONE timezone)"
+            return f"{dt} >= :date_from::date"
 
 
 class DateToQuery(QueryBaseModel):
@@ -505,15 +630,14 @@ class DateToQuery(QueryBaseModel):
         Returns:
             string of WHERE clause if `date_to` is set
         """
+        dt = self.map("datetime", "datetime")
+
         if self.date_to is None:
             return None
         elif isinstance(self.date_to, datetime):
-            if self.date_to.tzinfo is None:
-                return "datetime <= (:date_to::timestamp AT TIME ZONE timezone)"
-            else:
-                return "datetime <= :date_to"
+            return f"{dt} <= :date_to::date"
         elif isinstance(self.date_to, date):
-            return "datetime <= (:date_to::timestamp AT TIME ZONE timezone)"
+            return f"{dt} <= :date_to::date"
 
 
 class PeriodNames(StrEnum):
@@ -537,7 +661,8 @@ class PeriodNameQuery(QueryBaseModel):
     """
 
     period_name: PeriodNames | None = Query(
-        "hour", description="Period to aggregate. Month, day, hour, hour of day (hod), day of week (dow) and month of year (moy)"
+        "hour",
+        description="Period to aggregate. Year, month, day, hour, hour of day (hod), day of week (dow) and month of year (moy)",
     )
 
 
@@ -671,6 +796,26 @@ class RadiusQuery(QueryBaseModel):
             return f"ST_DWithin(ST_MakePoint(:lon, :lat)::geography, {geometry_field}, :radius)"
 
 
+class InstrumentsQuery(QueryBaseModel):
+    """Pydantic query model for the instruments query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        instruments_id: instruments_id or comma separated list of instruments_id
+            for filtering results to an instrument or instruments
+    """
+
+    instruments_id: CommaSeparatedList[int] | None = Query(None, description="")
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def where(self) -> str | None:
+        """ """
+        if self.has("instruments_id"):
+            return "instrument_ids && :instruments_id"
+
+
 class BboxQuery(QueryBaseModel):
     """Pydantic query model for the `bbox` query parameter.
 
@@ -767,8 +912,7 @@ class BboxQuery(QueryBaseModel):
             return "ST_MakeEnvelope(:minx, :miny, :maxx, :maxy, 4326) && geom"
 
 
-class MeasurementsQueries(Paging, ParametersQuery):
-    ...
+class MeasurementsQueries(Paging, ParametersQuery): ...
 
 
 class QueryBuilder(object):
@@ -814,6 +958,13 @@ class QueryBuilder(object):
             return sort_class[0]
         else:
             return None
+
+    def set_column_map(self, m: dict):
+        """
+        Provide a dictionary that can be used later in the where methods
+        to dynamically set a query field name.
+        """
+        setattr(self, "__column_map__", m)
 
     def fields(self) -> str:
         """
@@ -871,8 +1022,12 @@ class QueryBuilder(object):
         bases = self._bases()
         for base in bases:
             if callable(getattr(base, "where", None)):
-                if base.where(self.query):
-                    where.append(base.where(self.query))
+                setattr(
+                    self.query, "__column_map__", getattr(self, "__column_map__", {})
+                )
+                clause = base.where(self.query)
+                if clause:
+                    where.append(clause)
         if len(where):
             where = list(set(where))
             where.sort()  # ensure the order is consistent for testing

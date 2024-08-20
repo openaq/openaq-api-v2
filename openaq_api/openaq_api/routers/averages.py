@@ -5,8 +5,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 
 from openaq_api.v3.models.queries import (
-    DateFromQuery,
-    DateToQuery,
+    DatetimeFromQuery,
+    DatetimeToQuery,
     Paging,
     TemporalQuery,
     QueryBaseModel,
@@ -59,8 +59,8 @@ class AveragesQueries(
     Paging,
     SpatialTypeQuery,
     LocationQuery,
-    DateFromQuery,
-    DateToQuery,
+    DatetimeFromQuery,
+    DatetimeToQuery,
     ParametersQuery,
     TemporalQuery,
 ):
@@ -98,8 +98,8 @@ async def averages_v2_get(
         , m.measurands_id as "parameterId"
         , m.display as "displayName"
         , m.units as unit
-        , h.first_datetime
-        , h.last_datetime
+        , h.datetime_first as first_datetime
+        , h.datetime_last as last_datetime
         {query.fields()}
         FROM hourly_data h
         JOIN sensors s USING (sensors_id)
