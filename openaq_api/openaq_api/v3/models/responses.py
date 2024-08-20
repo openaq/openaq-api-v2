@@ -141,7 +141,7 @@ class License(JsonBase):
     redistribution_allowed: bool
     source_url: str
 
-
+      
 class Latest(JsonBase):
     datetime: DatetimeObject
     value: float
