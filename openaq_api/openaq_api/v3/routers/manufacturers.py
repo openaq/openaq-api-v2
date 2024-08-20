@@ -17,7 +17,7 @@ logger = logging.getLogger("manufacturers")
 
 router = APIRouter(
     prefix="/v3",
-    tags=["v3-alpha"],
+    tags=["v3"],
     include_in_schema=True,
 )
 
@@ -58,8 +58,7 @@ class InstrumentsSorting(SortingBase):
     )
 
 
-class ManufacturersQueries(Paging, InstrumentsSorting):
-    ...
+class ManufacturersQueries(Paging, InstrumentsSorting): ...
 
 
 @router.get(

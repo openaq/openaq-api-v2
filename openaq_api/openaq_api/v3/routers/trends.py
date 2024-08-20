@@ -19,7 +19,7 @@ from openaq_api.v3.models.queries import (
 
 router = APIRouter(
     prefix="/v3",
-    tags=["v3-alpha"],
+    tags=["v3"],
     include_in_schema=True,
 )
 
@@ -47,8 +47,7 @@ class LocationTrendsQueries(
     DatetimeFromQuery,
     DatetimeToQuery,
     PeriodNameQuery,
-):
-    ...
+): ...
 
 
 @router.get(

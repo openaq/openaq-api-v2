@@ -17,7 +17,7 @@ logger = logging.getLogger("owners")
 
 router = APIRouter(
     prefix="/v3",
-    tags=["v3-alpha"],
+    tags=["v3"],
     include_in_schema=True,
 )
 
@@ -59,8 +59,7 @@ class OwnersSorting(SortingBase):
     )
 
 
-class OwnersQueries(Paging, OwnersSorting):
-    ...
+class OwnersQueries(Paging, OwnersSorting): ...
 
 
 @router.get(

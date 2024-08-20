@@ -18,7 +18,7 @@ logger = logging.getLogger("tiles")
 
 router = APIRouter(
     prefix="/v3",
-    tags=["v3-alpha"],
+    tags=["v3"],
     include_in_schema=False,
 )
 
@@ -86,15 +86,13 @@ class Tile(
     MobileQuery,
     TileOwnersQuery,
     ActiveQuery,
-):
-    ...
+): ...
 
 
 class ThresholdTile(
     Tile,
     ThresholdsQuery,
-):
-    ...
+): ...
 
 
 class MobileTile(TileBase):
@@ -293,8 +291,7 @@ async def fetch_threshold_tiles(query, db):
 async def get_mobile_gen_tiles(
     tile: Annotated[Tile, Depends(Tile.depends())],
     db: DB = Depends(),
-):
-    ...
+): ...
 
 
 async def fetch_mobile_gen_tiles(where, db):
@@ -312,8 +309,7 @@ async def fetch_mobile_gen_tiles(where, db):
 async def get_mobile_path_tiles(
     tile: Annotated[Tile, Depends(Tile.depends())],
     db: DB = Depends(),
-):
-    ...
+): ...
 
 
 async def fetch_mobile_path_tiles(where, db):
@@ -331,8 +327,7 @@ async def fetch_mobile_path_tiles(where, db):
 async def get_mobiletiles(
     mt: Annotated[MobileTile, Depends(MobileTile.depends())],
     db: DB = Depends(),
-):
-    ...
+): ...
 
 
 async def fetch_mobile_tiles(where, db):

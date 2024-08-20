@@ -23,13 +23,13 @@ from openaq_api.v3.models.responses import (
     HourlyDataResponse,
     DailyDataResponse,
     AnnualDataResponse,
-    )
+)
 
 logger = logging.getLogger("sensors")
 
 router = APIRouter(
     prefix="/v3",
-    tags=["v3-alpha"],
+    tags=["v3"],
     include_in_schema=True,
 )
 
@@ -51,6 +51,7 @@ class LocationSensorQuery(QueryBaseModel):
     def where(self):
         return "n.sensor_nodes_id = :locations_id"
 
+
 class BaseDatetimeQueries(
     SensorQuery,
     DatetimeFromQuery,
@@ -59,18 +60,18 @@ class BaseDatetimeQueries(
     @model_validator(mode="after")
     @classmethod
     def check_dates_are_in_order(cls, data: Any) -> Any:
-        dt = getattr(data, 'datetime_to')
-        df = getattr(data, 'datetime_from')
+        dt = getattr(data, "datetime_to")
+        df = getattr(data, "datetime_from")
         if dt and df and dt <= df:
             raise RequestValidationError(
                 f"Date/time from must be older than the date/time to. User passed {df} - {dt}"
             )
 
+
 class PagedDatetimeQueries(
     Paging,
     BaseDatetimeQueries,
-    ):
-    ...
+): ...
 
 
 class BaseDateQueries(
@@ -81,19 +82,18 @@ class BaseDateQueries(
     @model_validator(mode="after")
     @classmethod
     def check_dates_are_in_order(cls, data: Any) -> Any:
-        dt = getattr(data, 'date_to')
-        df = getattr(data, 'date_from')
+        dt = getattr(data, "date_to")
+        df = getattr(data, "date_from")
         if dt and df and dt <= df:
             raise RequestValidationError(
                 f"Date from must be older than the date to. User passed {df} - {dt}"
             )
 
+
 class PagedDateQueries(
     Paging,
     BaseDateQueries,
-    ):
-    ...
-
+): ...
 
 
 @router.get(
@@ -121,10 +121,11 @@ async def sensor_measurements_aggregated_get(
     sensors: Annotated[PagedDatetimeQueries, Depends(PagedDatetimeQueries.depends())],
     db: DB = Depends(),
 ):
-    aggregate_to = 'hour'
+    aggregate_to = "hour"
     query = QueryBuilder(sensors)
     response = await fetch_measurements_aggregated(query, aggregate_to, db)
     return response
+
 
 @router.get(
     "/sensors/{sensors_id}/measurements/daily",
@@ -136,7 +137,7 @@ async def sensor_measurements_aggregated_get(
     sensors: Annotated[PagedDatetimeQueries, Depends(PagedDatetimeQueries.depends())],
     db: DB = Depends(),
 ):
-    aggregate_to = 'day'
+    aggregate_to = "day"
     query = QueryBuilder(sensors)
     response = await fetch_measurements_aggregated(query, aggregate_to, db)
     return response
@@ -167,7 +168,7 @@ async def sensor_hourly_measurements_aggregate_to_day_get(
     sensors: Annotated[PagedDatetimeQueries, Depends(PagedDatetimeQueries.depends())],
     db: DB = Depends(),
 ):
-    aggregate_to = 'day'
+    aggregate_to = "day"
     query = QueryBuilder(sensors)
     response = await fetch_hours_aggregated(query, aggregate_to, db)
     return response
@@ -183,7 +184,7 @@ async def sensor_hourly_measurements_aggregate_to_month_get(
     sensors: Annotated[PagedDatetimeQueries, Depends(PagedDatetimeQueries.depends())],
     db: DB = Depends(),
 ):
-    aggregate_to = 'month'
+    aggregate_to = "month"
     query = QueryBuilder(sensors)
     response = await fetch_hours_aggregated(query, aggregate_to, db)
     return response
@@ -199,7 +200,7 @@ async def sensor_hourly_measurements_aggregate_to_year_get(
     sensors: Annotated[PagedDatetimeQueries, Depends(PagedDatetimeQueries.depends())],
     db: DB = Depends(),
 ):
-    aggregate_to = 'year'
+    aggregate_to = "year"
     query = QueryBuilder(sensors)
     response = await fetch_hours_aggregated(query, aggregate_to, db)
     return response
@@ -215,10 +216,11 @@ async def sensor_hourly_measurements_aggregate_to_hod_get(
     sensors: Annotated[BaseDatetimeQueries, Depends(BaseDatetimeQueries.depends())],
     db: DB = Depends(),
 ):
-    aggregate_to = 'hod'
+    aggregate_to = "hod"
     query = QueryBuilder(sensors)
     response = await fetch_hours_trends(aggregate_to, query, db)
     return response
+
 
 @router.get(
     "/sensors/{sensors_id}/hours/dayofweek",
@@ -230,10 +232,11 @@ async def sensor_hourly_measurements_aggregate_to_dow_get(
     sensors: Annotated[BaseDatetimeQueries, Depends(BaseDatetimeQueries.depends())],
     db: DB = Depends(),
 ):
-    aggregate_to = 'dow'
+    aggregate_to = "dow"
     query = QueryBuilder(sensors)
     response = await fetch_hours_trends(aggregate_to, query, db)
     return response
+
 
 @router.get(
     "/sensors/{sensors_id}/hours/monthofyear",
@@ -245,7 +248,7 @@ async def sensor_hourly_measurements_aggregate_to_moy_get(
     sensors: Annotated[BaseDatetimeQueries, Depends(BaseDatetimeQueries.depends())],
     db: DB = Depends(),
 ):
-    aggregate_to = 'moy'
+    aggregate_to = "moy"
     query = QueryBuilder(sensors)
     response = await fetch_hours_trends(aggregate_to, query, db)
     return response
@@ -261,7 +264,7 @@ async def sensor_daily_measurements_aggregate_to_dow_get(
     sensors: Annotated[BaseDateQueries, Depends(BaseDateQueries.depends())],
     db: DB = Depends(),
 ):
-    aggregate_to = 'dow'
+    aggregate_to = "dow"
     query = QueryBuilder(sensors)
     response = await fetch_days_trends(aggregate_to, query, db)
     return response
@@ -277,7 +280,7 @@ async def sensor_daily_measurements_aggregate_to_moy_get(
     sensors: Annotated[BaseDateQueries, Depends(BaseDateQueries.depends())],
     db: DB = Depends(),
 ):
-    aggregate_to = 'moy'
+    aggregate_to = "moy"
     query = QueryBuilder(sensors)
     response = await fetch_days_trends(aggregate_to, query, db)
     return response
@@ -308,7 +311,7 @@ async def sensor_daily_aggregate_to_month_get(
     sensors: Annotated[PagedDateQueries, Depends(PagedDateQueries.depends())],
     db: DB = Depends(),
 ):
-    aggregate_to = 'month'
+    aggregate_to = "month"
     query = QueryBuilder(sensors)
     response = await fetch_days_aggregated(query, aggregate_to, db)
     return response
@@ -324,11 +327,10 @@ async def sensor_daily_aggregate_to_year_get(
     sensors: Annotated[PagedDateQueries, Depends(PagedDateQueries.depends())],
     db: DB = Depends(),
 ):
-    aggregate_to = 'year'
+    aggregate_to = "year"
     query = QueryBuilder(sensors)
     response = await fetch_days_aggregated(query, aggregate_to, db)
     return response
-
 
 
 @router.get(
@@ -346,9 +348,6 @@ async def sensor_yearly_get(
     return response
 
 
-
-
-
 @router.get(
     "/locations/{locations_id}/sensors",
     response_model=SensorsResponse,
@@ -356,7 +355,9 @@ async def sensor_yearly_get(
     description="Provides a list of sensors by location ID",
 )
 async def sensors_get(
-    location_sensors: Annotated[LocationSensorQuery, Depends(LocationSensorQuery.depends())],
+    location_sensors: Annotated[
+        LocationSensorQuery, Depends(LocationSensorQuery.depends())
+    ],
     db: DB = Depends(),
 ):
     return await fetch_sensors(location_sensors, db)
@@ -423,8 +424,6 @@ async def fetch_sensors(q, db):
     return await db.fetchPage(sql, query.params())
 
 
-
-
 async def fetch_measurements(query, db):
     sql = f"""
       SELECT m.sensors_id
@@ -464,17 +463,16 @@ async def fetch_measurements(query, db):
     return await db.fetchPage(sql, query.params())
 
 
-
 async def fetch_measurements_aggregated(query, aggregate_to, db):
-    if aggregate_to == 'hour':
+    if aggregate_to == "hour":
         dur = "01:00:00"
         expected_hours = 1
         interval_seconds = 3600
-    elif aggregate_to == 'day':
+    elif aggregate_to == "day":
         dur = "24:00:00"
         interval_seconds = 3600 * 24
     else:
-        raise Exception(f'{aggregate_to} is not supported')
+        raise Exception(f"{aggregate_to} is not supported")
 
     sql = f"""
         WITH meas AS (
@@ -551,11 +549,12 @@ async def fetch_measurements_aggregated(query, aggregate_to, db):
         {query.pagination()}
     """
     params = query.params()
-    params['aggregate_to'] = aggregate_to
+    params["aggregate_to"] = aggregate_to
     return await db.fetchPage(sql, params)
 
+
 async def fetch_hours(query, db):
-        sql = f"""
+    sql = f"""
         SELECT sn.id
         , json_build_object(
         'label', '1hour'
@@ -599,20 +598,20 @@ async def fetch_hours(query, db):
         ORDER BY datetime
         {query.pagination()}
         """
-        return await db.fetchPage(sql, query.params())
+    return await db.fetchPage(sql, query.params())
 
 
 async def fetch_hours_aggregated(query, aggregate_to, db):
-    if aggregate_to == 'year':
+    if aggregate_to == "year":
         dur = "1year"
-    elif aggregate_to == 'month':
+    elif aggregate_to == "month":
         dur = "1month"
-    elif aggregate_to == 'day':
+    elif aggregate_to == "day":
         dur = "24:00:00"
     else:
-        raise Exception(f'{aggregate_to} is not supported')
+        raise Exception(f"{aggregate_to} is not supported")
 
-    query.set_column_map({ "timezone": "tz.tzid" })
+    query.set_column_map({"timezone": "tz.tzid"})
 
     sql = f"""
         WITH meas AS (
@@ -689,9 +688,8 @@ async def fetch_hours_aggregated(query, aggregate_to, db):
         {query.pagination()}
     """
     params = query.params()
-    params['aggregate_to'] = aggregate_to
+    params["aggregate_to"] = aggregate_to
     return await db.fetchPage(sql, params)
-
 
 
 async def fetch_days_trends(aggregate_to, query, db):
@@ -712,18 +710,16 @@ async def fetch_days_trends(aggregate_to, query, db):
     dur = "24:00:00"
     interval_seconds = 3600 * 24
 
-
     params = query.params()
-    params['aggregate_to'] = aggregate_to
+    params["aggregate_to"] = aggregate_to
 
-    datetime_field_name = 'date'
-    if params.get('date_to') is None:
-        params['date_to'] = date.today()
+    datetime_field_name = "date"
+    if params.get("date_to") is None:
+        params["date_to"] = date.today()
 
-    if params.get('date_from') is None:
-        dt = params.get('date_to')
-        params['date_from'] = dt - timedelta(days=365)
-
+    if params.get("date_from") is None:
+        dt = params.get("date_to")
+        params["date_from"] = dt - timedelta(days=365)
 
     sql = f"""
     -----------------------------------
@@ -861,22 +857,19 @@ async def fetch_hours_trends(aggregate_to, query, db):
         period_last_offset = "'+1sec'"
         aggregate_to = "month"
 
-
     dur = "01:00:00"
     interval_seconds = 3600
 
-
     params = query.params()
-    params['aggregate_to'] = aggregate_to
+    params["aggregate_to"] = aggregate_to
 
-    datetime_field_name = 'datetime'
-    if params.get('datetime_to') is None:
-        params['datetime_to'] = date.today()
+    datetime_field_name = "datetime"
+    if params.get("datetime_to") is None:
+        params["datetime_to"] = date.today()
 
-    if params.get('datetime_from') is None:
-        dt = params.get('datetime_to')
-        params['datetime_from'] = dt - timedelta(days=365)
-
+    if params.get("datetime_from") is None:
+        dt = params.get("datetime_to")
+        params["datetime_from"] = dt - timedelta(days=365)
 
     sql = f"""
     -----------------------------------
@@ -994,14 +987,14 @@ async def fetch_hours_trends(aggregate_to, query, db):
 
 
 async def fetch_days_aggregated(query, aggregate_to, db):
-    if aggregate_to == 'year':
+    if aggregate_to == "year":
         dur = "1year"
         interval_seconds = 3600 * 24 * 365.24
-    elif aggregate_to == 'month':
+    elif aggregate_to == "month":
         dur = "1 month"
         interval_seconds = 3600 * 24
     else:
-        raise Exception(f'{aggregate_to} is not supported')
+        raise Exception(f"{aggregate_to} is not supported")
 
     sql = f"""
         WITH meas AS (
@@ -1079,12 +1072,12 @@ async def fetch_days_aggregated(query, aggregate_to, db):
         {query.pagination()}
     """
     params = query.params()
-    params['aggregate_to'] = aggregate_to
+    params["aggregate_to"] = aggregate_to
     return await db.fetchPage(sql, params)
 
 
 async def fetch_days(query, db):
-        sql = f"""
+    sql = f"""
         SELECT sn.id
         , json_build_object(
         'label', '1day'
@@ -1128,15 +1121,14 @@ async def fetch_days(query, db):
         ORDER BY datetime
         {query.pagination()}
         """
-        return await db.fetchPage(sql, query.params())
+    return await db.fetchPage(sql, query.params())
 
 
-def aggregate_days(query, aggregate_to, db):
-    ...
+def aggregate_days(query, aggregate_to, db): ...
 
 
 async def fetch_years(query, db):
-        sql = f"""
+    sql = f"""
         SELECT sn.id
         , json_build_object(
         'label', '1year'
@@ -1180,4 +1172,4 @@ async def fetch_years(query, db):
         ORDER BY datetime
         {query.pagination()}
         """
-        return await db.fetchPage(sql, query.params())
+    return await db.fetchPage(sql, query.params())

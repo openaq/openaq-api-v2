@@ -23,7 +23,7 @@ logger = logging.getLogger("providers")
 
 router = APIRouter(
     prefix="/v3",
-    tags=["v3-alpha"],
+    tags=["v3"],
     include_in_schema=True,
 )
 
