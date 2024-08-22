@@ -1,12 +1,11 @@
 import logging
+from datetime import date, datetime
 from enum import StrEnum
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 
 from openaq_api.v3.models.queries import (
-    DatetimeFromQuery,
-    DatetimeToQuery,
     Paging,
     TemporalQuery,
     QueryBaseModel,
@@ -19,6 +18,87 @@ from ..models.responses import AveragesResponse
 logger = logging.getLogger("averages")
 
 router = APIRouter()
+
+
+class DateFromQuery(QueryBaseModel):
+    """Pydantic query model for the `datetime_from` query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        datetime_from: date or datetime in ISO-8601 format to filter results to a
+        date range.
+    """
+
+    date_from: datetime | date | None = Query(
+        None,
+        description="From when?",
+        examples=["2022-10-01T11:19:38-06:00", "2022-10-01"],
+    )
+
+    def where(self) -> str:
+        """Generates SQL condition for filtering to datetime.
+
+        Overrides the base QueryBaseModel `where` method
+
+        If `date_from` is a `date` or `datetime` without a timezone a timezone
+        is added as UTC.
+
+        Returns:
+            string of WHERE clause if `date_from` is set
+        """
+        tz = self.map("timezone", "timezone")
+        dt = self.map("datetime", "datetime")
+
+        if self.date_from is None:
+            return None
+        elif isinstance(self.date_from, datetime):
+            if self.date_from.tzinfo is None:
+                return f"{dt} > (:date_from::timestamp AT TIME ZONE {tz})"
+            else:
+                return f"{dt} > :date_from"
+        elif isinstance(self.date_from, date):
+            return f"{dt} > (:date_from::timestamp AT TIME ZONE {tz})"
+
+
+class DateToQuery(QueryBaseModel):
+    """Pydantic query model for the `date_to` query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        date_to: date or datetime in ISO-8601 format to filter results to a
+        date range.
+    """
+
+    date_to: datetime | date | None = Query(
+        None,
+        description="To when?",
+        examples=["2022-10-01T11:19:38-06:00", "2022-10-01"],
+    )
+
+    def where(self) -> str:
+        """Generates SQL condition for filtering to datetime.
+
+        Overrides the base QueryBaseModel `where` method
+
+        If `date_to` is a `date` or `datetime` without a timezone a timezone
+        is added as UTC.
+
+        Returns:
+            string of WHERE clause if `date_to` is set
+        """
+        tz = self.map("timezone", "timezone")
+        dt = self.map("datetime", "datetime")
+        if self.date_to is None:
+            return None
+        elif isinstance(self.date_to, datetime):
+            if self.date_to.tzinfo is None:
+                return f"{dt} <= (:date_to::timestamp AT TIME ZONE {tz})"
+            else:
+                return f"{dt} <= :date_to"
+        elif isinstance(self.date_to, date):
+            return f"{dt} <= (:date_to::timestamp AT TIME ZONE {tz})"
 
 
 class SpatialTypes(StrEnum):
@@ -59,12 +139,11 @@ class AveragesQueries(
     Paging,
     SpatialTypeQuery,
     LocationQuery,
-    DatetimeFromQuery,
-    DatetimeToQuery,
+    DateFromQuery,
+    DateToQuery,
     ParametersQuery,
     TemporalQuery,
-):
-    ...
+): ...
 
 
 @router.get(

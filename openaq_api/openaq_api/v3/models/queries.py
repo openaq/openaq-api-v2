@@ -554,7 +554,6 @@ class DatetimeToQuery(QueryBaseModel):
         """
         tz = self.map("timezone", "timezone")
         dt = self.map("datetime", "datetime")
-
         if self.datetime_to is None:
             return None
         elif isinstance(self.datetime_to, datetime):
