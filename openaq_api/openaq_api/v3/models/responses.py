@@ -141,7 +141,7 @@ class License(JsonBase):
     redistribution_allowed: bool
     source_url: str
 
-      
+
 class Latest(JsonBase):
     datetime: DatetimeObject
     value: float
@@ -249,7 +249,7 @@ class Measurement(JsonBase):
 
 class HourlyData(JsonBase):
     #datetime: DatetimeObject
-    value: float
+    value: float | None = None # Nullable to deal with errors
     parameter: ParameterBase
     period: Period | None = None
     coordinates: Coordinates | None = None
