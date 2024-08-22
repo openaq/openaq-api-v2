@@ -19,7 +19,7 @@ logger = logging.getLogger("countries")
 
 router = APIRouter(
     prefix="/v3",
-    tags=["v3-alpha"],
+    tags=["v3"],
     include_in_schema=True,
 )
 
@@ -61,8 +61,7 @@ class CountriesSorting(SortingBase):
     )
 
 
-class CountriesQueries(Paging, ParametersQuery, ProviderQuery, CountriesSorting):
-    ...
+class CountriesQueries(Paging, ParametersQuery, ProviderQuery, CountriesSorting): ...
 
 
 @router.get(
