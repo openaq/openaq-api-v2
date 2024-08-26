@@ -506,7 +506,7 @@ class DatetimeFromQuery(QueryBaseModel):
         Overrides the base QueryBaseModel `where` method
 
         If `datetime_from` is a `date` or `datetime` without a timezone a timezone
-        is added as UTC.
+        is added as local timezone.
 
         Returns:
             string of WHERE clause if `datetime_from` is set
@@ -544,13 +544,13 @@ class DatetimeToQuery(QueryBaseModel):
     def where(self) -> str:
         """Generates SQL condition for filtering to datetime.
 
-        Overrides the base QueryBaseModel `where` method
+         Overrides the base QueryBaseModel `where` method
 
-        If `datetime_to` is a `date` or `datetime` without a timezone a timezone
-        is added as UTC.
+         If `datetime_to` is a `date` or `datetime` without a timezone a timezone
+        is added as local timezone.
 
-        Returns:
-            string of WHERE clause if `datetime_to` is set
+         Returns:
+             string of WHERE clause if `datetime_to` is set
         """
         tz = self.map("timezone", "timezone")
         dt = self.map("datetime", "datetime")
@@ -587,7 +587,7 @@ class DateFromQuery(QueryBaseModel):
         Overrides the base QueryBaseModel `where` method
 
         If `date_from` is a `date` or `datetime` without a timezone a timezone
-        is added as UTC.
+        is added as local timezone.
 
         Returns:
             string of WHERE clause if `date_from` is set
@@ -624,7 +624,7 @@ class DateToQuery(QueryBaseModel):
         Overrides the base QueryBaseModel `where` method
 
         If `date_to` is a `date` or `datetime` without a timezone a timezone
-        is added as UTC.
+        is added as local timezone.
 
         Returns:
             string of WHERE clause if `date_to` is set
