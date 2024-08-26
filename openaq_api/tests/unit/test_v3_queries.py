@@ -7,6 +7,10 @@ import pytest
 from buildpg import render
 from pydantic import TypeAdapter
 
+from openaq_api.v3.routers.latest import (
+    ParameterLatestPathQuery,
+    LocationLatestPathQuery,
+)
 from openaq_api.v3.models.queries import (
     BboxQuery,
     CommaSeparatedList,
@@ -604,3 +608,29 @@ class TestManufacturersQueries:
         params = manufacturers_query.model_dump()
         assert where is None
         assert params == {"manufacturers_id": None}
+
+
+class TestParameterLatestPathQuery:
+    def test_has_value(self):
+        parameter_latest_path_query = ParameterLatestPathQuery(parameters_id=42)
+        where = parameter_latest_path_query.where()
+        params = parameter_latest_path_query.model_dump()
+        assert where == "m.measurands_id = :parameters_id"
+        assert params == {"parameters_id": 42}
+
+    def test_no_value(self):
+        with pytest.raises(fastapi.exceptions.HTTPException):
+            ParameterLatestPathQuery()
+
+
+class TestLocationLatestPathQuery:
+    def test_has_value(self):
+        location_latest_path_query = LocationLatestPathQuery(locations_id=42)
+        where = location_latest_path_query.where()
+        params = location_latest_path_query.model_dump()
+        assert where == "n.sensor_nodes_id = :locations_id"
+        assert params == {"locations_id": 42}
+
+    def test_no_value(self):
+        with pytest.raises(fastapi.exceptions.HTTPException):
+            LocationLatestPathQuery()

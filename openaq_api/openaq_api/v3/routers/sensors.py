@@ -34,7 +34,7 @@ router = APIRouter(
 )
 
 
-class SensorQuery(QueryBaseModel):
+class SensorPathQuery(QueryBaseModel):
     sensors_id: int = Path(
         ..., description="Limit the results to a specific sensors id", ge=1
     )
@@ -53,7 +53,7 @@ class LocationSensorQuery(QueryBaseModel):
 
 
 class BaseDatetimeQueries(
-    SensorQuery,
+    SensorPathQuery,
     DatetimeFromQuery,
     DatetimeToQuery,
 ):
@@ -75,7 +75,7 @@ class PagedDatetimeQueries(
 
 
 class BaseDateQueries(
-    SensorQuery,
+    SensorPathQuery,
     DateFromQuery,
     DateToQuery,
 ):
@@ -370,7 +370,7 @@ async def sensors_get(
     description="Provides a sensor by sensor ID",
 )
 async def sensor_get(
-    sensors: Annotated[SensorQuery, Depends(SensorQuery.depends())],
+    sensors: Annotated[SensorPathQuery, Depends(SensorPathQuery.depends())],
     db: DB = Depends(),
 ):
     return await fetch_sensors(sensors, db)

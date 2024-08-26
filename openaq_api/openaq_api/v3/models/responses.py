@@ -142,7 +142,7 @@ class License(JsonBase):
     source_url: str
 
 
-class Latest(JsonBase):
+class LatestBase(JsonBase):
     datetime: DatetimeObject
     value: float
     coordinates: Coordinates
@@ -213,8 +213,13 @@ class Sensor(SensorBase):
     datetime_first: DatetimeObject | None = None
     datetime_last: DatetimeObject | None = None
     coverage: Coverage
-    latest: Latest
+    latest: LatestBase
     summary: Summary
+
+
+class Latest(LatestBase):
+    sensors_id: int
+    locations_id: int
 
 
 class Location(JsonBase):
@@ -248,8 +253,8 @@ class Measurement(JsonBase):
 
 
 class HourlyData(JsonBase):
-    #datetime: DatetimeObject
-    value: float | None = None # Nullable to deal with errors
+    # datetime: DatetimeObject
+    value: float | None = None  # Nullable to deal with errors
     parameter: ParameterBase
     period: Period | None = None
     coordinates: Coordinates | None = None
@@ -258,7 +263,7 @@ class HourlyData(JsonBase):
 
 
 class DailyData(JsonBase):
-    #datetime: DatetimeObject
+    # datetime: DatetimeObject
     value: float
     parameter: ParameterBase
     period: Period | None = None
@@ -268,7 +273,7 @@ class DailyData(JsonBase):
 
 
 class AnnualData(JsonBase):
-    #datetime: DatetimeObject
+    # datetime: DatetimeObject
     value: float
     parameter: ParameterBase
     period: Period | None = None
@@ -301,11 +306,14 @@ class LocationsResponse(OpenAQResult):
 class MeasurementsResponse(OpenAQResult):
     results: list[Measurement]
 
+
 class HourlyDataResponse(OpenAQResult):
     results: list[HourlyData]
 
+
 class DailyDataResponse(OpenAQResult):
     results: list[DailyData]
+
 
 class AnnualDataResponse(OpenAQResult):
     results: list[AnnualData]
@@ -341,3 +349,7 @@ class ManufacturersResponse(OpenAQResult):
 
 class OwnersResponse(OpenAQResult):
     results: list[Owner]
+
+
+class LatestResponse(OpenAQResult):
+    results: list[Latest]
