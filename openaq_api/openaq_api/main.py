@@ -32,7 +32,8 @@ from openaq_api.models.logging import (
     UnprocessableEntityLog,
     WarnLog,
 )
-#from openaq_api.routers.auth import router as auth_router
+
+# from openaq_api.routers.auth import router as auth_router
 from openaq_api.routers.averages import router as averages_router
 from openaq_api.routers.cities import router as cities_router
 from openaq_api.routers.countries import router as countries_router
@@ -61,6 +62,7 @@ from openaq_api.v3.routers import (
     tiles,
     trends,
     licenses,
+    latest,
 )
 
 logging.basicConfig(
@@ -193,13 +195,12 @@ class OpenAQValidationResponse(BaseModel):
     detail: list[OpenAQValidationResponseDetail] | None = None
 
 
-
 @app.exception_handler(RequestValidationError)
 async def openaq_request_validation_exception_handler(
     request: Request, exc: RequestValidationError
 ):
     return ORJSONResponse(status_code=422, content=jsonable_encoder(str(exc)))
-    #return PlainTextResponse(str(exc))
+    # return PlainTextResponse(str(exc))
     # print("\n\n\n\n\n")
     # print(str(exc))
     # print("\n\n\n\n\n")
@@ -209,7 +210,7 @@ async def openaq_request_validation_exception_handler(
     #     UnprocessableEntityLog(request=request, detail=str(exc)).model_dump_json()
     # )
     # detail = OpenAQValidationResponse(detail=detail)
-    #return ORJSONResponse(status_code=422, content=jsonable_encoder(detail))
+    # return ORJSONResponse(status_code=422, content=jsonable_encoder(detail))
 
 
 @app.exception_handler(ValidationError)
@@ -222,7 +223,7 @@ async def openaq_exception_handler(request: Request, exc: ValidationError):
     #         request=request, detail=exc.jsmodel_dump_jsonon()
     #     ).model_dump_json()
     # )
-    #return ORJSONResponse(status_code=422, content=jsonable_encoder(detail))
+    # return ORJSONResponse(status_code=422, content=jsonable_encoder(detail))
     # return ORJSONResponse(status_code=500, content={"message": "internal server error"})
 
 
@@ -256,6 +257,8 @@ app.include_router(owners.router)
 app.include_router(trends.router)
 app.include_router(providers.router)
 app.include_router(sensors.router)
+app.include_router(latest.router)
+
 
 # app.include_router(auth_router)
 app.include_router(averages_router)

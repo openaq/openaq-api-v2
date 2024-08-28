@@ -7,6 +7,11 @@ import pytest
 from buildpg import render
 from pydantic import TypeAdapter
 
+from openaq_api.v3.routers.latest import (
+    ParameterLatestPathQuery,
+    LocationLatestPathQuery,
+    DatetimeMinQuery,
+)
 from openaq_api.v3.models.queries import (
     BboxQuery,
     CommaSeparatedList,
@@ -604,3 +609,55 @@ class TestManufacturersQueries:
         params = manufacturers_query.model_dump()
         assert where is None
         assert params == {"manufacturers_id": None}
+
+
+class TestParameterLatestPathQuery:
+    def test_has_value(self):
+        parameter_latest_path_query = ParameterLatestPathQuery(parameters_id=42)
+        where = parameter_latest_path_query.where()
+        params = parameter_latest_path_query.model_dump()
+        assert where == "m.measurands_id = :parameters_id"
+        assert params == {"parameters_id": 42}
+
+    def test_no_value(self):
+        with pytest.raises(fastapi.exceptions.HTTPException):
+            ParameterLatestPathQuery()
+
+
+class TestLocationLatestPathQuery:
+    def test_has_value(self):
+        location_latest_path_query = LocationLatestPathQuery(locations_id=42)
+        where = location_latest_path_query.where()
+        params = location_latest_path_query.model_dump()
+        assert where == "n.sensor_nodes_id = :locations_id"
+        assert params == {"locations_id": 42}
+
+    def test_no_value(self):
+        with pytest.raises(fastapi.exceptions.HTTPException):
+            LocationLatestPathQuery()
+
+
+class TestDatetimeMinQuery:
+    def test_has_no_value(self):
+        query = DatetimeMinQuery(datetime_min=None)
+        params = query.model_dump()
+        assert params == {"datetime_min": None}
+        assert query.where() == None
+
+    def test_has_date_value(self):
+        query = DatetimeMinQuery(datetime_min='2024-01-01')
+        params = query.model_dump()
+        assert params == {"datetime_min": date(2024, 1, 1)}
+        assert query.where() == "datetime_last > (:datetime_min::timestamp AT TIME ZONE tzid)"
+
+    def test_has_timestamp_value(self):
+        query = DatetimeMinQuery(datetime_min='2024-01-01 01:01:01')
+        params = query.model_dump()
+        assert params == {"datetime_min": datetime(2024, 1, 1, 1, 1, 1)}
+        assert query.where() == "datetime_last > (:datetime_min::timestamp AT TIME ZONE tzid)"
+
+    def test_has_timestamptz_value(self):
+        query = DatetimeMinQuery(datetime_min='2024-01-01 01:01:01-00:00')
+        params = query.model_dump()
+        assert params == {"datetime_min": datetime(2024, 1, 1, 1, 1, 1, tzinfo=ZoneInfo('UTC'))}
+        assert query.where() == "datetime_last > :datetime_min"
