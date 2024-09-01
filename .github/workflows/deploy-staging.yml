@@ -35,7 +35,6 @@ env:
   VPC_ID: ${{ secrets.VPC_ID }}
 
   RATE_LIMITING: True
-  RATE_AMOUNT: 10
   RATE_AMOUNT_KEY: 10
   RATE_TIME: 1
 

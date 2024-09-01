@@ -96,11 +96,10 @@ Now a redis instance will be available at ``` http://localhost:7000 ```. Configu
 ### Rate limiting values
 
 Rate limiting can be toggled off for local develop via the `RATE_LIMITING` environment variable. Other rate limiting values are:
-* `RATE_AMOUNT` - The number of requests allowed without a valid API key
 * `RATE_AMOUNT_KEY` - The number of requests allowed with a valid API key
 * `RATE_TIME` - The number of minutes for the rate
 
-e.g. `RATE_AMOUNT=5` and `RATE_TIME=1` would allow 5 requests per 1 minute.
+e.g. `RATE_AMOUNT_KEY=5` and `RATE_TIME=1` would allow 5 requests per 1 minute.
 
 > [!NOTE] 
 > With AWS WAF, rate limiting also occurs at the cloudfront stage. The application level rate limiting should be less than or equal to the value set at AWS WAF.

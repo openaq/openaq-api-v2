@@ -29,7 +29,6 @@ class Settings(BaseSettings):
     REDIS_PORT: int | None = 6379
 
     RATE_LIMITING: bool = False
-    RATE_AMOUNT: int | None = None
     RATE_AMOUNT_KEY: int | None = None
     RATE_TIME: int | None = None
     USER_AGENT: str | None = None
@@ -55,7 +54,11 @@ class Settings(BaseSettings):
     @computed_field(return_type=str, alias="DATABASE_WRITE_URL")
     @property
     def USE_SMTP_EMAIL(self):
-        return None not in [self.SMTP_EMAIL_HOST, self.SMTP_EMAIL_USER, self.SMTP_EMAIL_PASSWORD]
+        return None not in [
+            self.SMTP_EMAIL_HOST,
+            self.SMTP_EMAIL_USER,
+            self.SMTP_EMAIL_PASSWORD,
+        ]
 
     model_config = SettingsConfigDict(extra="ignore", env_file=get_env())
 

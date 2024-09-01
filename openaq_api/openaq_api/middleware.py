@@ -139,14 +139,12 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         self,
         app: ASGIApp,
         redis_client: RedisCluster,
-        rate_amount: int,  # number of requests allowed without api key
         rate_amount_key: int,  # number of requests allowed with api key
         rate_time: timedelta,  # timedelta of rate limit expiration
     ) -> None:
         """Init Middleware."""
         super().__init__(app)
         self.redis_client = redis_client
-        self.rate_amount = rate_amount
         self.rate_amount_key = rate_amount_key
         self.rate_time = rate_time
 
@@ -213,6 +211,17 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
                 )
             key = f"{auth}:{now.year}{now.month}{now.day}{now.hour}{now.minute}"
             limit = self.rate_amount_key
+        else:
+            logging.info(
+                UnauthorizedLog(
+                    request=request,
+                    rate_limiter=f"{key}/{limit}/{request.state.counter}",
+                ).model_dump_json()
+            )
+            response = JSONResponse(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                content={"message": "API KEY missing from x-api-key header"},
+            )
         request.state.counter = limit
         limited = False
         ttl = 0
