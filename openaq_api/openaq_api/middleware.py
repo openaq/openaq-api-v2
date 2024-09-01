@@ -214,7 +214,6 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
             logging.info(
                 UnauthorizedLog(
                     request=request,
-                    rate_limiter=f"{key}/{limit}/{request.state.counter}",
                 ).model_dump_json()
             )
             response = JSONResponse(
