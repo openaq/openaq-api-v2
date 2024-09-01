@@ -193,10 +193,9 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         if auth == settings.EXPLORER_API_KEY:
             response = await call_next(request)
             return response
-        limit = self.rate_amount
+        limit = self.rate_amount_key
         now = datetime.now()
         key = f"{request.client.host}:{now.year}{now.month}{now.day}{now.hour}{now.minute}"
-
         if auth:
             valid_key = await self.check_valid_key(auth)
             if not valid_key:
