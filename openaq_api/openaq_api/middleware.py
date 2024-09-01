@@ -220,6 +220,7 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 content={"message": "API KEY missing from x-api-key header"},
             )
+            return response
         request.state.counter = limit
         limited = False
         ttl = 0
