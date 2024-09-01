@@ -161,7 +161,6 @@ if settings.RATE_LIMITING is True:
         app.add_middleware(
             RateLimiterMiddleWare,
             redis_client=redis_client,
-            rate_amount=settings.RATE_AMOUNT,
             rate_amount_key=settings.RATE_AMOUNT_KEY,
             rate_time=datetime.timedelta(minutes=settings.RATE_TIME),
         )
