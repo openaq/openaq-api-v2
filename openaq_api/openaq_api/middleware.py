@@ -189,6 +189,9 @@ class RateLimiterMiddleWare(BaseHTTPMiddleware):
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
         route = request.url.path
+        if not self.limited_path(route):
+            response = await call_next(request)
+            return response
         auth = request.headers.get("x-api-key", None)
         if auth == settings.EXPLORER_API_KEY:
             response = await call_next(request)
