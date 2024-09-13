@@ -212,9 +212,9 @@ class Manufacturer(ManufacturerBase):
 class Sensor(SensorBase):
     datetime_first: DatetimeObject | None = None
     datetime_last: DatetimeObject | None = None
-    coverage: Coverage
-    latest: LatestBase
-    summary: Summary
+    coverage: Coverage | None = None
+    latest: LatestBase | None = None
+    summary: Summary | None = None
 
 
 class Latest(LatestBase):
@@ -243,7 +243,6 @@ class Location(JsonBase):
 
 
 class Measurement(JsonBase):
-    # datetime: DatetimeObject
     value: float
     parameter: ParameterBase
     period: Period | None = None
@@ -253,7 +252,6 @@ class Measurement(JsonBase):
 
 
 class HourlyData(JsonBase):
-    # datetime: DatetimeObject
     value: float | None = None  # Nullable to deal with errors
     parameter: ParameterBase
     period: Period | None = None
@@ -263,7 +261,6 @@ class HourlyData(JsonBase):
 
 
 class DailyData(JsonBase):
-    # datetime: DatetimeObject
     value: float
     parameter: ParameterBase
     period: Period | None = None
@@ -273,7 +270,6 @@ class DailyData(JsonBase):
 
 
 class AnnualData(JsonBase):
-    # datetime: DatetimeObject
     value: float
     parameter: ParameterBase
     period: Period | None = None
@@ -287,7 +283,6 @@ class Trend(JsonBase):
     factor: Factor
     value: float
     parameter: ParameterBase
-    # coordinates: Coordinates | None
     summary: Summary
     coverage: Coverage
 

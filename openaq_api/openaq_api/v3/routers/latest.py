@@ -166,7 +166,7 @@ async def fetch_latest(query, db):
         timezones t ON (n.timezones_id = t.timezones_id)
     JOIN 
         measurands m ON (s.measurands_id = m.measurands_id)
-    LEFT JOIN 
+    INNER JOIN 
         sensors_rollup r ON (s.sensors_id = r.sensors_id)
     {query_builder.where()}
     {query_builder.pagination()}

@@ -73,7 +73,7 @@ async def fetch_sensors(q, db):
 
     logger.debug(query.params())
     sql = f"""
-        SELECT s.sensors_id as id
+    SELECT s.sensors_id as id
     , m.measurand||' '||m.units as name
     , json_build_object(
     'id', m.measurands_id
@@ -82,28 +82,41 @@ async def fetch_sensors(q, db):
     , 'display_name', m.display
     ) as parameter
     , s.sensors_id
-    , json_build_object(
+    , CASE 
+        WHEN r.value_latest IS NOT NULL THEN
+    json_build_object(
       'min', r.value_min
     , 'max', r.value_max
     , 'avg', r.value_avg
     , 'sd', r.value_sd
-    ) as summary
-    , calculate_coverage(
-          r.value_count
-        , s.data_averaging_period_seconds
-        , s.data_logging_period_seconds
-        , r.datetime_first
-        , r.datetime_last
-    ) as coverage
+    ) 
+    ELSE NULL
+    END as summary
+    , CASE 
+        WHEN r.value_latest IS NOT NULL THEN
+      jsonb_build_object(
+        'datetime_from', get_datetime_object(r.datetime_first, t.tzid),
+        'datetime_to', get_datetime_object(r.datetime_last, t.tzid)
+      ) || calculate_coverage(
+        r.value_count,
+        s.data_averaging_period_seconds,
+        s.data_logging_period_seconds
+      )::jsonb
+    ELSE NULL
+    END as coverage
     , get_datetime_object(r.datetime_first, t.tzid) as datetime_first
     , get_datetime_object(r.datetime_last, t.tzid) as datetime_last
-    , json_build_object(
+    ,CASE 
+        WHEN r.value_latest IS NOT NULL THEN
+     json_build_object(
        'datetime', get_datetime_object(r.datetime_last, t.tzid)
       , 'value', r.value_latest
       , 'coordinates', json_build_object(
                 'latitude', st_y(COALESCE(r.geom_latest, n.geom))
                 ,'longitude', st_x(COALESCE(r.geom_latest, n.geom))
-    )) as latest
+    )) 
+    ELSE NULL
+    END as latest
     FROM sensors s
     JOIN sensor_systems sy ON (s.sensor_systems_id = sy.sensor_systems_id)
     JOIN sensor_nodes n ON (sy.sensor_nodes_id = n.sensor_nodes_id)
