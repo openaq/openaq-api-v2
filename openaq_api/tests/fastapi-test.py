@@ -43,7 +43,6 @@ endpoints = [
     "/v3/providers/62",
     "/v3/sensors/662",
     "/v3/locations/tiles/2/2/1.pbf",
-    "/v3/locations/2178/trends/2",
 ]
 
 

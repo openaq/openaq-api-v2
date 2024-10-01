@@ -2,9 +2,11 @@ from datetime import date, datetime
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
 from openaq_api.db import DB
+from openaq_api.v3.routers.locations import LocationPathQuery, fetch_locations
+from openaq_api.v3.routers.parameters import fetch_parameters
 from openaq_api.v3.models.queries import QueryBaseModel, QueryBuilder, Paging
 from openaq_api.v3.models.responses import LatestResponse
 
@@ -87,8 +89,8 @@ class ParametersLatestQueries(ParameterLatestPathQuery, DatetimeMinQuery, Paging
 @router.get(
     "/parameters/{parameters_id}/latest",
     response_model=LatestResponse,
-    summary="Get a owner by ID",
-    description="Provides a owner by owner ID",
+    summary="",
+    description="",
 )
 async def parameters_latest_get(
     parameters_latest: Annotated[
@@ -97,6 +99,10 @@ async def parameters_latest_get(
     db: DB = Depends(),
 ):
     response = await fetch_latest(parameters_latest, db)
+    if len(response.results) == 0:
+        parameters_response = await fetch_parameters(parameters_latest, db)
+        if len(parameters_response.results) == 0:
+            raise HTTPException(status_code=404, detail="Parameter not found")
     return response
 
 
@@ -130,16 +136,22 @@ class LocationsLatestQueries(LocationLatestPathQuery, DatetimeMinQuery, Paging):
 @router.get(
     "/locations/{locations_id}/latest",
     response_model=LatestResponse,
-    summary="Get a owner by ID",
-    description="Provides a owner by owner ID",
+    summary="Get a location's latest measurements",
+    description="Providers a location's latest measurement values",
 )
-async def owner_get(
+async def location_latest_get(
     locations_latest: Annotated[
         LocationsLatestQueries, Depends(LocationsLatestQueries.depends())
     ],
     db: DB = Depends(),
 ):
     response = await fetch_latest(locations_latest, db)
+    if len(response.results) == 0:
+        locations_response = await fetch_locations(
+            LocationPathQuery(locations_id=locations_latest.locations_id), db
+        )
+        if len(locations_response.results) == 0:
+            raise HTTPException(status_code=404, detail="Location not found")
     return response
 
 

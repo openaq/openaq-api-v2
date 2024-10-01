@@ -2,7 +2,7 @@ import logging
 from typing import Annotated
 from enum import StrEnum, auto
 
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
 from openaq_api.db import DB
 from openaq_api.v3.models.queries import (
@@ -101,6 +101,8 @@ async def provider_get(
     db: DB = Depends(),
 ):
     response = await fetch_providers(providers, db)
+    if len(response.results) == 0:
+        raise HTTPException(status_code=404, detail="Provider not found")
     return response
 
 
