@@ -1,7 +1,7 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path
+from fastapi import APIRouter, Depends, HTTPException, Path
 
 from openaq_api.db import DB
 from openaq_api.v3.models.queries import (
@@ -65,7 +65,10 @@ async def sensor_get(
     sensors: Annotated[SensorPathQuery, Depends(SensorPathQuery.depends())],
     db: DB = Depends(),
 ):
-    return await fetch_sensors(sensors, db)
+    response = await fetch_sensors(sensors, db)
+    if len(response.results) == 0:
+        raise HTTPException(status_code=404, detail="Sensor not found")
+    return response
 
 
 async def fetch_sensors(q, db):

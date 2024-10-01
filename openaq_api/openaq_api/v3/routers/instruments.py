@@ -2,7 +2,7 @@ from enum import StrEnum, auto
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
 from openaq_api.db import DB
 from openaq_api.v3.models.queries import (
@@ -90,6 +90,8 @@ async def instrument_get(
     db: DB = Depends(),
 ):
     response = await fetch_instruments(instruments, db)
+    if len(response.results) == 0:
+        raise HTTPException(status_code=404, detail="Instrument not found")
     return response
 
 
