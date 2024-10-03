@@ -37,7 +37,7 @@ TOO_MANY_REQUESTS = HTTPException(
 
 def is_whitelisted_route(route: str) -> bool:
     logger.debug(f"Checking if '{route}' is whitelisted")
-    allow_list = ["/", "/auth", "/openapi.json", "/docs", "/register"]
+    allow_list = ["/", "/openapi.json", "/docs", "/register"]
     if route in allow_list:
         return True
     if "/v2/locations/tiles" in route:

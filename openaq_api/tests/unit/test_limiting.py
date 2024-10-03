@@ -85,7 +85,6 @@ def test_empty_key_returns_401(client):
     response = client.get("/ping", headers={"X-API-Key":""})
     assert response.status_code == 401
 
-
 def test_invalid_key_returns_401(client):
     response = client.get("/ping", headers={"X-API-Key":"invalid-key"})
     assert response.status_code == 401
