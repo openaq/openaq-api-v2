@@ -808,8 +808,8 @@ async def fetch_hours_trends(aggregate_to, query, db):
         , m.measurands_id
         , m.measurand
         , m.units
-        , as_timestamptz(:{datetime_field_name}_from, tz.tzid) as datetime_from
-        , as_timestamptz(:{datetime_field_name}_to, tz.tzid) as datetime_to
+        , as_timestamptz(:{datetime_field_name}_from::timestamp, tz.tzid) as datetime_from
+        , as_timestamptz(:{datetime_field_name}_to::timestamp, tz.tzid) as datetime_to
         FROM sensors s
         , sensor_systems sy
         , sensor_nodes sn
@@ -905,6 +905,7 @@ async def fetch_hours_trends(aggregate_to, query, db):
     JOIN observed o ON (e.factor = o.factor)
     ORDER BY e.factor
     """
+
 
     return await db.fetchPage(sql, params)
 

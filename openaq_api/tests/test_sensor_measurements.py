@@ -95,6 +95,7 @@ class TestHours:
         data = json.loads(response.content).get('results', [])
         assert len(data) == 12
 
+
         row = data[0]
         # hours are time ending
         assert row['coverage']['datetimeFrom']['local'] == '2022-01-02T00:00:00-10:00'

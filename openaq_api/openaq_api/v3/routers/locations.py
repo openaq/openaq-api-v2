@@ -98,7 +98,6 @@ async def location_get(
     request: Request,
     db: DB = Depends(),
 ):
-    print("FOO", request.app.state.redis_client)
     response = await fetch_locations(locations, db)
     return response
 
