@@ -236,7 +236,7 @@ async def get_register(
         user_token = await db.get_user_token(body.users_id)
         if not user_token:
             return HTTPException(401)
-        redis_client = getattr(request.app.state, "redis_client")
+        redis_client = getattr(request.app, "redis")
         if redis_client:
             await redis_client.sadd("keys", user_token)
         return {"message": "success"}
