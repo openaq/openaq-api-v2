@@ -639,6 +639,8 @@ class DateToQuery(QueryBaseModel):
             return f"{dt} <= :date_to::date"
 
 
+
+
 class PeriodNames(StrEnum):
     hour = "hour"
     day = "day"

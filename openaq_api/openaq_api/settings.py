@@ -30,7 +30,6 @@ class Settings(BaseSettings):
 
     RATE_LIMITING: bool = False
     RATE_AMOUNT_KEY: int | None = None
-    RATE_TIME: int | None = None
     USER_AGENT: str | None = None
     ORIGIN: str | None = None
 
