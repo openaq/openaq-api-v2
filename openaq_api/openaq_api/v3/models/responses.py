@@ -242,6 +242,22 @@ class Location(JsonBase):
     datetime_last: DatetimeObject | None = None
 
 
+class Flag(JsonBase):
+    id: int = Field(alias='flags_id')
+    label: str
+    level: str
+    invalidates: bool
+
+class LocationFlag(JsonBase):
+    #model_config = ConfigDict(exclude_unset=True)
+    location_id: int
+    flag: Flag
+    datetime_from: DatetimeObject
+    datetime_to: DatetimeObject
+    sensor_ids: list[int] = []
+    note: str | None = None
+
+
 class Measurement(JsonBase):
     value: float
     parameter: ParameterBase
@@ -332,6 +348,10 @@ class ParametersResponse(OpenAQResult):
 
 class SensorsResponse(OpenAQResult):
     results: list[Sensor]
+
+
+class LocationFlagsResponse(OpenAQResult):
+    results: list[LocationFlag]
 
 
 class ProvidersResponse(OpenAQResult):

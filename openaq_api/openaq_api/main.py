@@ -63,6 +63,7 @@ from openaq_api.v3.routers import (
     tiles,
     licenses,
     latest,
+    flags,
 )
 
 logging.basicConfig(
@@ -228,6 +229,7 @@ app.include_router(owners.router)
 app.include_router(providers.router)
 app.include_router(sensors.router)
 app.include_router(latest.router)
+app.include_router(flags.router)
 
 
 # app.include_router(auth_router)

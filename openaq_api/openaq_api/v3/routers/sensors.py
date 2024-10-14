@@ -82,17 +82,17 @@ async def fetch_sensors(q, db):
     , 'display_name', m.display
     ) as parameter
     , s.sensors_id
-    , CASE 
+    , CASE
         WHEN r.value_latest IS NOT NULL THEN
     json_build_object(
       'min', r.value_min
     , 'max', r.value_max
     , 'avg', r.value_avg
     , 'sd', r.value_sd
-    ) 
+    )
     ELSE NULL
     END as summary
-    , CASE 
+    , CASE
         WHEN r.value_latest IS NOT NULL THEN
       jsonb_build_object(
         'datetime_from', get_datetime_object(r.datetime_first, t.tzid),
@@ -106,7 +106,7 @@ async def fetch_sensors(q, db):
     END as coverage
     , get_datetime_object(r.datetime_first, t.tzid) as datetime_first
     , get_datetime_object(r.datetime_last, t.tzid) as datetime_last
-    ,CASE 
+    ,CASE
         WHEN r.value_latest IS NOT NULL THEN
      json_build_object(
        'datetime', get_datetime_object(r.datetime_last, t.tzid)
@@ -114,7 +114,7 @@ async def fetch_sensors(q, db):
       , 'coordinates', json_build_object(
                 'latitude', st_y(COALESCE(r.geom_latest, n.geom))
                 ,'longitude', st_x(COALESCE(r.geom_latest, n.geom))
-    )) 
+    ))
     ELSE NULL
     END as latest
     FROM sensors s
