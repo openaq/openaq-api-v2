@@ -20,8 +20,10 @@ from pydantic import BaseModel, ValidationError
 from starlette.responses import JSONResponse, RedirectResponse
 
 from openaq_api.db import db_pool
+from openaq_api.dependencies import (
+    check_api_key
+    )
 from openaq_api.middleware import (
-    check_api_key,
     CacheControlMiddleware,
     LoggingMiddleware,
 )
@@ -31,8 +33,6 @@ from openaq_api.models.logging import (
     UnprocessableEntityLog,
     WarnLog,
 )
-
-
 
 # from openaq_api.routers.auth import router as auth_router
 from openaq_api.routers.averages import router as averages_router
