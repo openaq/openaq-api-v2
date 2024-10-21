@@ -2,7 +2,7 @@ from datetime import datetime, date
 from typing import Any, List
 
 from humps import camelize
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .utils import fix_date
 
@@ -242,24 +242,35 @@ class Location(JsonBase):
     datetime_last: DatetimeObject | None = None
 
 
-class Flag(JsonBase):
-    id: int = Field(alias='flags_id')
+class FlagType(JsonBase):
+    flag_types_id: int = Field(alias='id')
     label: str
     level: str
-    invalidates: bool
 
 class LocationFlag(JsonBase):
     #model_config = ConfigDict(exclude_unset=True)
     location_id: int
-    flag: Flag
+    flag_type: FlagType
     datetime_from: DatetimeObject
     datetime_to: DatetimeObject
     sensor_ids: list[int] = []
     note: str | None = None
 
 
+class FlagInfo(JsonBase):
+    has_flags: bool
+
+    @model_validator(mode='before')
+    @classmethod
+    def check_data_type(cls, data: Any):
+        if isinstance(data, bool):
+            data = { "has_flags": data }
+        return data
+
+
 class Measurement(JsonBase):
     value: float
+    flag_info: FlagInfo
     parameter: ParameterBase
     period: Period | None = None
     coordinates: Coordinates | None = None
@@ -267,31 +278,15 @@ class Measurement(JsonBase):
     coverage: Coverage | None = None
 
 
-class HourlyData(JsonBase):
+class HourlyData(Measurement):
     value: float | None = None  # Nullable to deal with errors
-    parameter: ParameterBase
-    period: Period | None = None
-    coordinates: Coordinates | None = None
-    summary: Summary | None = None
-    coverage: Coverage | None = None
 
 
-class DailyData(JsonBase):
-    value: float
-    parameter: ParameterBase
-    period: Period | None = None
-    coordinates: Coordinates | None = None
-    summary: Summary | None = None
-    coverage: Coverage | None = None
+class DailyData(Measurement):
+    ...
 
-
-class AnnualData(JsonBase):
-    value: float
-    parameter: ParameterBase
-    period: Period | None = None
-    coordinates: Coordinates | None = None
-    summary: Summary | None = None
-    coverage: Coverage | None = None
+class AnnualData(Measurement):
+    ...
 
 
 # Similar to measurement but without timestamps

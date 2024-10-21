@@ -80,7 +80,7 @@ class SensorFlagQuery(QueryBaseModel):
     )
 
     def where(self):
-        return "ARRAY[:sensor_id::int] @> fm.sensors_ids"
+        return "ARRAY[:sensor_id::int] @> f.sensors_ids"
 
 
 class LocationFlagQueries(LocationFlagQuery, DatetimePeriodQuery, Paging):
@@ -128,16 +128,15 @@ async def fetch_flags(q, db):
     query.set_column_map({"timezone": "tz.tzid", "datetime": "lower(period)"})
 
     sql = f"""
-    SELECT fm.sensor_nodes_id as location_id
-    , json_build_object('id', f.flags_id, 'label', f.label, 'level', fl.label, 'invalidates', fl.invalidates) as flag
+    SELECT f.sensor_nodes_id as location_id
+    , json_build_object('id', ft.flag_types_id, 'label', ft.label, 'level', ft.flag_level) as flag_type
     , sensors_ids
-    , get_datetime_object(lower(fm.period), t.tzid) as datetime_from
-    , get_datetime_object(upper(fm.period), t.tzid) as datetime_to
+    , get_datetime_object(lower(f.period), t.tzid) as datetime_from
+    , get_datetime_object(upper(f.period), t.tzid) as datetime_to
     , note
-    FROM flagged_measurements fm
-    JOIN flags f ON (fm.flags_id = f.flags_id)
-    JOIN flag_levels fl ON (f.flag_levels_id = fl.flag_levels_id)
-    JOIN sensor_nodes n ON (fm.sensor_nodes_id = n.sensor_nodes_id)
+    FROM flags f
+    JOIN flag_types ft ON (f.flag_types_id = ft.flag_types_id)
+    JOIN sensor_nodes n ON (f.sensor_nodes_id = n.sensor_nodes_id)
     JOIN timezones t ON (n.timezones_id = t.timezones_id)
     {query.where()}
     """

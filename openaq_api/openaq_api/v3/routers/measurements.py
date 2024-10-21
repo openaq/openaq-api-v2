@@ -373,6 +373,7 @@ async def fetch_measurements(query, db):
        , 'percent_complete', 100
        , 'percent_coverage', (s.data_averaging_period_seconds/s.data_logging_period_seconds)*100
       ) as coverage
+        , sensor_flags_exist(m.sensors_id, m.datetime, make_interval(secs=>s.data_averaging_period_seconds*-1)) as flag_info
         FROM measurements m
         JOIN sensors s USING (sensors_id)
         JOIN measurands p USING (measurands_id)
@@ -400,7 +401,7 @@ async def fetch_measurements_aggregated(query, aggregate_to, db):
     sql = f"""
         WITH meas AS (
         SELECT
-        sy.sensor_nodes_id
+        s.sensors_id
         , s.measurands_id
         , tz.tzid as timezone
         , truncate_timestamp(datetime, :aggregate_to, tz.tzid) as datetime
@@ -428,7 +429,7 @@ async def fetch_measurements_aggregated(query, aggregate_to, db):
         JOIN timezones tz ON (sn.timezones_id = tz.timezones_id)
         {query.where()}
         GROUP BY 1, 2, 3, 4)
-        SELECT t.sensor_nodes_id
+        SELECT t.sensors_id
         ----------
         , json_build_object(
             'label', '1 {aggregate_to}'
@@ -466,6 +467,7 @@ async def fetch_measurements_aggregated(query, aggregate_to, db):
                 'datetime_from', get_datetime_object(datetime_first, t.timezone)
                 , 'datetime_to', get_datetime_object(datetime_last, t.timezone)
                 ) as coverage
+        , sensor_flags_exist(t.sensors_id, t.datetime, '-{dur}'::interval) as flag_info
         {query.total()}
         FROM meas t
         JOIN measurands m ON (t.measurands_id = m.measurands_id)
@@ -511,6 +513,7 @@ async def fetch_hours(query, db):
           'datetime_from', get_datetime_object(h.datetime_first, sn.timezone)
         , 'datetime_to', get_datetime_object(h.datetime_last, sn.timezone)
         ) as coverage
+        , sensor_flags_exist(h.sensors_id, h.datetime) as flag_info
         {query.fields()}
         FROM hourly_data h
         JOIN sensors s USING (sensors_id)
@@ -539,7 +542,7 @@ async def fetch_hours_aggregated(query, aggregate_to, db):
     sql = f"""
         WITH meas AS (
         SELECT
-        sy.sensor_nodes_id
+        s.sensors_id
         , s.measurands_id
         , tz.tzid as timezone
         , truncate_timestamp(datetime, :aggregate_to, tz.tzid) as datetime
@@ -567,7 +570,7 @@ async def fetch_hours_aggregated(query, aggregate_to, db):
         JOIN timezones tz ON (sn.timezones_id = tz.timezones_id)
         {query.where()}
         GROUP BY 1, 2, 3, 4)
-        SELECT t.sensor_nodes_id
+        SELECT t.sensors_id
         ----------
         , json_build_object(
             'label', '1 {aggregate_to}'
@@ -605,6 +608,7 @@ async def fetch_hours_aggregated(query, aggregate_to, db):
                 'datetime_from', get_datetime_object(datetime_first, t.timezone)
                 , 'datetime_to', get_datetime_object(datetime_last, t.timezone)
                 ) as coverage
+        , sensor_flags_exist(t.sensors_id, t.datetime, '-{dur}'::interval) as flag_info
         {query.total()}
         FROM meas t
         JOIN measurands m ON (t.measurands_id = m.measurands_id)
@@ -751,6 +755,7 @@ async def fetch_days_trends(aggregate_to, query, db):
         'datetime_from', get_datetime_object(o.coverage_first::timestamp, o.timezone)
       , 'datetime_to', get_datetime_object(o.coverage_last + '1day'::interval, o.timezone)
     ) as coverage
+    , sensor_flags_exist(o.sensors_id, e.period_last, '-{dur}'::interval) as flag_info
     FROM expected e
     JOIN observed o ON (e.factor = o.factor)
     ORDER BY e.factor
@@ -901,6 +906,7 @@ async def fetch_hours_trends(aggregate_to, query, db):
         'datetime_from', get_datetime_object(o.coverage_first, o.timezone)
       , 'datetime_to', get_datetime_object(o.coverage_last, o.timezone)
     ) as coverage
+    , sensor_flags_exist(o.sensors_id, o.coverage_first, '{dur}'::interval) as flag_info
     FROM expected e
     JOIN observed o ON (e.factor = o.factor)
     ORDER BY e.factor
@@ -923,7 +929,7 @@ async def fetch_days_aggregated(query, aggregate_to, db):
     sql = f"""
         WITH meas AS (
         SELECT
-        sy.sensor_nodes_id
+        s.sensors_id
         , s.measurands_id
         , sn.timezone
         -- days are time begining
@@ -952,7 +958,7 @@ async def fetch_days_aggregated(query, aggregate_to, db):
         JOIN locations_view_cached sn ON (sy.sensor_nodes_id = sn.id)
         {query.where()}
         GROUP BY 1, 2, 3, 4)
-        SELECT t.sensor_nodes_id
+        SELECT t.sensors_id
         ----------
         , json_build_object(
             'label', '1 {aggregate_to}'
@@ -990,6 +996,7 @@ async def fetch_days_aggregated(query, aggregate_to, db):
                 'datetime_from', get_datetime_object(datetime_first, t.timezone)
                 , 'datetime_to', get_datetime_object(datetime_last + '1day'::interval, t.timezone)
                 ) as coverage
+        , sensor_flags_exist(t.sensors_id, t.datetime, '-{dur}'::interval) as flag_info
         {query.total()}
         FROM meas t
         JOIN measurands m ON (t.measurands_id = m.measurands_id)
@@ -1035,6 +1042,7 @@ async def fetch_days(query, db):
           'datetime_from', get_datetime_object(h.datetime_first, sn.timezone)
         , 'datetime_to', get_datetime_object(h.datetime_last, sn.timezone)
         ) as coverage
+        , sensor_flags_exist(h.sensors_id, h.datetime, '-1day'::interval) as flag_info
         {query.fields()}
         FROM daily_data h
         JOIN sensors s USING (sensors_id)
@@ -1086,6 +1094,7 @@ async def fetch_years(query, db):
           'datetime_from', get_datetime_object(h.datetime_first, sn.timezone)
         , 'datetime_to', get_datetime_object(h.datetime_last, sn.timezone)
         ) as coverage
+        , sensor_flags_exist(h.sensors_id, h.datetime, '-1y'::interval) as flag_info
         {query.fields()}
         FROM annual_data h
         JOIN sensors s USING (sensors_id)
