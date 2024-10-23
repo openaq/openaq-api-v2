@@ -25,7 +25,7 @@ from openaq_api.exceptions import (
 logger = logging.getLogger("dependencies")
 
 
-def is_whitelisted_route(route: str) -> bool:
+def in_allowed_list(route: str) -> bool:
     logger.debug(f"Checking if '{route}' is whitelisted")
     allow_list = ["/", "/openapi.json", "/docs", "/register"]
     if route in allow_list:
@@ -55,7 +55,7 @@ async def check_api_key(
     """
     route = request.url.path
     # no checking or limiting for whitelistted routes
-    if is_whitelisted_route(route):
+    if in_allowed_list(route):
         return api_key
     elif api_key == settings.EXPLORER_API_KEY:
         return api_key
