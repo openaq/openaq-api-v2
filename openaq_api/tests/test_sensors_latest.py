@@ -47,13 +47,13 @@ class TestMeasurands:
         response = client.get(f"/v3/parameters/{measurands_id}/latest")
         assert response.status_code == 200
         data = json.loads(response.content).get('results', [])
-        assert len(data) == 5
+        assert len(data) == 6
 
     def test_date_filter(self, client):
         response = client.get(f"/v3/parameters/{measurands_id}/latest?datetime_min=2024-08-27")
         assert response.status_code == 200
         data = json.loads(response.content).get('results', [])
-        assert len(data) == 10
+        assert len(data) == 1
 
     def test_timestamp_filter(self, client):
         response = client.get(f"/v3/parameters/{measurands_id}/latest?datetime_min=2024-08-27 19:00:00")

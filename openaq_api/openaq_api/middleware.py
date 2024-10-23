@@ -1,10 +1,8 @@
 import logging
 import time
-from datetime import timedelta, datetime
 from os import environ
-from fastapi import Response, status
+from fastapi import Response
 from fastapi.responses import JSONResponse
-from redis.asyncio.cluster import RedisCluster
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.types import ASGIApp
@@ -12,15 +10,9 @@ from starlette.types import ASGIApp
 from openaq_api.models.logging import (
     HTTPLog,
     LogType,
-    TooManyRequestsLog,
-    UnauthorizedLog,
-    RedisErrorLog,
 )
 
-from .settings import settings
-
 logger = logging.getLogger("middleware")
-
 
 class CacheControlMiddleware(BaseHTTPMiddleware):
     """MiddleWare to add CacheControl in response headers."""
@@ -41,16 +33,6 @@ class CacheControlMiddleware(BaseHTTPMiddleware):
             and response.status_code < 500
         ):
             response.headers["Cache-Control"] = self.cachecontrol
-        return response
-
-
-class GetHostMiddleware(BaseHTTPMiddleware):
-    """MiddleWare to set servers url on App with current url."""
-
-    async def dispatch(self, request: Request, call_next):
-        environ["BASE_URL"] = str(request.base_url)
-        response = await call_next(request)
-
         return response
 
 
@@ -113,143 +95,4 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     api_key=api_key,
                 ).model_dump_json()
             )
-        return response
-
-
-class PrivatePathsMiddleware(BaseHTTPMiddleware):
-    """
-    Middleware to protect private endpoints with an API key
-    """
-
-    async def dispatch(self, request: Request, call_next):
-        route = request.url.path
-        if "/auth" in route:
-            auth = request.headers.get("x-api-key", None)
-            if auth != settings.EXPLORER_API_KEY:
-                return JSONResponse(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    content={"message": "invalid credentials"},
-                )
-        response = await call_next(request)
-        return response
-
-
-class RateLimiterMiddleWare(BaseHTTPMiddleware):
-    def __init__(
-        self,
-        app: ASGIApp,
-        redis_client: RedisCluster,
-        rate_amount_key: int,  # number of requests allowed with api key
-        rate_time: timedelta,  # timedelta of rate limit expiration
-    ) -> None:
-        """Init Middleware."""
-        super().__init__(app)
-        self.redis_client = redis_client
-        self.rate_amount_key = rate_amount_key
-        self.rate_time = rate_time
-
-    async def request_is_limited(self, key: str, limit: int, request: Request) -> bool:
-        value = await self.redis_client.get(key)
-        if value is None:
-            async with self.redis_client.pipeline() as pipe:
-                [incr, _] = await pipe.incr(key).expire(key, 60).execute()
-                request.state.counter = limit - incr
-                return False
-        if int(value) < limit:
-            async with self.redis_client.pipeline() as pipe:
-                [incr] = await pipe.incr(key).execute()
-                request.state.counter = limit - incr
-                return False
-        else:
-            return True
-
-    async def check_valid_key(self, key: str) -> bool:
-        if await self.redis_client.sismember("keys", key):
-            return True
-        return False
-
-    @staticmethod
-    def limited_path(route: str) -> bool:
-        allow_list = ["/", "/openapi.json", "/docs", "/register"]
-        if route in allow_list:
-            return False
-        if "/v2/locations/tiles" in route:
-            return False
-        if "/v3/locations/tiles" in route:
-            return False
-        if "/assets" in route:
-            return False
-        if ".css" in route:
-            return False
-        if ".js" in route:
-            return False
-        return True
-
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
-        route = request.url.path
-        if not self.limited_path(route):
-            response = await call_next(request)
-            return response
-        auth = request.headers.get("x-api-key", None)
-        if auth == settings.EXPLORER_API_KEY:
-            response = await call_next(request)
-            return response
-        limit = self.rate_amount_key
-        now = datetime.now()
-        key = f"{request.client.host}:{now.year}{now.month}{now.day}{now.hour}{now.minute}"
-        if auth:
-            valid_key = await self.check_valid_key(auth)
-            if not valid_key:
-                logging.info(
-                    UnauthorizedLog(
-                        request=request, detail=f"invalid key used: {auth}"
-                    ).model_dump_json()
-                )
-                return JSONResponse(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    content={"message": "invalid credentials"},
-                )
-            key = f"{auth}:{now.year}{now.month}{now.day}{now.hour}{now.minute}"
-            limit = self.rate_amount_key
-        else:
-            logging.info(
-                UnauthorizedLog(
-                    request=request,
-                ).model_dump_json()
-            )
-            response = JSONResponse(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                content={"message": "API KEY missing from x-api-key header"},
-            )
-            return response
-        request.state.counter = limit
-        limited = False
-        ttl = 0
-        if self.limited_path(route):
-            limited = await self.request_is_limited(key, limit, request)
-            ttl = await self.redis_client.ttl(key)
-        if self.limited_path(route) and limited:
-            logging.info(
-                TooManyRequestsLog(
-                    request=request,
-                    rate_limiter=f"{key}/{limit}/{request.state.counter}",
-                ).model_dump_json()
-            )
-            response = JSONResponse(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                content={"message": "Too many requests"},
-            )
-            response.headers["x-ratelimit-limit"] = str(limit)
-            response.headers["x-ratelimit-remaining"] = "0"
-            response.headers["x-ratelimit-used"] = str(limit)
-            response.headers["x-ratelimit-reset"] = str(ttl)
-            return response
-        request.state.rate_limiter = f"{key}/{limit}/{request.state.counter}"
-        response = await call_next(request)
-        response.headers["x-ratelimit-limit"] = str(limit)
-        response.headers["x-ratelimit-remaining"] = str(request.state.counter)
-        response.headers["x-ratelimit-used"] = str(limit - request.state.counter)
-        response.headers["x-ratelimit-reset"] = str(ttl)
         return response
