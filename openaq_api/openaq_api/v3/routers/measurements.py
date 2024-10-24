@@ -217,6 +217,7 @@ async def sensor_hourly_measurements_aggregate_to_hod_get(
 ):
     aggregate_to = "hod"
     query = QueryBuilder(sensors)
+    logger.debug(query)
     response = await fetch_hours_trends(aggregate_to, query, db)
     return response
 
@@ -791,7 +792,6 @@ async def fetch_hours_trends(aggregate_to, query, db):
     params = query.params()
     params["aggregate_to"] = aggregate_to
 
-    datetime_field_name = "datetime"
     if params.get("datetime_to") is None:
         params["datetime_to"] = date.today()
 
@@ -813,8 +813,8 @@ async def fetch_hours_trends(aggregate_to, query, db):
         , m.measurands_id
         , m.measurand
         , m.units
-        , as_timestamptz(:{datetime_field_name}_from::timestamp, tz.tzid) as datetime_from
-        , as_timestamptz(:{datetime_field_name}_to::timestamp, tz.tzid) as datetime_to
+        , as_timestamptz(:datetime_from, tz.tzid) as datetime_from
+        , as_timestamptz(:datetime_to, tz.tzid) as datetime_to
         FROM sensors s
         , sensor_systems sy
         , sensor_nodes sn

@@ -83,6 +83,25 @@ class TestHours:
         data = json.loads(response.content).get('results', [])
         assert len(data) == 24
 
+    def test_aggregated_hod_dates_good(self, client):
+        response = client.get(f"/v3/sensors/{sensors_id}/hours/hourofday?datetime_from=2023-03-01&datetime_to=2023-04-01")
+        assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        assert len(data) == 24
+
+    def test_aggregated_hod_timestamps_good(self, client):
+        response = client.get(f"/v3/sensors/{sensors_id}/hours/hourofday?datetime_from=2023-03-01T00:00:01&datetime_to=2023-04-01T00:00:01")
+        assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        assert len(data) == 24
+
+    def test_aggregated_hod_timestamptzs_good(self, client):
+        response = client.get(f"/v3/sensors/{sensors_id}/hours/hourofday?datetime_from=2023-03-01T00:00:01Z&datetime_to=2023-04-01T00:00:01Z")
+        assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        assert len(data) == 24
+
+
     def test_aggregated_dow_good(self, client):
         response = client.get(f"/v3/sensors/{sensors_id}/hours/dayofweek")
         assert response.status_code == 200
@@ -94,7 +113,6 @@ class TestHours:
         assert response.status_code == 200
         data = json.loads(response.content).get('results', [])
         assert len(data) == 12
-
 
         row = data[0]
         # hours are time ending
