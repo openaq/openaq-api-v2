@@ -283,10 +283,11 @@ class HourlyData(Measurement):
 
 
 class DailyData(Measurement):
-    ...
+    value: float | None = None  # Nullable to deal with errors
+
 
 class AnnualData(Measurement):
-    ...
+    value: float | None = None  # Nullable to deal with errors
 
 
 # Similar to measurement but without timestamps

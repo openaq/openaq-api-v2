@@ -1012,8 +1012,8 @@ async def fetch_days(query, db):
         SELECT sn.id
         , json_build_object(
         'label', '1day'
-        , 'datetime_from', get_datetime_object(h.datetime - '1day'::interval, sn.timezone)
-        , 'datetime_to', get_datetime_object(h.datetime, sn.timezone)
+        , 'datetime_from', get_datetime_object(h.datetime, sn.timezone)
+        , 'datetime_to', get_datetime_object(h.datetime + '1day'::interval, sn.timezone)
         , 'interval',  '24:00:00'
         ) as period
         , json_build_object(
@@ -1064,8 +1064,8 @@ async def fetch_years(query, db):
         SELECT sn.id
         , json_build_object(
         'label', '1year'
-        , 'datetime_from', get_datetime_object(h.datetime - '1year'::interval, sn.timezone)
-        , 'datetime_to', get_datetime_object(h.datetime, sn.timezone)
+        , 'datetime_from', get_datetime_object(h.datetime, sn.timezone)
+        , 'datetime_to', get_datetime_object(h.datetime + '1year'::interval, sn.timezone)
         , 'interval',  '1 year'
         ) as period
         , json_build_object(
