@@ -439,7 +439,7 @@ async def fetch_measurements_aggregated(query, aggregate_to, db):
             , 'interval',  '{dur}'
             ) as period
         ----------
-        , sig_digits(value_avg, 2) as value
+        , sig_digits(value_avg, 3) as value
         -----------
         , json_build_object(
             'id', t.measurands_id
@@ -504,7 +504,7 @@ async def fetch_hours(query, db):
         , 'q98', h.value_p98
         , 'max', h.value_max
         ) as summary
-        , sig_digits(h.value_avg, 2) as value
+        , sig_digits(h.value_avg, 3) as value
         , calculate_coverage(
           h.value_count
         , s.data_averaging_period_seconds
@@ -580,7 +580,7 @@ async def fetch_hours_aggregated(query, aggregate_to, db):
             , 'interval',  '{dur}'
             ) as period
         ----------
-        , sig_digits(value_avg, 2) as value
+        , sig_digits(value_avg, 3) as value
         -----------
         , json_build_object(
             'id', t.measurands_id
@@ -723,7 +723,7 @@ async def fetch_days_trends(aggregate_to, query, db):
 -- And finally we tie it all together
 -----------------------------------------
     SELECT o.sensors_id
-  , sig_digits(value_avg, 2) as value
+  , sig_digits(value_avg, 3) as value
   , json_build_object(
      'id', o.measurands_id
    , 'units', o.units
@@ -873,7 +873,7 @@ async def fetch_hours_trends(aggregate_to, query, db):
 -- And finally we tie it all together
 -----------------------------------------
     SELECT o.sensors_id
-  , sig_digits(value_avg, 2) as value
+  , sig_digits(value_avg, 3) as value
   , json_build_object(
      'id', o.measurands_id
    , 'units', o.units
@@ -967,7 +967,7 @@ async def fetch_days_aggregated(query, aggregate_to, db):
             , 'interval',  '{dur}'
             ) as period
         ----------
-        , sig_digits(value_avg, 2) as value
+        , sig_digits(value_avg, 3) as value
         -----------
         , json_build_object(
             'id', t.measurands_id
@@ -1032,7 +1032,7 @@ async def fetch_days(query, db):
         , 'q98', h.value_p98
         , 'max', h.value_max
         ) as summary
-        , sig_digits(h.value_avg, 2) as value
+        , sig_digits(h.value_avg, 3) as value
         , calculate_coverage(
           h.value_count
         , 3600
@@ -1084,7 +1084,7 @@ async def fetch_years(query, db):
         , 'q98', h.value_p98
         , 'max', h.value_max
         ) as summary
-        , sig_digits(h.value_avg, 2) as value
+        , sig_digits(h.value_avg, 3) as value
         , calculate_coverage(
           h.value_count
         , 3600
