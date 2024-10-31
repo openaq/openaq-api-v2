@@ -1,6 +1,6 @@
 import logging
 from typing import Annotated, Any
-from datetime import datetime, date
+from datetime import date
 
 from fastapi import APIRouter, Depends, Path, Query
 from fastapi.exceptions import RequestValidationError
@@ -35,13 +35,56 @@ router = APIRouter(
 # sensor versions of a given version
 # /sensors/:id/versions
 
-class VersionsQueries(QueryBaseModel):
+class ParentSensorPath(QueryBaseModel):
+    parent_sensors_id: int = Path(
+        ..., description="Limit the results to a specific parent sensor", ge=1
+    )
+
+    def where(self):
+        return "parent_sensors_id = :parent_sensors_id"
+
+
+class LocationPath(QueryBaseModel):
+    location_id: int = Path(
+        ..., description="Limit the results to a specific location", ge=1
+    )
+
+    def where(self):
+        return "sensor_nodes_id = :location_id"
+
+
+class ParentSensorQuery(QueryBaseModel):
+    parent_sensors_id: int | None = Query(None, description='Id of parent sensor')
+
+    def where(self):
+        if self.has("parent_sensors_id"):
+            return "parent_sensors_id = :parent_sensors_id"
+
+
+class LocationQuery(QueryBaseModel):
+    location_id: int | None = Query(None, description='Location of sensor node')
+
+    def where(self):
+        if self.has("location_id"):
+            return "sensor_nodes_id = :location_id"
+
+
+class VersionDateQuery(QueryBaseModel):
+    version_date: date | None = Query(None, description='Date of version')
+
+    def where(self):
+        if self.has("version_date"):
+            return "version_date = :version_date"
+
+
+class VersionsQueries(ParentSensorQuery, LocationQuery, VersionDateQuery):
     ...
 
-class LocationVersionsQueries(QueryBaseModel):
+class LocationVersionsQueries(LocationPath, VersionDateQuery):
     ...
 
-class SensorVersionsQueries(QueryBaseModel):
+
+class SensorVersionsQueries(ParentSensorPath, VersionDateQuery):
     ...
 
 
@@ -61,7 +104,7 @@ async def versions_get(
 
 
 @router.get(
-    "/locations/{locations_id}/versions",
+    "/locations/{location_id}/versions",
     response_model=VersionsResponse,
     summary="Get sensor versions by location ID",
     description="Provides a list of sensor versions by location ID",
@@ -76,13 +119,13 @@ async def location_versions_get(
 
 
 @router.get(
-    "/sensors/{sensor_id}/versions",
+    "/sensors/{parent_sensors_id}/versions",
     response_model=VersionsResponse,
     summary="Get sensor verstions by sensor ID",
     description="Provides a list of sensor versions by sensor ID",
 )
-async def sensor_flags_get(
-    sensor_flags: Annotated[
+async def sensors_versions_get(
+    sensor_versions: Annotated[
         SensorVersionsQueries, Depends(SensorVersionsQueries.depends())
     ],
     db: DB = Depends(),
@@ -93,7 +136,6 @@ async def sensor_flags_get(
 
 async def fetch_versions(q, db):
     query = QueryBuilder(q)
-    query.set_column_map({"timezone": "tz.tzid", "datetime": "lower(period)"})
 
     sql = f"""
     SELECT versions_id
