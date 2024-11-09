@@ -24,14 +24,16 @@ templates = Jinja2Templates(
 
 router = APIRouter(
     prefix="/auth",
-    include_in_schema=False,
+    include_in_schema=True,
 )
+
 
 def send_email(destination_email: str, msg: EmailMessage):
     if settings.USE_SMTP_EMAIL:
         return send_smtp_email(destination_email, msg)
     else:
         return send_ses_email(destination_email, msg)
+
 
 def send_smtp_email(destination_email: str, msg: EmailMessage):
     with smtplib.SMTP_SSL(settings.SMTP_EMAIL_HOST, 465) as s:
@@ -45,6 +47,7 @@ def send_ses_email(destination_email: str, msg: EmailMessage):
         Destinations=[f"{full_name} <{destination_email}>"],
         RawMessage={"Data": msg.as_string()},
     )
+
 
 def send_change_password_email(full_name: str, email: str):
     ses_client = boto3.client("ses")
@@ -238,7 +241,10 @@ async def get_register(
             return HTTPException(401)
         redis_client = getattr(request.app, "redis")
         if redis_client:
-            await redis_client.sadd("keys", user_token)
+            async with redis_client.pipeline() as pipe:
+                await pipe.sadd("keys", user_token).hset(
+                    user_token, mapping={"rate": 2000}
+                ).execute()
         return {"message": "success"}
     except Exception as e:
         return e
@@ -262,10 +268,12 @@ async def get_register(
             return HTTPException(401)
         await db.regenerate_user_token(body.users_id, body.token)
         new_token = await db.get_user_token(body.users_id)
-        redis_client = getattr(request.app.state, "redis_client")
+        redis_client = getattr(request.app, "redis")
         if redis_client:
-            await redis_client.srem("keys", body.token)
-            await redis_client.sadd("keys", new_token)
+            async with redis_client.pipeline() as pipe:
+                await pipe.srem("keys", body.token).sadd("keys", new_token).hset(
+                    new_token, mapping={"rate": 60}
+                ).execute()
         return {"message": "success"}
     except Exception as e:
         return e
@@ -347,7 +355,7 @@ async def verify_email(
 ):
     try:
         token = await db.get_user_token(body.users_id)
-        redis_client = getattr(request.app.state, "redis_client")
+        redis_client = getattr(request.app, "redis")
         if redis_client:
             await redis_client.sadd("keys", token)
     except Exception as e:
