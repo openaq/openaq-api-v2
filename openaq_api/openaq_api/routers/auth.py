@@ -210,7 +210,7 @@ async def verify(request: Request, verification_code: str, db: DB = Depends()):
     else:
         try:
             token = await db.get_user_token(row[0])
-            redis_client = getattr(request.app.state, "redis_client")
+            redis_client = getattr(request.app.state, "redis")
             if redis_client:
                 await redis_client.sadd("keys", token)
             send_api_key_email(token, row[3], row[4])
@@ -224,29 +224,6 @@ async def verify(request: Request, verification_code: str, db: DB = Depends()):
 class RegenerateTokenBody(BaseModel):
     users_id: int
     token: str
-
-
-@router.post("/regenerate-token")
-async def regenerate_token(
-    token: int = Body(..., embed=True)
-    # request: Request,
-    # db: DB = Depends(),
-):
-    """ """
-    _token = token
-    print(_token)
-    try:
-        # db.get_user_token
-        # await db.regenerate_user_token(body.users_id, _token)
-        # token = await db.get_user_token(body.users_id)
-        # redis_client = getattr(request.app.state, "redis_client")
-        # print("REDIS", redis_client)
-        # if redis_client:
-        #     await redis_client.srem("keys", _token)
-        #     await redis_client.sadd("keys", token)
-        return {"success"}
-    except Exception as e:
-        return e
 
 
 @router.post("/send-verification")

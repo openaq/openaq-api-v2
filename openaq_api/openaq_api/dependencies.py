@@ -71,9 +71,7 @@ async def check_api_key(
             )
             raise NOT_AUTHENTICATED_EXCEPTION
         else:
-            # check api key
-            limit = settings.RATE_AMOUNT_KEY
-            limited = False
+
             # check valid key
             if await redis.sismember("keys", api_key) == 0:
                 logging.info(
@@ -82,7 +80,13 @@ async def check_api_key(
                     ).model_dump_json()
                 )
                 raise NOT_AUTHENTICATED_EXCEPTION
-
+            # check api key
+            limit = await redis.hget(api_key, "rate")
+            try:
+                limit = int(limit)
+            except TypeError:
+                limit = 60
+            limited = False
             # check if its limited
             now = datetime.now()
             # Using a sliding window rate limiting algorithm
@@ -91,7 +95,6 @@ async def check_api_key(
             # if the that key is in our redis db it will return the number of requests
             # that key has made during the current minute
             value = await redis.get(key)
-            ttl = await redis.ttl(key)
 
             if value is None:
                 # if the value is none than we need to add that key to the redis db
@@ -117,10 +120,11 @@ async def check_api_key(
                 )
                 limited = True
                 requests_used = int(value)
+            ttl = await redis.ttl(key)
 
             response.headers["x-ratelimit-limit"] = str(limit)
-            response.headers["x-ratelimit-remaining"] = str(limit - requests_used)
-            response.headers["x-ratelimit-used"] = str(requests_used)
+            response.headers["x-ratelimit-remaining"] = str(requests_used)
+            response.headers["x-ratelimit-used"] = str(limit - requests_used)
             response.headers["x-ratelimit-reset"] = str(ttl)
 
             if limited:
