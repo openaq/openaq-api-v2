@@ -24,7 +24,7 @@ templates = Jinja2Templates(
 
 router = APIRouter(
     prefix="/auth",
-    include_in_schema=True,
+    include_in_schema=False,
 )
 
 
