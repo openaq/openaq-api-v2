@@ -20,6 +20,10 @@ class TestMeasurements:
         data = json.loads(response.content).get('results', [])
         assert len(data) > 0, "response did not have at least one record"
 
+    def test_date_filter_good(self, client):
+        response = client.get(f"/v3/sensors/{sensors_id}/measurements?datetime_from=2023-03-06")
+        assert response.status_code == 200
+
     def test_aggregated_hourly_good(self, client):
         response = client.get(f"/v3/sensors/{sensors_id}/measurements/hourly")
         assert response.status_code == 200

@@ -349,6 +349,9 @@ async def sensor_yearly_get(
 
 
 async def fetch_measurements(query, db):
+
+    query.set_column_map({"timezone": "tz.tzid"})
+
     sql = f"""
       SELECT m.sensors_id
        , value
