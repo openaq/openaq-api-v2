@@ -43,7 +43,7 @@ class TileJSON(BaseModel):
 
 logger = logging.getLogger("mvt")
 
-router = APIRouter()
+router = APIRouter(deprecated=True)
 
 
 class TileBase(OBaseModel):

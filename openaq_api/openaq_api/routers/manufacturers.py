@@ -9,7 +9,7 @@ from ..db import DB
 logger = logging.getLogger("manufacturers")
 logger.setLevel(logging.DEBUG)
 
-router = APIRouter()
+router = APIRouter(deprecated=True)
 
 
 @router.get(

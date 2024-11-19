@@ -8,7 +8,7 @@ from ..models.responses import SummaryResponse
 logger = logging.getLogger("summary")
 logger.setLevel(logging.DEBUG)
 
-router = APIRouter()
+router = APIRouter(deprecated=True)
 
 
 @router.get(

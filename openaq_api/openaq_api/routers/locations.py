@@ -26,7 +26,7 @@ from ..models.responses import (
 
 logger = logging.getLogger("locations")
 
-router = APIRouter(include_in_schema=True)
+router = APIRouter(include_in_schema=True, deprecated=True)
 
 
 class LocationsOrder(StrEnum):

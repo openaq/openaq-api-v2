@@ -11,7 +11,7 @@ from ..models.queries import APIBase, Country, Measurands, Project, ProjectByPat
 
 logger = logging.getLogger("projects")
 
-router = APIRouter()
+router = APIRouter(deprecated=True)
 
 
 class ProjectsOrder(StrEnum):

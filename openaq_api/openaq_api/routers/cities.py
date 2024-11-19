@@ -11,7 +11,7 @@ from ..models.queries import APIBase, City, Country
 
 logger = logging.getLogger("cities")
 
-router = APIRouter()
+router = APIRouter(deprecated=True)
 
 
 class CitiesOrder(StrEnum):

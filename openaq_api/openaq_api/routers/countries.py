@@ -11,7 +11,7 @@ from ..models.queries import APIBase, Country, CountryByPath
 
 logger = logging.getLogger("countries")
 
-router = APIRouter()
+router = APIRouter(deprecated=True)
 
 
 class CountriesOrder(StrEnum):

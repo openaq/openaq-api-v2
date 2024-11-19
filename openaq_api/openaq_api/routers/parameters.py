@@ -10,7 +10,7 @@ from ..models.queries import APIBase
 
 logger = logging.getLogger("parameters")
 
-router = APIRouter()
+router = APIRouter(deprecated=True)
 
 
 class ParametersV1(APIBase):

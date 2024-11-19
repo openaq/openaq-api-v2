@@ -26,9 +26,7 @@ from ..models.responses import MeasurementsResponse, MeasurementsResponseV1
 
 logger = logging.getLogger("measurements")
 
-router = APIRouter(
-    include_in_schema=True,
-)
+router = APIRouter(include_in_schema=True, deprecated=True)
 
 
 def meas_csv(rows, includefields):

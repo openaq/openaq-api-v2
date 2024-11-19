@@ -17,7 +17,7 @@ from ..models.responses import AveragesResponse
 
 logger = logging.getLogger("averages")
 
-router = APIRouter()
+router = APIRouter(deprecated=True)
 
 
 class DateFromQuery(QueryBaseModel):

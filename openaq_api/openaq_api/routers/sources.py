@@ -13,7 +13,7 @@ from ..models.responses import SourcesResponse, SourcesResponseV1
 
 logger = logging.getLogger("sources")
 
-router = APIRouter()
+router = APIRouter(deprecated=True)
 
 
 class SourcesOrder(StrEnum):
