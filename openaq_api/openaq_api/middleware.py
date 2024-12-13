@@ -1,9 +1,6 @@
 import logging
 import time
-from os import environ
-from fastapi import Response
-from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.types import ASGIApp
 
@@ -13,6 +10,7 @@ from openaq_api.models.logging import (
 )
 
 logger = logging.getLogger("middleware")
+
 
 class CacheControlMiddleware(BaseHTTPMiddleware):
     """MiddleWare to add CacheControl in response headers."""
