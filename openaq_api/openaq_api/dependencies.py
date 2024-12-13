@@ -88,7 +88,10 @@ async def check_api_key(
                 limit = 60
             limited = False
             # check if its limited
-            key = f"{api_key}"
+            now = datetime.now()
+            # Using a sliding window rate limiting algorithm
+            # we add the current time to the minute to the api key and use that as our check
+            key = f"{api_key}:{now.year}{now.month}{now.day}{now.hour}{now.minute}"
             # if the that key is in our redis db it will return the number of requests
             # that key has made during the current minute
             value = await redis.get(key)
@@ -118,9 +121,6 @@ async def check_api_key(
                 limited = True
                 requests_used = int(value)
             ttl = await redis.ttl(key)
-            request.state.rate_limiter = (
-                f"{key}/{limit}/{requests_used}/{limit - requests_used}/{ttl}"
-            )
 
             response.headers["x-ratelimit-limit"] = str(limit)
             response.headers["x-ratelimit-remaining"] = str(requests_used)
