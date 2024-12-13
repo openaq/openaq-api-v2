@@ -268,6 +268,14 @@ class FlagInfo(JsonBase):
         return data
 
 
+class Version(JsonBase):
+    versions_id: int
+    parent_sensor: dict
+    sensor: dict
+    life_cycle: str
+    version_date: date
+    version_rank: int
+
 class Measurement(JsonBase):
     value: float
     flag_info: FlagInfo
@@ -348,6 +356,10 @@ class SensorsResponse(OpenAQResult):
 
 class LocationFlagsResponse(OpenAQResult):
     results: list[LocationFlag]
+
+
+class VersionsResponse(OpenAQResult):
+    results: list[Version]
 
 
 class ProvidersResponse(OpenAQResult):
