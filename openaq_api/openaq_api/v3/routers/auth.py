@@ -243,7 +243,7 @@ async def get_register(
         if redis_client:
             async with redis_client.pipeline() as pipe:
                 await pipe.sadd("keys", user_token).hset(
-                    user_token, mapping={"rate": 2000}
+                    user_token, mapping={"rate": 60}
                 ).execute()
         return {"message": "success"}
     except Exception as e:

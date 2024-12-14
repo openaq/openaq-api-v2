@@ -121,7 +121,9 @@ async def check_api_key(
                 limited = True
                 requests_used = int(value)
             ttl = await redis.ttl(key)
-
+            request.state.rate_limiter = (
+                f"{key}/{limit}/{requests_used}/{limit - requests_used}/{ttl}"
+            )
             response.headers["x-ratelimit-limit"] = str(limit)
             response.headers["x-ratelimit-remaining"] = str(requests_used)
             response.headers["x-ratelimit-used"] = str(limit - requests_used)
