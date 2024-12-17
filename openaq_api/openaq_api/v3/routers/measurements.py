@@ -402,6 +402,8 @@ async def fetch_measurements_aggregated(query, aggregate_to, db):
     else:
         raise Exception(f"{aggregate_to} is not supported")
 
+    query.set_column_map({"timezone": "tz.tzid"})
+
     sql = f"""
         WITH meas AS (
         SELECT
@@ -413,8 +415,8 @@ async def fetch_measurements_aggregated(query, aggregate_to, db):
         , AVG(s.data_logging_period_seconds) as log_seconds
         , MAX(truncate_timestamp(datetime, '{aggregate_to}', tz.tzid, '1{aggregate_to}'::interval))
            as last_period
-        , MIN(timezone(tz.tzid, datetime - '1sec'::interval)) as datetime_first
-        , MAX(timezone(tz.tzid, datetime - '1sec'::interval)) as datetime_last
+        , MIN(timezone(tz.tzid, datetime)) as datetime_first
+        , MAX(timezone(tz.tzid, datetime)) as datetime_last
         , COUNT(1) as value_count
         , AVG(value) as value_avg
         , STDDEV(value) as value_sd
@@ -464,11 +466,11 @@ async def fetch_measurements_aggregated(query, aggregate_to, db):
         --------
         , calculate_coverage(
             value_count::int
-            , {interval_seconds}
-            , {interval_seconds}
+           , avg_seconds
+           , log_seconds
             , EXTRACT(EPOCH FROM last_period - datetime)
         )||jsonb_build_object(
-                'datetime_from', get_datetime_object(datetime_first, t.timezone)
+                'datetime_from', get_datetime_object(datetime_first - make_interval(secs=>log_seconds), t.timezone)
                 , 'datetime_to', get_datetime_object(datetime_last, t.timezone)
                 ) as coverage
         , sensor_flags_exist(t.sensors_id, t.datetime, '-{dur}'::interval) as flag_info
@@ -477,6 +479,7 @@ async def fetch_measurements_aggregated(query, aggregate_to, db):
         JOIN measurands m ON (t.measurands_id = m.measurands_id)
         {query.pagination()}
     """
+
     params = query.params()
     params["aggregate_to"] = aggregate_to
     return await db.fetchPage(sql, params)
@@ -514,7 +517,7 @@ async def fetch_hours(query, db):
         , s.data_logging_period_seconds
         , 1 * 3600
         )||jsonb_build_object(
-          'datetime_from', get_datetime_object(h.datetime_first, sn.timezone)
+          'datetime_from', get_datetime_object(h.datetime_first - '1h'::interval, sn.timezone)
         , 'datetime_to', get_datetime_object(h.datetime_last, sn.timezone)
         ) as coverage
         , sensor_flags_exist(h.sensors_id, h.datetime) as flag_info
@@ -554,8 +557,8 @@ async def fetch_hours_aggregated(query, aggregate_to, db):
         , AVG(s.data_logging_period_seconds) as log_seconds
         , MAX(truncate_timestamp(datetime, '{aggregate_to}', tz.tzid, '{dur}'::interval))
            as last_period
-        , MIN(timezone(tz.tzid, datetime - '1sec'::interval)) as datetime_first
-        , MAX(timezone(tz.tzid, datetime - '1sec'::interval)) as datetime_last
+        , MIN(timezone(tz.tzid, datetime)) as datetime_first
+        , MAX(timezone(tz.tzid, datetime)) as datetime_last
         , COUNT(1) as value_count
         , AVG(value_avg) as value_avg
         , STDDEV(value_avg) as value_sd
@@ -609,7 +612,7 @@ async def fetch_hours_aggregated(query, aggregate_to, db):
             , 3600
             , EXTRACT(EPOCH FROM last_period - datetime)
         )||jsonb_build_object(
-                'datetime_from', get_datetime_object(datetime_first, t.timezone)
+                'datetime_from', get_datetime_object(datetime_first - '1h'::interval, t.timezone)
                 , 'datetime_to', get_datetime_object(datetime_last, t.timezone)
                 ) as coverage
         , sensor_flags_exist(t.sensors_id, t.datetime, '-{dur}'::interval) as flag_info
@@ -906,7 +909,7 @@ async def fetch_hours_trends(aggregate_to, query, db):
       , e.n * {interval_seconds}
            )||
     jsonb_build_object(
-        'datetime_from', get_datetime_object(o.coverage_first, o.timezone)
+        'datetime_from', get_datetime_object(o.coverage_first - make_interval(secs=>{interval_seconds}), o.timezone)
       , 'datetime_to', get_datetime_object(o.coverage_last, o.timezone)
     ) as coverage
     , sensor_flags_exist(o.sensors_id, o.coverage_first, '{dur}'::interval) as flag_info
@@ -914,7 +917,7 @@ async def fetch_hours_trends(aggregate_to, query, db):
     JOIN observed o ON (e.factor = o.factor)
     ORDER BY e.factor
     """
-
+    logger.debug(params)
 
     return await db.fetchPage(sql, params)
 
@@ -1003,6 +1006,7 @@ async def fetch_days_aggregated(query, aggregate_to, db):
         {query.total()}
         FROM meas t
         JOIN measurands m ON (t.measurands_id = m.measurands_id)
+        ORDER BY datetime
         {query.pagination()}
     """
     params = query.params()

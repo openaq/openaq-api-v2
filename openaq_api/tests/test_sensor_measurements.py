@@ -21,14 +21,45 @@ class TestMeasurements:
         assert len(data) > 0, "response did not have at least one record"
 
     def test_date_filter_good(self, client):
-        response = client.get(f"/v3/sensors/{sensors_id}/measurements?datetime_from=2023-03-06")
+        ## 7 is the only hourly sensor
+        response = client.get(f"/v3/sensors/7/measurements?datetime_from=2023-03-05&datetime_to=2023-03-06")
         assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        row = data[0]
+        assert len(data) == 24
+        assert row['coverage']['expectedCount'] == 1
+        assert row['coverage']['observedCount'] == 1
+        assert row['coverage']['datetimeFrom']['local'] == '2023-03-05T00:00:00-08:00'
+        assert row['coverage']['datetimeTo']['local'] == '2023-03-05T01:00:00-08:00'
+        assert row['period']['datetimeFrom']['local'] == '2023-03-05T00:00:00-08:00'
+        assert row['period']['datetimeTo']['local'] == '2023-03-05T01:00:00-08:00'
+
 
     def test_aggregated_hourly_good(self, client):
         response = client.get(f"/v3/sensors/{sensors_id}/measurements/hourly")
         assert response.status_code == 200
         data = json.loads(response.content).get('results', [])
         assert len(data) > 0
+
+    def test_date_filter_aggregated_hourly_good(self, client):
+        response = client.get(f"/v3/sensors/{sensors_id}/measurements/hourly?datetime_from=2023-03-05&datetime_to=2023-03-06")
+        assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        assert len(data) == 24
+
+        row = data[0]
+        period = row['period']['label']
+
+        assert row['coverage']['datetimeFrom']['local'] == '2023-03-05T00:00:00-10:00'
+        assert row['coverage']['datetimeTo']['local'] == '2023-03-05T01:00:00-10:00'
+        assert row['period']['datetimeFrom']['local'] == '2023-03-05T00:00:00-10:00'
+        assert row['period']['datetimeTo']['local'] == '2023-03-05T01:00:00-10:00'
+
+        assert row['coverage']['expectedCount'] == 2
+        assert row['coverage']['observedCount'] == 2
+        assert row['coverage']['percentComplete'] == 100
+        assert row['coverage']['percentComplete'] == row['coverage']['percentCoverage']
+
 
     def test_aggregated_daily_good(self, client):
         response = client.get(f"/v3/sensors/{sensors_id}/measurements/daily")
@@ -43,6 +74,20 @@ class TestHours:
         assert response.status_code == 200
         data = json.loads(response.content).get('results', [])
         assert len(data) > 0
+
+    def test_date_filter_good(self, client):
+        ## 7 is the only hourly sensor
+        response = client.get(f"/v3/sensors/7/hours?datetime_from=2023-03-05T00:00:00&datetime_to=2023-03-06T00:00:00")
+        assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        row = data[0]
+        assert len(data) == 24
+        assert row['coverage']['expectedCount'] == 1
+        assert row['coverage']['observedCount'] == 1
+        assert row['coverage']['datetimeFrom']['local'] == '2023-03-05T00:00:00-08:00'
+        assert row['coverage']['datetimeTo']['local'] == '2023-03-05T01:00:00-08:00'
+        assert row['period']['datetimeFrom']['local'] == '2023-03-05T00:00:00-08:00'
+        assert row['period']['datetimeTo']['local'] == '2023-03-05T01:00:00-08:00'
 
     def test_aggregated_daily_good(self, client):
         response = client.get(f"/v3/sensors/{sensors_id}/hours/daily")
@@ -72,6 +117,24 @@ class TestHours:
         data = json.loads(response.content).get('results', [])
         assert len(data) > 0
 
+    def test_aggregated_daily_good_with_dates(self, client):
+        response = client.get(f"/v3/sensors/{sensors_id}/hours/daily?datetime_from=2023-03-05&datetime_to=2023-03-06")
+        assert response.status_code == 200
+        data = json.loads(response.content).get('results', [])
+        assert len(data) == 1
+        row = data[0]
+
+        assert row['coverage']['datetimeFrom']['local'] == '2023-03-05T00:00:00-10:00'
+        assert row['coverage']['datetimeTo']['local'] == '2023-03-06T00:00:00-10:00'
+        assert row['period']['datetimeFrom']['local'] == '2023-03-05T00:00:00-10:00'
+        assert row['period']['datetimeTo']['local'] == '2023-03-06T00:00:00-10:00'
+
+        assert row['coverage']['expectedCount'] == 24
+        assert row['coverage']['observedCount'] == 24
+        assert row['coverage']['percentComplete'] == 100
+        assert row['coverage']['percentComplete'] == row['coverage']['percentCoverage']
+
+
     def test_aggregated_yearly_good_with_dates(self, client):
         response = client.get(f"/v3/sensors/{sensors_id}/hours/yearly?datetime_from=2022-01-01&datetime_to=2023-01-01")
         assert response.status_code == 200
@@ -79,7 +142,7 @@ class TestHours:
         assert len(data) == 1
         row = data[0]
         assert row.get('coverage', {}).get('expectedCount') == (365 * 24)
-        assert row.get('coverage', {}).get('observedCount') == 365
+        assert row.get('coverage', {}).get('observedCount') == 365 * 24
 
     def test_aggregated_hod_good(self, client):
         response = client.get(f"/v3/sensors/{sensors_id}/hours/hourofday")
@@ -100,7 +163,7 @@ class TestHours:
         assert len(data) == 24
 
     def test_aggregated_hod_timestamptzs_good(self, client):
-        response = client.get(f"/v3/sensors/{sensors_id}/hours/hourofday?datetime_from=2023-03-01T00:00:01Z&datetime_to=2023-04-01T00:00:01Z")
+        response = client.get(f"/v3/sensors/{sensors_id}/hours/hourofday?datetime_from=2023-03-01T00:00:00Z&datetime_to=2023-04-01T00:00:00Z")
         assert response.status_code == 200
         data = json.loads(response.content).get('results', [])
         assert len(data) == 24
@@ -113,14 +176,14 @@ class TestHours:
         assert len(data) == 7
 
     def test_aggregated_moy_good(self, client):
-        response = client.get(f"/v3/sensors/{sensors_id}/hours/monthofyear?datetime_from=2022-01-01&datetime_to=2023-01-01")
+        response = client.get(f"/v3/sensors/{sensors_id}/hours/monthofyear?datetime_from=2022-01-01T00:00:00Z&datetime_to=2023-01-01T00:00:00Z")
         assert response.status_code == 200
         data = json.loads(response.content).get('results', [])
         assert len(data) == 12
 
         row = data[0]
         # hours are time ending
-        assert row['coverage']['datetimeFrom']['local'] == '2022-01-02T00:00:00-10:00'
+        assert row['coverage']['datetimeFrom']['local'] == '2022-01-01T00:00:00-10:00'
         assert row['coverage']['datetimeTo']['local'] == '2022-02-01T00:00:00-10:00'
         assert row['period']['datetimeFrom']['local'] == '2022-01-01T00:00:00-10:00'
         assert row['period']['datetimeTo']['local'] == '2022-02-01T00:00:00-10:00'
@@ -150,6 +213,11 @@ class TestDays:
         data = json.loads(response.content).get('results', [])
         assert len(data) == 12
         row = data[0]
+        assert row['coverage']['datetimeFrom']['local'] == '2022-01-01T00:00:00-10:00'
+        assert row['coverage']['datetimeTo']['local'] == '2022-02-01T00:00:00-10:00'
+        assert row['period']['datetimeFrom']['local'] == '2022-01-01T00:00:00-10:00'
+        assert row['period']['datetimeTo']['local'] == '2022-02-01T00:00:00-10:00'
+
         assert row['coverage']['expectedCount'] == 31
         assert row['coverage']['observedCount'] == 31
         assert row['coverage']['percentComplete'] == 100
@@ -223,6 +291,6 @@ class TestYears:
         assert len(data) == 1
         row = data[0]
         assert row['coverage']['expectedCount'] == 8760
-        assert row['coverage']['observedCount'] == 365
-        assert row['coverage']['percentComplete'] == 4
+        assert row['coverage']['observedCount'] == 365*24
+        assert row['coverage']['percentComplete'] == 100
         assert row['coverage']['percentComplete'] == row['coverage']['percentCoverage']
