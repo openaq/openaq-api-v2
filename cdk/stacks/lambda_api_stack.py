@@ -291,7 +291,7 @@ class LambdaApiStack(Stack):
                 f"OpenAQAPIDistOriginRequestPolicy-{env_name}",
                 origin_request_policy_name=f"OpenAQAPIDistOriginRequestPolicy_{env_name}",
                 header_behavior=cloudfront.OriginRequestHeaderBehavior.allow_list(
-                    "x-api-key" "X-API-Key", "User-Agent"
+                    "x-api-key", "X-API-Key", "User-Agent"
                 ),
                 query_string_behavior=cloudfront.OriginRequestQueryStringBehavior.all(),
             )
