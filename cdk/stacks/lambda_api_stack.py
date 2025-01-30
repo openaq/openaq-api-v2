@@ -62,9 +62,8 @@ def create_waf(stack: Construct) -> CfnWebACL:
             amazon_ip_reputation_list,
             known_bad_inputs_rule_set,
             api_key_header_rule,
-            retired_endpoints_rule,
+            # retired_endpoints_rule,
             ip_rate_limiter,
-            bad_radius_query,
         ],
         custom_response_bodies={
             "UnauthorizedMessage": CfnWebACL.CustomResponseBodyProperty(
