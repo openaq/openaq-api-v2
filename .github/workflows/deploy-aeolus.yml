@@ -58,6 +58,11 @@ jobs:
           DATABASE_PORT: ${{ env.AEOLUS_DATABASE_PORT }}
           API_LAMBDA_MEMORY_SIZE: ${{ env.AEOLUS_API_LAMBDA_MEMORY_SIZE }}
 
+          HOSTED_ZONE_ID: ${{ secrets.HOSTED_ZONE_ID }}
+          HOSTED_ZONE_NAME: ${{ secrets.HOSTED_ZONE_NAME }}
+          DOMAIN_NAME: "api.openaq.org"
+          CERTIFICATE_ARN: ${{ secrets.CERTIFICATE_ARN }}
+
           CDK_ACCOUNT: ${{ secrets.CDK_ACCOUNT }}
           CDK_REGION: ${{ secrets.CDK_REGION }}
 
