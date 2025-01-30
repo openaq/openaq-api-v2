@@ -27,9 +27,9 @@ jobs:
           name-transformation: uppercase
           parse-json-secrets: true
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "20"
 
       - name: build pages
         working-directory: ./pages
@@ -39,7 +39,7 @@ jobs:
 
       - name: Install CDK
         run: |
-          npm install -g aws-cdk@2.92.0
+          npm install -g aws-cdk@2.177.0
 
       - uses: actions/setup-python@v3
         with:
