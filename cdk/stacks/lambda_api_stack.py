@@ -207,15 +207,15 @@ class LambdaApiStack(Stack):
 
             log_bucket = aws_s3.Bucket(
                 self,
-                f"openaq-api-dist-log-{env_name}",
-                bucket_name=f"openaq-api-dist-log-{env_name}",
+                f"openaq-api-cf-dist-log-{env_name}",
+                bucket_name=f"openaq-api-cf-dist-log-{env_name}",
                 auto_delete_objects=False,
                 public_read_access=False,
                 removal_policy=RemovalPolicy.DESTROY,
                 object_ownership=aws_s3.ObjectOwnership.OBJECT_WRITER,
                 lifecycle_rules=[
                     aws_s3.LifecycleRule(
-                        id=f"openaq-api-dist-log-lifecycle-rule-{env_name}",
+                        id=f"openaq-api-cf-dist-log-lifecycle-rule-{env_name}",
                         enabled=True,
                         expiration=aws_cdk.Duration.days(7),
                     )
