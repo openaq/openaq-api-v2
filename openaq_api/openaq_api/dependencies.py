@@ -52,6 +52,7 @@ async def check_api_key(
     """
     route = request.url.path
     # no checking or limiting for whitelistted routes
+    logger.debug(settings.EXPLORER_API_KEY)
     if in_allowed_list(route):
         return api_key
     elif api_key == settings.EXPLORER_API_KEY:

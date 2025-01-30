@@ -1,5 +1,4 @@
 from datetime import datetime, date
-from typing import Union
 from humps import camelize
 from pydantic import BaseModel, validator
 
@@ -22,39 +21,39 @@ class HTTPStatusLog(BaseModel):
 
 
 class CloudfrontLog(BaseModel):
-    date: Union[date, None]
-    time: Union[str, None]
-    location: Union[str, None]
-    bytes: Union[int, None]
-    request_ip: Union[str, None]
-    method: Union[str, None]
-    host: Union[str, None]
-    uri: Union[str, None]
-    status: Union[int, None]
-    referrer: Union[str, None]
-    user_agent: Union[str, None]
-    query_string: Union[str, None]
-    cookie: Union[str, None]
-    result_type: Union[str, None]
-    request_id: Union[str, None]
-    host_header: Union[str, None]
-    request_protocol: Union[str, None]
-    request_bytes: Union[int, None]
-    time_taken: Union[float, None]
-    xforwarded_for: Union[str, None]
-    ssl_protocol: Union[str, None]
-    ssl_cipher: Union[str, None]
-    response_result_type: Union[str, None]
-    http_version: Union[str, None]
-    fle_status: Union[str, None]
-    fle_encrypted_fields: Union[int, None]
-    c_port: Union[int, None]
-    time_to_first_byte: Union[float, None]
-    x_edge_detailed_result_type: Union[str, None]
-    sc_content_type: Union[str, None]
-    sc_content_len: Union[int, None]
-    sc_range_start: Union[int, None]
-    sc_range_end: Union[int, None]
+    date: date | None
+    time: str | None
+    location: str | None
+    bytes: int | None
+    request_ip: str | None
+    method: str | None
+    host: str | None
+    uri: str | None
+    status: int | None
+    referrer: str | None
+    user_agent: str | None
+    query_string: str | None
+    cookie: str | None
+    result_type: str | None
+    request_id: str | None
+    host_header: str | None
+    request_protocol: str | None
+    request_bytes: int | None
+    time_taken: float | None
+    xforwarded_for: str | None
+    ssl_protocol: str | None
+    ssl_cipher: str | None
+    response_result_type: str | None
+    http_version: str | None
+    fle_status: str | None
+    fle_encrypted_fields: int | None
+    c_port: int | None
+    time_to_first_byte: float | None
+    x_edge_detailed_result_type: str | None
+    sc_content_type: str | None
+    sc_content_len: int | None
+    sc_range_start: int | None
+    sc_range_end: int | None
 
     @validator("date", pre=True)
     def parse_date(cls, v):

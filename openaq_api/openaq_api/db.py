@@ -67,6 +67,7 @@ async def db_pool(pool):
         )
 
     logger.debug(f"Checking for existing pool: {pool}")
+    logger.debug(settings.DATABASE_READ_URL)
     if pool is None:
         logger.debug("Creating a new pool")
         pool = await asyncpg.create_pool(
