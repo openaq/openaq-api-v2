@@ -26,7 +26,6 @@ class Settings(BaseSettings):
     HOSTED_ZONE_ID: str = None
     HOSTED_ZONE_NAME: str = None
     DOMAIN_NAME: str = None
-    LOG_BUCKET: str = None
     CERTIFICATE_ARN: str = None
     CF_LOGS_LAMBDA_MEMORY_SIZE: int = 1792
     CF_LOG_LAMBDA_TIMEOUT: int = 180  # lambda timeout in seconds
