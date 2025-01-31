@@ -42,12 +42,12 @@ from stacks.waf_rules import (
     amazon_ip_reputation_list,
     known_bad_inputs_rule_set,
     api_key_header_rule,
-    # retired_endpoints_rule,
+    retired_endpoints_rule,
     ip_rate_limiter,
 )
 
 
-def create_waf(stack: Construct) -> CfnWebACL:
+def create_waf(stack: Construct, limit: int, evaluation_window_sec: int) -> CfnWebACL:
     waf = CfnWebACL(
         stack,
         "OpenAQAPICloudFrontWebACL",
@@ -62,8 +62,8 @@ def create_waf(stack: Construct) -> CfnWebACL:
             amazon_ip_reputation_list,
             known_bad_inputs_rule_set,
             api_key_header_rule,
-            # retired_endpoints_rule,
-            ip_rate_limiter,
+            retired_endpoints_rule,
+            ip_rate_limiter(limit, evaluation_window_sec),
         ],
         custom_response_bodies={
             "UnauthorizedMessage": CfnWebACL.CustomResponseBodyProperty(
@@ -99,6 +99,8 @@ class LambdaApiStack(Stack):
         hosted_zone_id: str | None,
         domain_name: str | None,
         cert_arn: str | None,
+        waf_evaluation_window_sec: int | None,
+        waf_rate_limit: int | None,
         **kwargs,
     ) -> None:
         """Lambda to handle api requests"""
@@ -296,7 +298,7 @@ class LambdaApiStack(Stack):
                 query_string_behavior=cloudfront.OriginRequestQueryStringBehavior.all(),
             )
 
-            waf = create_waf(self)
+            waf = create_waf(self, waf_rate_limit, waf_evaluation_window_sec)
 
             dist = cloudfront.Distribution(
                 self,

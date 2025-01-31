@@ -83,6 +83,8 @@ jobs:
           SMTP_EMAIL_PASSWORD: ${{ env.AEOLUS_SMTP_EMAIL_PASSWORD }}
 
           EXPLORER_API_KEY: ${{ env.AEOLUS_EXPLORER_API_KEY }}
+          WAF_RATE_LIMIT_EVALUATION_WINDOW: ${{ secrets.WAF_RATE_LIMIT_EVALUATION_WINDOW }}
+          WAF_RATE_LIMIT: ${{ secrets.WAF_RATE_LIMIT }}
 
         working-directory: ./cdk
         run: |

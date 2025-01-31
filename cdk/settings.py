@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     CERTIFICATE_ARN: str = None
     CF_LOGS_LAMBDA_MEMORY_SIZE: int = 1792
     CF_LOG_LAMBDA_TIMEOUT: int = 180  # lambda timeout in seconds
+    WAF_RATE_LIMIT_EVALUATION_WINDOW: int = 60  # in seconds
+    WAF_RATE_LIMIT: int
 
     model_config = SettingsConfigDict(
         extra="ignore",

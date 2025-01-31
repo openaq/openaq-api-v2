@@ -133,18 +133,24 @@ retired_endpoints_rule = CfnWebACL.RuleProperty(
     ),
 )
 
-ip_rate_limiter = CfnWebACL.RuleProperty(
-    name="IPRateLimiter",
-    priority=4,
-    statement=CfnWebACL.StatementProperty(
-        rate_based_statement=CfnWebACL.RateBasedStatementProperty(
-            aggregate_key_type="IP", evaluation_window_sec=300, limit=7500
-        )
-    ),
-    action=CfnWebACL.RuleActionProperty(block={}),
-    visibility_config=CfnWebACL.VisibilityConfigProperty(
-        sampled_requests_enabled=True,
-        cloud_watch_metrics_enabled=True,
-        metric_name="IpRateLimiter",
-    ),
-)
+
+def ip_rate_limiter(
+    limit: int, evaluation_window_sec: int = 60
+) -> CfnWebACL.RuleProperty:
+    return CfnWebACL.RuleProperty(
+        name="IPRateLimiter",
+        priority=4,
+        statement=CfnWebACL.StatementProperty(
+            rate_based_statement=CfnWebACL.RateBasedStatementProperty(
+                aggregate_key_type="IP",
+                evaluation_window_sec=evaluation_window_sec,
+                limit=limit,
+            )
+        ),
+        action=CfnWebACL.RuleActionProperty(block={}),
+        visibility_config=CfnWebACL.VisibilityConfigProperty(
+            sampled_requests_enabled=True,
+            cloud_watch_metrics_enabled=True,
+            metric_name="IpRateLimiter",
+        ),
+    )

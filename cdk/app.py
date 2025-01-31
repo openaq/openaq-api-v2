@@ -43,6 +43,8 @@ api = LambdaApiStack(
     cloudfront_logs_lambda_env=cloudfront_logs_lambda_env,
     cf_logs_lambda_memory_size=settings.CF_LOGS_LAMBDA_MEMORY_SIZE,
     cf_logs_lambda_timeout=settings.CF_LOG_LAMBDA_TIMEOUT,
+    waf_evaluation_window_sec=settings.WAF_RATE_LIMIT_EVALUATION_WINDOW,
+    waf_rate_limit=settings.WAF_RATE_LIMIT,
     env=env,
 )
 
