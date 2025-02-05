@@ -195,7 +195,7 @@ def ip_block_rule(stack: Construct, ips: List[str]) -> CfnWebACL.RuleProperty:
         action=CfnWebACL.RuleActionProperty(
             block=CfnWebACL.BlockActionProperty(
                 custom_response=CfnWebACL.CustomResponseProperty(
-                    response_code=410, custom_response_body_key="ForbiddenMessage"
+                    response_code=403, custom_response_body_key="ForbiddenMessage"
                 )
             )
         ),
