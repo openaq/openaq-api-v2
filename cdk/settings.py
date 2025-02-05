@@ -1,5 +1,6 @@
 from os import environ
 from pathlib import Path
+from typing import List
 
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -31,6 +32,7 @@ class Settings(BaseSettings):
     CF_LOG_LAMBDA_TIMEOUT: int = 180  # lambda timeout in seconds
     WAF_RATE_LIMIT_EVALUATION_WINDOW: int = 60  # in seconds
     WAF_RATE_LIMIT: int
+    WAF_BLOCK_IPS: List[str] | None = None
 
     model_config = SettingsConfigDict(
         extra="ignore",

@@ -45,6 +45,7 @@ api = LambdaApiStack(
     cf_logs_lambda_timeout=settings.CF_LOG_LAMBDA_TIMEOUT,
     waf_evaluation_window_sec=settings.WAF_RATE_LIMIT_EVALUATION_WINDOW,
     waf_rate_limit=settings.WAF_RATE_LIMIT,
+    waf_block_ips=settings.WAF_BLOCK_IPS,
     env=env,
 )
 

@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import List
 
 
 from aws_cdk import (
@@ -39,15 +40,31 @@ from stacks.utils import (
 )
 
 from stacks.waf_rules import (
+    custom_response_bodies,
     amazon_ip_reputation_list,
     known_bad_inputs_rule_set,
     api_key_header_rule,
     retired_endpoints_rule,
     ip_rate_limiter,
+    ip_block_rule,
 )
 
 
-def create_waf(stack: Construct, limit: int, evaluation_window_sec: int) -> CfnWebACL:
+def create_waf(
+    stack: Construct,
+    limit: int,
+    evaluation_window_sec: int,
+    block_ips: List[str] | None,
+) -> CfnWebACL:
+    rules = [
+        amazon_ip_reputation_list,
+        known_bad_inputs_rule_set,
+        api_key_header_rule,
+        retired_endpoints_rule,
+        ip_rate_limiter(limit, evaluation_window_sec),
+    ]
+    if block_ips:
+        rules.append(ip_block_rule(stack, block_ips))
     waf = CfnWebACL(
         stack,
         "OpenAQAPICloudFrontWebACL",
@@ -58,23 +75,8 @@ def create_waf(stack: Construct, limit: int, evaluation_window_sec: int) -> CfnW
             metric_name="API-WAF",
             sampled_requests_enabled=True,
         ),
-        rules=[
-            amazon_ip_reputation_list,
-            known_bad_inputs_rule_set,
-            api_key_header_rule,
-            retired_endpoints_rule,
-            ip_rate_limiter(limit, evaluation_window_sec),
-        ],
-        custom_response_bodies={
-            "UnauthorizedMessage": CfnWebACL.CustomResponseBodyProperty(
-                content='{"message": "Unauthorized. A valid API key must be provided in the X-API-Key header."}',
-                content_type="APPLICATION_JSON",
-            ),
-            "GoneMessage": CfnWebACL.CustomResponseBodyProperty(
-                content='{"message": "Gone. Version 1 and Version 2 API endpoints are retired and no longer available. Please migrate to Version 3 endpoints."}',
-                content_type="APPLICATION_JSON",
-            ),
-        },
+        rules=rules,
+        custom_response_bodies=custom_response_bodies,
     )
     return waf
 
@@ -101,6 +103,7 @@ class LambdaApiStack(Stack):
         cert_arn: str | None,
         waf_evaluation_window_sec: int | None,
         waf_rate_limit: int | None,
+        waf_block_ips: List[str] | None,
         **kwargs,
     ) -> None:
         """Lambda to handle api requests"""
@@ -298,7 +301,9 @@ class LambdaApiStack(Stack):
                 query_string_behavior=cloudfront.OriginRequestQueryStringBehavior.all(),
             )
 
-            waf = create_waf(self, waf_rate_limit, waf_evaluation_window_sec)
+            waf = create_waf(
+                self, waf_rate_limit, waf_evaluation_window_sec, waf_block_ips
+            )
 
             dist = cloudfront.Distribution(
                 self,
