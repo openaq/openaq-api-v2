@@ -64,7 +64,6 @@ def create_waf(
         ip_rate_limiter(limit, evaluation_window_sec),
     ]
     if block_ips:
-        print("ADDING BLOCK IP")
         rules.append(ip_block_rule(stack, block_ips))
     waf = CfnWebACL(
         stack,

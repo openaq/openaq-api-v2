@@ -181,7 +181,7 @@ def ip_block_rule(stack: Construct, ips: List[str]) -> CfnWebACL.RuleProperty:
         ip_address_version="IPV4",
         scope="CLOUDFRONT",
         description="Set of IPs to specifically block to prevent abuse",
-        name="IP block list",
+        name="OpenAQAPIWAFIPBlockList",
     )
 
     return CfnWebACL.RuleProperty(
