@@ -105,7 +105,7 @@ api_key_header_rule = CfnWebACL.RuleProperty(
 
 retired_endpoints_rule = CfnWebACL.RuleProperty(
     name="retiredVersionsEndpoints",
-    priority=3,
+    priority=4,
     action=CfnWebACL.RuleActionProperty(
         block=CfnWebACL.BlockActionProperty(
             custom_response=CfnWebACL.CustomResponseProperty(
@@ -156,7 +156,7 @@ def ip_rate_limiter(
 ) -> CfnWebACL.RuleProperty:
     return CfnWebACL.RuleProperty(
         name="IPRateLimiter",
-        priority=4,
+        priority=5,
         statement=CfnWebACL.StatementProperty(
             rate_based_statement=CfnWebACL.RateBasedStatementProperty(
                 aggregate_key_type="IP",
@@ -186,7 +186,7 @@ def ip_block_rule(stack: Construct, ips: List[str]) -> CfnWebACL.RuleProperty:
 
     return CfnWebACL.RuleProperty(
         name="IpBlockRule",
-        priority=4,
+        priority=3,
         statement=CfnWebACL.StatementProperty(
             ip_set_reference_statement=CfnWebACL.IPSetReferenceStatementProperty(
                 arn=ip_set.attr_arn
