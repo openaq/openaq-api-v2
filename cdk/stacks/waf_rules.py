@@ -5,7 +5,7 @@ from constructs import Construct
 
 custom_response_bodies = {
     "ForbiddenMessage": CfnWebACL.CustomResponseBodyProperty(
-        content='{"meta": {}, "results": []}',
+        content='{"message": "Forbidden. violation of rate limit policy. Contact dev@openaq.org"}',
         content_type="APPLICATION_JSON",
     ),
     "UnauthorizedMessage": CfnWebACL.CustomResponseBodyProperty(
