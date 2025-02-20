@@ -11,7 +11,6 @@ from fastapi.security import (
 from openaq_api.models.logging import (
     TooManyRequestsLog,
     UnauthorizedLog,
-    RedisErrorLog,
 )
 
 from openaq_api.exceptions import (
@@ -23,11 +22,9 @@ logger = logging.getLogger("dependencies")
 
 
 def in_allowed_list(route: str) -> bool:
-    logger.debug(f"Checking if '{route}' is whitelisted")
+    logger.debug(f"Checking if '{route}' is allowed")
     allow_list = ["/", "/openapi.json", "/docs", "/register"]
     if route in allow_list:
-        return True
-    if "/v2/locations/tiles" in route:
         return True
     if "/v3/locations/tiles" in route:
         return True
@@ -67,7 +64,7 @@ async def check_api_key(
         elif api_key is None:
             logging.info(
                 UnauthorizedLog(
-                    request=request, detail=f"api key not provided"
+                    request=request, detail="api key not provided"
                 ).model_dump_json()
             )
             raise NOT_AUTHENTICATED_EXCEPTION
@@ -77,7 +74,7 @@ async def check_api_key(
             if await redis.sismember("keys", api_key) == 0:
                 logging.info(
                     UnauthorizedLog(
-                        request=request, detail=f"api key not found"
+                        request=request, detail="api key not found"
                     ).model_dump_json()
                 )
                 raise NOT_AUTHENTICATED_EXCEPTION
