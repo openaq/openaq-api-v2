@@ -2,7 +2,6 @@ from contextlib import asynccontextmanager
 import datetime
 import logging
 import time
-import traceback
 from os import environ
 from pathlib import Path
 from typing import Any
@@ -13,39 +12,19 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from mangum import Mangum
 from pydantic import BaseModel, ValidationError
 from starlette.responses import JSONResponse, RedirectResponse
 
 from openaq_api.db import db_pool
-from openaq_api.dependencies import (
-    check_api_key
-    )
+from openaq_api.dependencies import check_api_key
 from openaq_api.middleware import (
     CacheControlMiddleware,
     LoggingMiddleware,
 )
-from openaq_api.models.logging import (
-    InfrastructureErrorLog,
-    ModelValidationError,
-    UnprocessableEntityLog,
-    WarnLog,
-)
+from openaq_api.models.logging import InfrastructureErrorLog
 
-# from openaq_api.routers.auth import router as auth_router
-from openaq_api.routers.averages import router as averages_router
-from openaq_api.routers.cities import router as cities_router
-from openaq_api.routers.countries import router as countries_router
-from openaq_api.routers.locations import router as locations_router
-from openaq_api.routers.manufacturers import router as manufacturers_router
-from openaq_api.routers.measurements import router as measurements_router
-from openaq_api.routers.mvt import router as mvt_router
-from openaq_api.routers.parameters import router as parameters_router
-from openaq_api.routers.projects import router as projects_router
-from openaq_api.routers.sources import router as sources_router
-from openaq_api.routers.summary import router as summary_router
 from openaq_api.settings import settings
 
 # V3 routers
@@ -107,7 +86,6 @@ class ORJSONResponse(JSONResponse):
         return orjson.dumps(content, default=default)
 
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if not hasattr(app.state, "pool"):
@@ -126,9 +104,6 @@ async def lifespan(app: FastAPI):
         await app.state.pool.close()
         delattr(app.state, "pool")
         logger.debug("Connection closed")
-
-
-
 
 
 app = FastAPI(
@@ -230,20 +205,6 @@ app.include_router(providers.router)
 app.include_router(sensors.router)
 app.include_router(latest.router)
 app.include_router(flags.router)
-
-
-# app.include_router(auth_router)
-app.include_router(averages_router)
-app.include_router(cities_router)
-app.include_router(countries_router)
-app.include_router(locations_router)
-app.include_router(manufacturers_router)
-app.include_router(measurements_router)
-app.include_router(mvt_router)
-app.include_router(parameters_router)
-app.include_router(projects_router)
-app.include_router(sources_router)
-app.include_router(summary_router)
 
 
 static_dir = Path.joinpath(Path(__file__).resolve().parent, "static")

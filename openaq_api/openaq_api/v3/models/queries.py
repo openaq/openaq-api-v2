@@ -5,7 +5,7 @@ import operator
 import types
 import weakref
 from datetime import date, datetime
-from enum import StrEnum, auto
+from enum import StrEnum
 from types import FunctionType
 from typing import Annotated, Any
 from abc import ABC
@@ -638,8 +638,6 @@ class DateToQuery(QueryBaseModel):
             return f"{dt} <= :date_to::date"
 
 
-
-
 class PeriodNames(StrEnum):
     hour = "hour"
     day = "day"
@@ -938,7 +936,7 @@ class QueryBuilder(object):
         """
         base_classes = inspect.getmro(self.query.__class__)
         bases = [
-            x for x in base_classes if not ABC in x.__bases__
+            x for x in base_classes if ABC not in x.__bases__
         ]  # remove all abstract classes
         bases.remove(object)  # remove <class 'object'>
         bases.remove(ABC)  # <class 'ABC'>

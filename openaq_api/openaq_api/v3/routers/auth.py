@@ -6,12 +6,11 @@ from email.message import EmailMessage
 import smtplib
 
 import boto3
-from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.templating import Jinja2Templates
 
 from openaq_api.db import DB
-from openaq_api.models.logging import AuthLog, ErrorLog, InfoLog, SESEmailLog
+from openaq_api.models.logging import ErrorLog, InfoLog, SESEmailLog
 from openaq_api.settings import settings
 from openaq_api.v3.models.responses import JsonBase
 
@@ -28,20 +27,21 @@ router = APIRouter(
 )
 
 
-def send_email(destination_email: str, msg: EmailMessage):
+def send_email(full_name: str, destination_email: str, msg: EmailMessage):
     if settings.USE_SMTP_EMAIL:
         return send_smtp_email(destination_email, msg)
     else:
         return send_ses_email(destination_email, msg)
 
 
-def send_smtp_email(destination_email: str, msg: EmailMessage):
+def send_smtp_email(msg: EmailMessage):
     with smtplib.SMTP_SSL(settings.SMTP_EMAIL_HOST, 465) as s:
         s.login(settings.SMTP_EMAIL_USER, settings.SMTP_EMAIL_PASSWORD)
         return s.send_message(msg)
 
 
-def send_ses_email(destination_email: str, msg: EmailMessage):
+def send_ses_email(full_name: str, destination_email: str, msg: EmailMessage):
+    ses_client = boto3.client("ses")
     return ses_client.send_raw_email(
         Source=settings.EMAIL_SENDER,
         Destinations=[f"{full_name} <{destination_email}>"],
@@ -50,7 +50,6 @@ def send_ses_email(destination_email: str, msg: EmailMessage):
 
 
 def send_change_password_email(full_name: str, email: str):
-    ses_client = boto3.client("ses")
     TEXT_EMAIL_CONTENT = """
     We are contacting you to notify you that your OpenAQ Explorer password has been changed.
 
@@ -77,7 +76,7 @@ def send_change_password_email(full_name: str, email: str):
     msg["Subject"] = "OpenAQ Explorer - Password changed"
     msg["From"] = settings.EMAIL_SENDER
     msg["To"] = email
-    response = send_email(email, msg)
+    response = send_email(full_name, email, msg)
     logger.info(
         SESEmailLog(
             detail=json.dumps(
@@ -93,7 +92,6 @@ def send_change_password_email(full_name: str, email: str):
 
 
 def send_verification_email(verification_code: str, full_name: str, email: str):
-    ses_client = boto3.client("ses")
     TEXT_EMAIL_CONTENT = f"""
     Thank you for signing up for an OpenAQ Explorer Account
     Visit the following URL to verify your email:
@@ -138,7 +136,6 @@ def send_verification_email(verification_code: str, full_name: str, email: str):
 
 
 def send_password_reset_email(verification_code: str, email: str):
-    ses_client = boto3.client("ses")
     TEXT_EMAIL_CONTENT = f"""
     You have requested a password reset for your OpenAQ Explorer account. Please visit the following link (expires in 30 minutes):
     https://explore.openaq.org/new-password?code={verification_code}
@@ -181,7 +178,6 @@ def send_password_reset_email(verification_code: str, email: str):
 
 
 def send_password_changed_email(email: str):
-    ses_client = boto3.client("ses")
     TEXT_EMAIL_CONTENT = """
         This email confirms you have successfully changed your password for you OpenAQ Explorer account.
 
@@ -229,7 +225,7 @@ class RegisterTokenBody(JsonBase):
 
 
 @router.post("/register-token")
-async def get_register(
+async def post_register_token(
     request: Request,
     body: RegisterTokenBody,
     db: DB = Depends(),
@@ -256,7 +252,7 @@ class RegenerateTokenBody(JsonBase):
 
 
 @router.post("/regenerate-token")
-async def get_register(
+async def post_regenerate_token(
     request: Request,
     body: RegenerateTokenBody,
     db: DB = Depends(),
@@ -284,7 +280,7 @@ class VerificationBody(JsonBase):
 
 
 @router.post("/send-verification")
-async def send_verification(
+async def post_send_verification(
     body: VerificationBody,
     db: DB = Depends(),
 ):

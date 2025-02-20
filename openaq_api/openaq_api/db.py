@@ -114,7 +114,7 @@ class DB:
                     for param, value in config.items():
                         if param in allowed_config_params:
                             q = f"SELECT set_config('{param}', $1, TRUE)"
-                            s = await con.execute(q, str(value))
+                            await con.execute(q, str(value))
                 if not isinstance(timeout, (str, int)):
                     logger.warning(
                         f"Non int or string timeout value passed - {timeout}"
