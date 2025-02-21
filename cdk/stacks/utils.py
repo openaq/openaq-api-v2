@@ -32,7 +32,7 @@ def create_dependencies_layer(
             client.images.build(
                 path=str("."),
                 dockerfile="Dockerfile",
-                platform="linux/amd64",
+                platform="linux/arm64",
                 tag="openaqapidependencies",
                 nocache=False,
             )
@@ -46,7 +46,7 @@ def create_dependencies_layer(
             )
             p = pathlib.Path(f"{output_dir}").resolve().absolute()
             if not os.path.exists(p):
-                os.mkdir(p)
+                os.makedirs(p)
             print("cleaning up")
             shutil.move("./python", str(p))
             os.remove(f"./requirements.docker.txt")
