@@ -1,4 +1,4 @@
-FROM public.ecr.aws/sam/build-python3.11:1.97.0-20230905191328-x86_64
+FROM public.ecr.aws/sam/build-python3.11:1.133.0-20250207220125
 
 WORKDIR /var/task
 

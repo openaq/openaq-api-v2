@@ -142,7 +142,7 @@ class LambdaApiStack(Stack):
             ),
             handler="openaq_api.main.handler",
             runtime=aws_lambda.Runtime.PYTHON_3_11,
-            architecture=aws_lambda.Architecture.X86_64,
+            architecture=aws_lambda.Architecture.ARM_64,
             vpc=vpc,
             allow_public_subnet=True,
             memory_size=api_lambda_memory_size,
