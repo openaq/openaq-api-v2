@@ -4,8 +4,6 @@ WORKDIR /var/task
 
 COPY requirements.docker.txt /var/task/requirements.txt
 
-RUN pip install --upgrade pip
-
 RUN mkdir -p /var/task/python
 
 RUN pip install -t /var/task/python -r /var/task/requirements.txt
