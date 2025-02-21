@@ -24,10 +24,10 @@ class Settings(BaseSettings):
     REDIS_SECURITY_GROUP_ID: str | None = None
     API_LAMBDA_MEMORY_SIZE: int = 1536
     API_LAMBDA_TIMEOUT: int = 15  # lambda timeout in seconds
-    HOSTED_ZONE_ID: str = None
-    HOSTED_ZONE_NAME: str = None
-    DOMAIN_NAME: str = None
-    CERTIFICATE_ARN: str = None
+    HOSTED_ZONE_ID: str | None = None
+    HOSTED_ZONE_NAME: str | None = None
+    DOMAIN_NAME: str | None = None
+    CERTIFICATE_ARN: str | None = None
     CF_LOGS_LAMBDA_MEMORY_SIZE: int = 1792
     CF_LOG_LAMBDA_TIMEOUT: int = 180  # lambda timeout in seconds
     WAF_RATE_LIMIT_EVALUATION_WINDOW: int = 60  # in seconds
