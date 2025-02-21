@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     CF_LOGS_LAMBDA_MEMORY_SIZE: int = 1792
     CF_LOG_LAMBDA_TIMEOUT: int = 180  # lambda timeout in seconds
     WAF_RATE_LIMIT_EVALUATION_WINDOW: int = 60  # in seconds
-    WAF_RATE_LIMIT: int
+    WAF_RATE_LIMIT: int | None = None
     WAF_BLOCK_IPS: List[str] | None = None
 
     model_config = SettingsConfigDict(
