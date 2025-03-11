@@ -3,7 +3,7 @@ import time
 import os
 
 import asyncpg
-from .models.auth import User
+from models.auth import User
 import orjson
 from aiocache import SimpleMemoryCache, cached
 from aiocache.plugins import HitMissRatioPlugin, TimingPlugin
@@ -12,9 +12,9 @@ from fastapi import HTTPException, Request
 from asyncio.exceptions import TimeoutError
 from asyncio import wait_for
 
-from openaq_api.settings import settings
+from settings import settings
 
-from .models.responses import Meta, OpenAQResult
+from models.responses import Meta, OpenAQResult
 
 logger = logging.getLogger("db")
 

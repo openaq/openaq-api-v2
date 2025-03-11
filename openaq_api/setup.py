@@ -7,10 +7,10 @@ setup(
     author_email="david@developmentseed.org",
     packages=[
         "openaq_api",
-        "openaq_api.ingest",
-        "openaq_api.models",
-        "openaq_api.routers",
-        "openaq_api.templates",
+        "ingest",
+        "models",
+        "routers",
+        "templates",
     ],
     url="http://openaq.org/",
     license="LICENSE.txt",
@@ -55,8 +55,8 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "openaqapi=openaq_api.main:run",
-            "openaqfetch=openaq_api.ingest.fetch:app",
+            "openaqapi=main:run",
+            "openaqfetch=ingest.fetch:app",
         ]
     },
     include_package_data=True,

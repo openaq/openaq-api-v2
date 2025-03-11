@@ -3,7 +3,7 @@ import re
 
 from fastapi.openapi.utils import get_openapi
 
-from openaq_api.main import app
+from main import app
 
 
 def convert_to_3_1(schema: dict) -> dict:

@@ -17,18 +17,18 @@ from mangum import Mangum
 from pydantic import BaseModel, ValidationError
 from starlette.responses import JSONResponse, RedirectResponse
 
-from openaq_api.db import db_pool
-from openaq_api.dependencies import check_api_key
-from openaq_api.middleware import (
+from db import db_pool
+from dependencies import check_api_key
+from middleware import (
     CacheControlMiddleware,
     LoggingMiddleware,
 )
-from openaq_api.models.logging import InfrastructureErrorLog
+from models.logging import InfrastructureErrorLog
 
-from openaq_api.settings import settings
+from settings import settings
 
 # V3 routers
-from openaq_api.v3.routers import (
+from v3.routers import (
     auth,
     countries,
     instruments,
@@ -225,7 +225,7 @@ def run():
             import uvicorn
 
             uvicorn.run(
-                "openaq_api.main:app",
+                "main:app",
                 host="0.0.0.0",
                 port=8888,
                 reload=True,

@@ -16,7 +16,7 @@ import sys
 
 p = os.path.abspath("../openaq_api")
 sys.path.insert(1, p)
-from openaq_api.settings import settings as lambda_env
+from settings import settings as lambda_env
 
 p = os.path.abspath("../cloudfront_logs")
 sys.path.insert(1, p)

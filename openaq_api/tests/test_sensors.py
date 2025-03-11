@@ -3,8 +3,8 @@ import json
 import time
 import os
 import pytest
-from openaq_api.main import app
-from openaq_api.db import db_pool
+from main import app
+from db import db_pool
 
 
 @pytest.fixture

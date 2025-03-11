@@ -4,14 +4,14 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
-from openaq_api.db import DB
-from openaq_api.v3.models.queries import (
+from db import DB
+from v3.models.queries import (
     Paging,
     QueryBaseModel,
     QueryBuilder,
     SortingBase,
 )
-from openaq_api.v3.models.responses import OwnersResponse
+from v3.models.responses import OwnersResponse
 
 logger = logging.getLogger("owners")
 

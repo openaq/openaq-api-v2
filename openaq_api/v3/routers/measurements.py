@@ -6,8 +6,8 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import model_validator
 from datetime import date, timedelta
 
-from openaq_api.db import DB
-from openaq_api.v3.models.queries import (
+from db import DB
+from v3.models.queries import (
     DateFromQuery,
     DateToQuery,
     DatetimeFromQuery,
@@ -17,7 +17,7 @@ from openaq_api.v3.models.queries import (
     QueryBuilder,
 )
 
-from openaq_api.v3.models.responses import (
+from v3.models.responses import (
     MeasurementsResponse,
     HourlyDataResponse,
     DailyDataResponse,

@@ -4,11 +4,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
-from openaq_api.db import DB
-from openaq_api.v3.routers.locations import LocationPathQuery, fetch_locations
-from openaq_api.v3.routers.parameters import fetch_parameters
-from openaq_api.v3.models.queries import QueryBaseModel, QueryBuilder, Paging
-from openaq_api.v3.models.responses import LatestResponse
+from db import DB
+from v3.routers.locations import LocationPathQuery, fetch_locations
+from v3.routers.parameters import fetch_parameters
+from v3.models.queries import QueryBaseModel, QueryBuilder, Paging
+from v3.models.responses import LatestResponse
 
 logger = logging.getLogger("latest")
 

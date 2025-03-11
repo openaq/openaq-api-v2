@@ -140,7 +140,7 @@ class LambdaApiStack(Stack):
                     "pytest_cache",
                 ],
             ),
-            handler="openaq_api.main.handler",
+            handler="main.handler",
             runtime=aws_lambda.Runtime.PYTHON_3_11,
             architecture=aws_lambda.Architecture.X86_64,
             vpc=vpc,
@@ -159,7 +159,7 @@ class LambdaApiStack(Stack):
             ],
         )
 
-        openaq_api.add_to_role_policy(
+        add_to_role_policy(
             aws_iam.PolicyStatement(
                 actions=["ses:SendEmail", "SES:SendRawEmail"],
                 resources=["*"],

@@ -7,16 +7,16 @@ from fastapi.exceptions import RequestValidationError
 
 from pydantic import model_validator
 
-from openaq_api.db import DB
-from openaq_api.v3.models.queries import (
+from db import DB
+from v3.models.queries import (
     Paging,
-    #DatetimeFromQuery,
-    #DatetimeToQuery,
+    # DatetimeFromQuery,
+    # DatetimeToQuery,
     QueryBaseModel,
     QueryBuilder,
 )
 
-from openaq_api.v3.models.responses import (
+from v3.models.responses import (
     LocationFlagsResponse,
 )
 
@@ -27,6 +27,7 @@ router = APIRouter(
     tags=["v3"],
     include_in_schema=True,
 )
+
 
 class DatetimePeriodQuery(QueryBaseModel):
     datetime_from: datetime | date | None = Query(
@@ -62,9 +63,6 @@ class DatetimePeriodQuery(QueryBaseModel):
             return f"{pd} && tstzrange(:datetime_from, 'infinity'::timestamptz, '[]')"
 
 
-
-
-
 class LocationFlagQuery(QueryBaseModel):
     locations_id: int = Path(
         ..., description="Limit the results to a specific locations", ge=1
@@ -83,13 +81,10 @@ class SensorFlagQuery(QueryBaseModel):
         return "ARRAY[:sensor_id::int] @> f.sensors_ids"
 
 
-class LocationFlagQueries(LocationFlagQuery, DatetimePeriodQuery, Paging):
-    ...
+class LocationFlagQueries(LocationFlagQuery, DatetimePeriodQuery, Paging): ...
 
 
-class SensorFlagQueries(SensorFlagQuery, DatetimePeriodQuery, Paging):
-    ...
-
+class SensorFlagQueries(SensorFlagQuery, DatetimePeriodQuery, Paging): ...
 
 
 @router.get(
@@ -114,13 +109,10 @@ async def location_flags_get(
     description="Provides a list of flags by sensor ID",
 )
 async def sensor_flags_get(
-    sensor_flags: Annotated[
-        SensorFlagQueries, Depends(SensorFlagQueries.depends())
-    ],
+    sensor_flags: Annotated[SensorFlagQueries, Depends(SensorFlagQueries.depends())],
     db: DB = Depends(),
 ):
     return await fetch_flags(sensor_flags, db)
-
 
 
 async def fetch_flags(q, db):

@@ -5,8 +5,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
 from pydantic import BaseModel, Field
 
-from openaq_api.db import DB
-from openaq_api.v3.models.queries import (
+from db import DB
+from v3.models.queries import (
     CommaSeparatedList,
     MobileQuery,
     MonitorQuery,

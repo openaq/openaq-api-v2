@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 def get_env():
-    parent = Path(__file__).resolve().parent.parent.parent
+    parent = Path(__file__).resolve().parent.parent
     env_file = Path.joinpath(parent, environ.get("DOTENV", ".env"))
     return env_file
 

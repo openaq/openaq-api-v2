@@ -7,12 +7,12 @@ import pytest
 from buildpg import render
 from pydantic import TypeAdapter
 
-from openaq_api.v3.routers.latest import (
+from v3.routers.latest import (
     ParameterLatestPathQuery,
     LocationLatestPathQuery,
     DatetimeMinQuery,
 )
-from openaq_api.v3.models.queries import (
+from v3.models.queries import (
     BboxQuery,
     CommaSeparatedList,
     CountryIdQuery,
@@ -35,7 +35,7 @@ from openaq_api.v3.models.queries import (
     SortingBase,
     truncate_float,
 )
-from openaq_api.v3.routers.locations import LocationPathQuery, LocationsQueries
+from v3.routers.locations import LocationPathQuery, LocationsQueries
 
 
 class TestTruncateFloat:
@@ -645,19 +645,27 @@ class TestDatetimeMinQuery:
         assert query.where() == None
 
     def test_has_date_value(self):
-        query = DatetimeMinQuery(datetime_min='2024-01-01')
+        query = DatetimeMinQuery(datetime_min="2024-01-01")
         params = query.model_dump()
         assert params == {"datetime_min": date(2024, 1, 1)}
-        assert query.where() == "datetime_last > (:datetime_min::timestamp AT TIME ZONE tzid)"
+        assert (
+            query.where()
+            == "datetime_last > (:datetime_min::timestamp AT TIME ZONE tzid)"
+        )
 
     def test_has_timestamp_value(self):
-        query = DatetimeMinQuery(datetime_min='2024-01-01 01:01:01')
+        query = DatetimeMinQuery(datetime_min="2024-01-01 01:01:01")
         params = query.model_dump()
         assert params == {"datetime_min": datetime(2024, 1, 1, 1, 1, 1)}
-        assert query.where() == "datetime_last > (:datetime_min::timestamp AT TIME ZONE tzid)"
+        assert (
+            query.where()
+            == "datetime_last > (:datetime_min::timestamp AT TIME ZONE tzid)"
+        )
 
     def test_has_timestamptz_value(self):
-        query = DatetimeMinQuery(datetime_min='2024-01-01 01:01:01-00:00')
+        query = DatetimeMinQuery(datetime_min="2024-01-01 01:01:01-00:00")
         params = query.model_dump()
-        assert params == {"datetime_min": datetime(2024, 1, 1, 1, 1, 1, tzinfo=ZoneInfo('UTC'))}
+        assert params == {
+            "datetime_min": datetime(2024, 1, 1, 1, 1, 1, tzinfo=ZoneInfo("UTC"))
+        }
         assert query.where() == "datetime_last > :datetime_min"

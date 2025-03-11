@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from .settings import settings
+from settings import settings
 from fastapi import Security, Response
 from starlette.requests import Request
 
@@ -8,12 +8,12 @@ from fastapi.security import (
     APIKeyHeader,
 )
 
-from openaq_api.models.logging import (
+from models.logging import (
     TooManyRequestsLog,
     UnauthorizedLog,
 )
 
-from openaq_api.exceptions import (
+from exceptions import (
     NOT_AUTHENTICATED_EXCEPTION,
     TOO_MANY_REQUESTS,
 )

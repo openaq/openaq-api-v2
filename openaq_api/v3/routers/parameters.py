@@ -4,8 +4,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
-from openaq_api.db import DB
-from openaq_api.v3.models.queries import (
+from db import DB
+from v3.models.queries import (
     BboxQuery,
     CountryIdQuery,
     CountryIsoQuery,
@@ -15,7 +15,7 @@ from openaq_api.v3.models.queries import (
     RadiusQuery,
     SortingBase,
 )
-from openaq_api.v3.models.responses import ParametersResponse
+from v3.models.responses import ParametersResponse
 
 logger = logging.getLogger("parameters")
 
