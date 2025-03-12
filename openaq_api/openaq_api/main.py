@@ -25,7 +25,7 @@ from middleware import (
 )
 from models.logging import InfrastructureErrorLog
 
-from settings import settings
+from openaq_api.settings import settings
 
 # V3 routers
 from v3.routers import (
