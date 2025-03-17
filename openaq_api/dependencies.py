@@ -15,7 +15,7 @@ from openaq_api.models.logging import (
 
 from openaq_api.exceptions import (
     NOT_AUTHENTICATED_EXCEPTION,
-    TOO_MANY_REQUESTS,
+    too_many_requests_with_headers,
 )
 
 logger = logging.getLogger("dependencies")
@@ -122,10 +122,13 @@ async def check_api_key(
             request.state.rate_limiter = (
                 f"{key}/{limit}/{requests_used}/{limit - requests_used}/{ttl}"
             )
-            response.headers["x-ratelimit-limit"] = str(limit)
-            response.headers["x-ratelimit-remaining"] = str(requests_used)
-            response.headers["x-ratelimit-used"] = str(limit - requests_used)
-            response.headers["x-ratelimit-reset"] = str(ttl)
+            rate_limit_headers = {
+                "x-ratelimit-limit": str(limit),
+                "x-ratelimit-remaining": str(requests_used),
+                "x-ratelimit-used": str(limit - requests_used),
+                "x-ratelimit-reset": str(ttl),
+            }
+            response.headers.update(rate_limit_headers)
 
             if limited:
                 logging.info(
@@ -134,7 +137,7 @@ async def check_api_key(
                         rate_limiter=f"{key}/{limit}/{requests_used}",
                     ).model_dump_json()
                 )
-                raise TOO_MANY_REQUESTS
+                raise too_many_requests_with_headers(rate_limit_headers)
 
             # it would be ideal if we were returing the user information right here
             # even it was just an email address it might be useful
