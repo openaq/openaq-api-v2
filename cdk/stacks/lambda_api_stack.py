@@ -133,7 +133,7 @@ class LambdaApiStack(Stack):
             self,
             f"openaq-api-{env_name}-lambda",
             code=aws_lambda.Code.from_asset(
-                path="../openaq_api",
+                path="../api",
                 exclude=[
                     "venv",
                     "__pycache__",
@@ -154,7 +154,7 @@ class LambdaApiStack(Stack):
                     self,
                     f"{env_name}",
                     "api",
-                    Path("../openaq_api/requirements.txt"),
+                    aws_lambda.Runtime.PYTHON_3_11,
                 ),
             ],
         )
@@ -271,7 +271,7 @@ class LambdaApiStack(Stack):
                         self,
                         f"{env_name}",
                         "cloudfront_logs",
-                        Path("../cloudfront_logs/requirements.txt"),
+                        aws_lambda.Runtime.PYTHON_3_11,
                     ),
                 ],
             )

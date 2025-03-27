@@ -109,7 +109,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="OpenAQ",
     description="OpenAQ API",
-    version="2.0.0",
+    version="3.0.0",
     default_response_class=ORJSONResponse,
     dependencies=[Depends(check_api_key)],
     docs_url="/docs",

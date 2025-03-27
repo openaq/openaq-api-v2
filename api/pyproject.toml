@@ -1,6 +1,6 @@
 [project]
 name = "openaq_api"
-version = "0.1.0"
+version = "3.0.0"
 description = "OpenAQ REST API"
 authors = [
     {name = "Russ Biggs",email = "russ@openaq.org"},
@@ -22,7 +22,8 @@ dependencies = [
     "aiocache (>=0.12.3,<0.13.0)",
     "pyhumps (>=3.8.0,<4.0.0)",
     "annotated-types (>=0.7.0,<0.8.0)",
-    "boto3 (>=1.37.10,<2.0.0)"
+    "boto3 (>=1.37.10,<2.0.0)",
+    "jinja2 (>=3.1.6,<4.0.0)"
 ]
 
 [tool.poetry.group.test.dependencies]

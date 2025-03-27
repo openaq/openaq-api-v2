@@ -3,7 +3,7 @@ name: Deploy staging
 on:
   push:
     branches:
-      - 'features/**'
+      - 'retired-versions-removal'  # 'features/**'
 
 jobs:
   deploy:

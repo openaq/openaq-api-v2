@@ -1,14 +1,19 @@
-from os import environ
-from pathlib import Path
+from os import environ, getcwd, path
 
 from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 def get_env():
-    parent = Path(__file__).resolve().parent.parent
-    env_file = Path.joinpath(parent, environ.get("DOTENV", ".env"))
-    return env_file
+    env_name = environ.get('DOTENV', '.env')
+    if not env_name.startswith(".env"):
+        env_name = f".env.{env_name}"
+    if path.basename(getcwd()) == 'openaq_api':
+        env_name = f"../../{env_name}"
+    elif path.basename(getcwd()) == 'cdk':
+        env_name = f"../{env_name}"
+    return env_name
+
 
 
 class Settings(BaseSettings):
