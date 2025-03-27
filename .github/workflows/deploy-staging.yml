@@ -88,4 +88,4 @@ jobs:
           poetry self add poetry-plugin-export
           poetry lock
           poetry install
-          cdk deploy openaq-api-staging --require-approval never
+          poetry run cdk deploy openaq-api-staging --require-approval never
