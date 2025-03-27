@@ -1,5 +1,5 @@
 [project]
-name = "cloudfront_logs"
+name = "cdk"
 version = "0.1.0"
 description = "OpenAQ REST API deployment"
 authors = [
