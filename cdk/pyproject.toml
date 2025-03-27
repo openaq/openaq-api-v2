@@ -1,0 +1,18 @@
+[project]
+name = "cloudfront_logs"
+version = "0.1.0"
+description = "OpenAQ REST API deployment"
+authors = [
+    {name = "Russ Biggs",email = "russ@openaq.org"},
+    {name = "Christian Parker", email = "chris@talloaks.io"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.11,<4.0"
+dependencies = [
+    "aws-cdk-lib (>=2.186.0,<3.0.0)"
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
