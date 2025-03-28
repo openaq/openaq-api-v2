@@ -3,13 +3,13 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path
 
-from db import DB
-from v3.models.queries import (
+from openaq_api.db import DB
+from openaq_api.v3.models.queries import (
     QueryBaseModel,
     QueryBuilder,
 )
 
-from v3.models.responses import (
+from openaq_api.v3.models.responses import (
     SensorsResponse,
 )
 

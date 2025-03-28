@@ -4,11 +4,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
-from db import DB
-from v3.routers.locations import LocationPathQuery, fetch_locations
-from v3.routers.parameters import fetch_parameters
-from v3.models.queries import QueryBaseModel, QueryBuilder, Paging
-from v3.models.responses import LatestResponse
+from openaq_api.db import DB
+from openaq_api.v3.routers.locations import LocationPathQuery, fetch_locations
+from openaq_api.v3.routers.parameters import fetch_parameters
+from openaq_api.v3.models.queries import QueryBaseModel, QueryBuilder, Paging
+from openaq_api.v3.models.responses import LatestResponse
 
 logger = logging.getLogger("latest")
 
@@ -168,17 +168,17 @@ async def fetch_latest(query, db):
                 ,'longitude', st_x(COALESCE(r.geom_latest, n.geom))
        ) AS coordinates
        {query_builder.total()}
-    FROM 
+    FROM
         sensors s
-    JOIN 
+    JOIN
         sensor_systems sy ON (s.sensor_systems_id = sy.sensor_systems_id)
-    JOIN 
+    JOIN
         sensor_nodes n ON (sy.sensor_nodes_id = n.sensor_nodes_id)
-    JOIN 
+    JOIN
         timezones t ON (n.timezones_id = t.timezones_id)
-    JOIN 
+    JOIN
         measurands m ON (s.measurands_id = m.measurands_id)
-    INNER JOIN 
+    INNER JOIN
         sensors_rollup r ON (s.sensors_id = r.sensors_id)
     {query_builder.where()}
     {query_builder.pagination()}

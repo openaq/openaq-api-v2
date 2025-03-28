@@ -5,8 +5,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
 from pydantic import BaseModel, Field
 
-from db import DB
-from v3.models.queries import (
+from openaq_api.db import DB
+from openaq_api.v3.models.queries import (
     CommaSeparatedList,
     MobileQuery,
     MonitorQuery,
@@ -163,13 +163,13 @@ async def fetch_tiles(query, db):
         locations AS (
             SELECT
                 locations_view_cached.id AS sensor_nodes_id
-                , locations_view_cached.ismobile 
-                , locations_view_cached.ismonitor 
+                , locations_view_cached.ismobile
+                , locations_view_cached.ismonitor
                 , sensors.measurands_id AS parameters_id
                 , ST_AsMVTGeom(ST_Transform(locations_view_cached.geom, 3857), tile) AS mvt
                 , sensors_rollup.value_latest AS value
                 , sensors_rollup.datetime_last > (NOW() - INTERVAL '48 hours' ) AS active
-                , (locations_view_cached.provider->'id')::int AS providers_id 
+                , (locations_view_cached.provider->'id')::int AS providers_id
             FROM
                 locations_view_cached
             JOIN
@@ -217,7 +217,7 @@ async def fetch_threshold_tiles(query, db):
             SELECT ST_TileEnvelope(:z,:x,:y) AS tile
         ),
         thresholds AS (
-            SELECT 
+            SELECT
                 sensor_nodes_id
                 , measurands_id
                 , days AS period
@@ -229,15 +229,15 @@ async def fetch_threshold_tiles(query, db):
         locations AS (
             SELECT
                 locations_view_cached.id AS sensor_nodes_id
-                , locations_view_cached.ismobile 
-                , locations_view_cached.ismonitor 
+                , locations_view_cached.ismobile
+                , locations_view_cached.ismonitor
                 , sensors.measurands_id AS measurands_id
                 , ST_AsMVTGeom(ST_Transform(locations_view_cached.geom, 3857), tile) AS mvt
                 , thresholds.exceedance
-                , thresholds.period    
-                , thresholds.threshold       
+                , thresholds.period
+                , thresholds.threshold
                 , sensors_rollup.datetime_last > (NOW() - INTERVAL '48 hours' ) AS active
-                , (locations_view_cached.provider->'id')::int AS providers_id 
+                , (locations_view_cached.provider->'id')::int AS providers_id
             FROM
                 locations_view_cached
             JOIN

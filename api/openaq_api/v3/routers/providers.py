@@ -4,8 +4,8 @@ from enum import StrEnum, auto
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
-from db import DB
-from v3.models.queries import (
+from openaq_api.db import DB
+from openaq_api.v3.models.queries import (
     BboxQuery,
     CountryIdQuery,
     CountryIsoQuery,
@@ -17,7 +17,7 @@ from v3.models.queries import (
     RadiusQuery,
     SortingBase,
 )
-from v3.models.responses import ProvidersResponse
+from openaq_api.v3.models.responses import ProvidersResponse
 
 logger = logging.getLogger("providers")
 

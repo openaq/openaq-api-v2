@@ -4,14 +4,14 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
-from db import DB
-from v3.models.queries import (
+from openaq_api.db import DB
+from openaq_api.v3.models.queries import (
     Paging,
     QueryBaseModel,
     QueryBuilder,
     SortingBase,
 )
-from v3.models.responses import InstrumentsResponse
+from openaq_api.v3.models.responses import InstrumentsResponse
 
 logger = logging.getLogger("instruments")
 
@@ -129,32 +129,32 @@ async def fetch_instruments(query, db):
     query_builder = QueryBuilder(query)
     sql = f"""
         WITH locations_summary AS (
-            SELECT 
+            SELECT
                 i.instruments_id
-            FROM 
-                sensor_nodes sn 
-            JOIN 
+            FROM
+                sensor_nodes sn
+            JOIN
                 sensor_systems ss ON sn.sensor_nodes_id = ss.sensor_nodes_id
-            JOIN 
-                instruments i ON i.instruments_id = ss.instruments_id  
+            JOIN
+                instruments i ON i.instruments_id = ss.instruments_id
 
             GROUP BY i.instruments_id
         )
-        SELECT 
+        SELECT
             instruments_id AS id
             , label AS name
             , is_monitor
-            , json_build_object('id', e.entities_id, 'name', e.full_name) AS manufacturer         
-        FROM 
-            instruments i 
-        JOIN 
+            , json_build_object('id', e.entities_id, 'name', e.full_name) AS manufacturer
+        FROM
+            instruments i
+        JOIN
             locations_summary USING (instruments_id)
-        JOIN 
-            entities e 
-        ON 
+        JOIN
+            entities e
+        ON
             i.manufacturer_entities_id = e.entities_id
             {query_builder.where()}
-        ORDER BY 
+        ORDER BY
             instruments_id
         {query_builder.pagination()};
 

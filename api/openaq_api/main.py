@@ -17,18 +17,18 @@ from mangum import Mangum
 from pydantic import BaseModel, ValidationError
 from starlette.responses import JSONResponse, RedirectResponse
 
-from db import db_pool
-from dependencies import check_api_key
-from middleware import (
+from openaq_api.db import db_pool
+from openaq_api.dependencies import check_api_key
+from openaq_api.middleware import (
     CacheControlMiddleware,
     LoggingMiddleware,
 )
-from models.logging import InfrastructureErrorLog
+from openaq_api.models.logging import InfrastructureErrorLog
 
 from openaq_api.settings import settings
 
 # V3 routers
-from v3.routers import (
+from openaq_api.v3.routers import (
     auth,
     countries,
     instruments,

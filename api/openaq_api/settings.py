@@ -6,11 +6,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 def get_env():
     env_name = environ.get('DOTENV', '.env')
+    dir_name = path.basename(getcwd())
     if not env_name.startswith(".env"):
         env_name = f".env.{env_name}"
-    if path.basename(getcwd()) == 'openaq_api':
+    if dir_name == 'openaq_api':
         env_name = f"../../{env_name}"
-    elif path.basename(getcwd()) == 'cdk':
+    elif dir_name == 'api':
+        env_name = f"../{env_name}"
+    elif dir_name == 'cdk':
         env_name = f"../{env_name}"
     return env_name
 

@@ -3,8 +3,8 @@ from typing import Annotated
 from enum import StrEnum, auto
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 
-from db import DB
-from v3.models.queries import (
+from openaq_api.db import DB
+from openaq_api.v3.models.queries import (
     BboxQuery,
     CountryIdQuery,
     CountryIsoQuery,
@@ -22,7 +22,7 @@ from v3.models.queries import (
     RadiusQuery,
     SortingBase,
 )
-from v3.models.responses import LocationsResponse
+from openaq_api.v3.models.responses import LocationsResponse
 
 logger = logging.getLogger("locations")
 

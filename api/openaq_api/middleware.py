@@ -4,7 +4,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.types import ASGIApp
 
-from models.logging import (
+from openaq_api.models.logging import (
     HTTPLog,
     LogType,
 )

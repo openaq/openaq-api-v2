@@ -13,13 +13,13 @@ def dictstr(item):
 
 
 def stringify_settings(data: dict):
-    return dict(map(dictstr, data.model_dump().items()))
+    return dict(map(dictstr, data.model_dump(exclude_unset=True).items()))
 
 
 def create_dependencies_layer(
     self,
     env_name: str,
-    functio_name: str,
+    function_name: str,
     python_version,
 ) -> aws_lambda.LayerVersion:
     output_dir = f"../.build/{function_name}"
@@ -30,7 +30,7 @@ def create_dependencies_layer(
         ## migrate to the package/function directory to export and install
         subprocess.run(
             f"""
-             cd ./{function_name} && poetry export --only main -o requirements.txt --without-hashes && \
+             cd ../{function_name} && poetry export --only main -o requirements.txt --without-hashes && \
              poetry run python -m pip install -qq -r requirements.txt \
              -t {output_dir}/python && \
              cd {output_dir} && \

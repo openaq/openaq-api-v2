@@ -129,7 +129,7 @@ class LambdaApiStack(Stack):
         if lambda_sec_group:
             security_groups = [lambda_sec_group]
 
-        openaq_api = aws_lambda.Function(
+        api_lambda = aws_lambda.Function(
             self,
             f"openaq-api-{env_name}-lambda",
             code=aws_lambda.Code.from_asset(
@@ -140,7 +140,7 @@ class LambdaApiStack(Stack):
                     "pytest_cache",
                 ],
             ),
-            handler="main.handler",
+            handler="openaq_api.main.handler",
             runtime=aws_lambda.Runtime.PYTHON_3_11,
             architecture=aws_lambda.Architecture.X86_64,
             vpc=vpc,
@@ -159,7 +159,7 @@ class LambdaApiStack(Stack):
             ],
         )
 
-        add_to_role_policy(
+        api_lambda.add_to_role_policy(
             aws_iam.PolicyStatement(
                 actions=["ses:SendEmail", "SES:SendRawEmail"],
                 resources=["*"],
@@ -188,7 +188,7 @@ class LambdaApiStack(Stack):
             create_default_stage=True,
             default_integration=HttpLambdaIntegration(
                 f"openaq-api-integration-{env_name}",
-                openaq_api,
+                api_lambda,
             ),
         )
 

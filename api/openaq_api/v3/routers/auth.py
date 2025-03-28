@@ -9,10 +9,10 @@ import boto3
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.templating import Jinja2Templates
 
-from db import DB
-from models.logging import ErrorLog, InfoLog, SESEmailLog
-from settings import settings
-from v3.models.responses import JsonBase
+from openaq_api.db import DB
+from openaq_api.models.logging import ErrorLog, InfoLog, SESEmailLog
+from openaq_api.settings import settings
+from openaq_api.v3.models.responses import JsonBase
 
 logger = logging.getLogger("auth")
 

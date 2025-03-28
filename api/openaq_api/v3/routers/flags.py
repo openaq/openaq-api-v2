@@ -7,16 +7,14 @@ from fastapi.exceptions import RequestValidationError
 
 from pydantic import model_validator
 
-from db import DB
-from v3.models.queries import (
+from openaq_api.db import DB
+from openaq_api.v3.models.queries import (
     Paging,
-    # DatetimeFromQuery,
-    # DatetimeToQuery,
     QueryBaseModel,
     QueryBuilder,
 )
 
-from v3.models.responses import (
+from openaq_api.v3.models.responses import (
     LocationFlagsResponse,
 )
 
