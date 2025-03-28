@@ -90,7 +90,6 @@ jobs:
           REDIS_SECURITY_GROUP_ID: ${{ env.STAGING_REDIS_SECURITY_GROUP_ID }}
           WAF_RATE_LIMIT_EVALUATION_WINDOW: ${{ secrets.WAF_RATE_LIMIT_EVALUATION_WINDOW }}
           WAF_RATE_LIMIT: ${{ secrets.WAF_RATE_LIMIT }}
-          WAF_BLOCK_IPS: ${{ secrets.WAF_BLOCK_IPS }}
 
         working-directory: ./cdk
         run: |
