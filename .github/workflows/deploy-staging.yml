@@ -29,7 +29,7 @@ jobs:
 
       - uses: actions/setup-node@v3
         with:
-          node-version: "18"
+          node-version: "22"
 
       - name: build pages
         working-directory: ./pages
@@ -39,7 +39,7 @@ jobs:
 
       - name: Install CDK
         run: |
-          npm install -g aws-cdk@2.92.0
+          npm install -g aws-cdk
 
       - uses: actions/setup-python@v3
         with:
