@@ -92,10 +92,6 @@ jobs:
           WAF_RATE_LIMIT: ${{ secrets.WAF_RATE_LIMIT }}
           WAF_BLOCK_IPS: ${{ secrets.WAF_BLOCK_IPS }}
 
-          WAF_RATE_LIMIT_EVALUATION_WINDOW: ${{ env.STAGING_WAF_RATE_LIMIT_EVALUATION_WINDOW }}
-          WAF_RATE_LIMIT: ${{ env.STAGING_WAF_RATE_LIMIT }}
-          WAF_BLOCK_IPS: ${{ env.STAGING_WAF_BLOCK_IPS }}
-
         working-directory: ./cdk
         run: |
           poetry self add poetry-plugin-export
