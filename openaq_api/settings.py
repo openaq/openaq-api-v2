@@ -10,8 +10,6 @@ def get_env():
     if not env_name.startswith(".env"):
         env_name = f".env.{env_name}"
     if dir_name == 'openaq_api':
-        env_name = f"../../{env_name}"
-    elif dir_name == 'api':
         env_name = f"../{env_name}"
     elif dir_name == 'cdk':
         env_name = f"../{env_name}"

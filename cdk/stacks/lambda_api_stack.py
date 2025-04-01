@@ -133,7 +133,7 @@ class LambdaApiStack(Stack):
             self,
             f"openaq-api-{env_name}-lambda",
             code=aws_lambda.Code.from_asset(
-                path="../api",
+                path="../openaq_api",
                 exclude=[
                     "venv",
                     "__pycache__",
@@ -153,7 +153,7 @@ class LambdaApiStack(Stack):
                 create_dependencies_layer(
                     self,
                     f"{env_name}",
-                    "api",
+                    "openaq_api",
                     aws_lambda.Runtime.PYTHON_3_11,
                 ),
             ],
