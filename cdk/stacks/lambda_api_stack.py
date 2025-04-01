@@ -133,11 +133,17 @@ class LambdaApiStack(Stack):
             self,
             f"openaq-api-{env_name}-lambda",
             code=aws_lambda.Code.from_asset(
-                path="../openaq_api",
+                path="..",
                 exclude=[
                     "venv",
+                    "tests",
                     "__pycache__",
                     "pytest_cache",
+                    ".*",
+                    "*.md",
+                    "cdk",
+                    "cloudfront_logs",
+                    "pages",
                 ],
             ),
             handler="openaq_api.main.handler",
