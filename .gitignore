@@ -11,3 +11,4 @@ openaq_api/openaq_api/static/assets/*
 .python-version
 Pipfile
 /openaq_api/venv/
+venv*
