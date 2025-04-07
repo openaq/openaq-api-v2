@@ -44,7 +44,7 @@ async def check_api_key(
 ):
     """
     Check for an api key and then to see if they are rate limited. Throws a
-    `not authenticated` or `to many reqests` error if appropriate.
+    `not authenticated` or `too many reqests` error if appropriate.
     Meant to be used as a dependency either at the app, router or function level
     """
     route = request.url.path
