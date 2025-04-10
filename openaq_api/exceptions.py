@@ -8,13 +8,7 @@ NOT_AUTHENTICATED_EXCEPTION = HTTPException(
     detail="Invalid credentials",
 )
 
-TOO_MANY_REQUESTS = HTTPException(
-    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-    detail="Too many requests",
-)
-
-
-def too_many_requests_with_headers(headers):
+def TOO_MANY_REQUESTS(headers=None):
     return HTTPException(
         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
         detail="Too many requests",
