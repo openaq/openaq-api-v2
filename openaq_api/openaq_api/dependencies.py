@@ -16,7 +16,7 @@ from openaq_api.models.logging import (
 
 from openaq_api.exceptions import (
     NOT_AUTHENTICATED_EXCEPTION,
-    too_many_requests_with_headers,
+    TOO_MANY_REQUESTS,
 )
 
 logger = logging.getLogger("dependencies")
@@ -140,7 +140,7 @@ async def check_api_key(
                         rate_limiter=f"{key}/{limit}/{requests_used}",
                     ).model_dump_json()
                 )
-                raise too_many_requests_with_headers(rate_limit_headers)
+                raise TOO_MANY_REQUESTS(rate_limit_headers)
 
             # it would be ideal if we were returing the user information right here
             # even it was just an email address it might be useful
