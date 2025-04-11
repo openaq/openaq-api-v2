@@ -39,11 +39,14 @@ jobs:
 
       - name: Install CDK
         run: |
-          npm install -g aws-cdk@2.177.0
+          npm install -g aws-cdk
 
       - uses: actions/setup-python@v3
         with:
           python-version: '3.11'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
 
       - name: Deploy stack
         env:
@@ -89,5 +92,7 @@ jobs:
 
         working-directory: ./cdk
         run: |
-          pip install -r requirements.txt
-          cdk deploy openaq-api-aeolus --require-approval never
+          poetry self add poetry-plugin-export
+          poetry lock
+          poetry install
+          poetry run cdk deploy openaq-api-aeolus --require-approval never

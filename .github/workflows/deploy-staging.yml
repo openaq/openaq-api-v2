@@ -3,7 +3,7 @@ name: Deploy staging
 on:
   push:
     branches:
-      - 'features/**'
+      - 'retired-versions-removal'  # 'features/**'
 
 jobs:
   deploy:
@@ -29,7 +29,7 @@ jobs:
 
       - uses: actions/setup-node@v3
         with:
-          node-version: "18"
+          node-version: "20"
 
       - name: build pages
         working-directory: ./pages
@@ -39,11 +39,14 @@ jobs:
 
       - name: Install CDK
         run: |
-          npm install -g aws-cdk@2.92.0
+          npm install -g aws-cdk
 
       - uses: actions/setup-python@v3
         with:
           python-version: '3.11'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
 
       - name: Deploy stack
         env:
@@ -63,15 +66,17 @@ jobs:
 
           VPC_ID: ${{ env.STAGING_VPC_ID }}
 
+          HOSTED_ZONE_ID: ${{ env.STAGING_HOSTED_ZONE_ID }}
+          HOSTED_ZONE_NAME: ${{ env.STAGING_HOSTED_ZONE_NAME }}
+          DOMAIN_NAME: ${{ env.STAGING_DOMAIN_NAME }}
+          CERTIFICATE_ARN: ${{ env.STAGING_CERTIFICATE_ARN }}
+
           RATE_LIMITING: True
           RATE_AMOUNT: 10
           RATE_AMOUNT_KEY: 60
           RATE_TIME: 1
           USER_AGENT: ${{ env.STAGING_USER_AGENT }}
           ORIGIN: ${{ env.STAGING_ORIGIN }}
-          REDIS_HOST: ${{ env.STAGING_REDIS_HOST }}
-          REDIS_PORT: ${{ env.STAGING_REDIS_PORT }}
-          REDIS_SECURITY_GROUP_ID: ${{ env.STAGING_REDIS_SECURITY_GROUP_ID }}
 
           EMAIL_SENDER: ${{ env.STAGING_EMAIL_SENDER }}
           SMTP_EMAIL_HOST: ${{ env.STAGING_SMTP_EMAIL_HOST }}
@@ -80,7 +85,15 @@ jobs:
 
           EXPLORER_API_KEY: ${{ env.STAGING_EXPLORER_API_KEY }}
 
+          REDIS_HOST: ${{ env.STAGING_REDIS_HOST }}
+          REDIS_PORT: ${{ env.STAGING_REDIS_PORT }}
+          REDIS_SECURITY_GROUP_ID: ${{ env.STAGING_REDIS_SECURITY_GROUP_ID }}
+          WAF_RATE_LIMIT_EVALUATION_WINDOW: ${{ secrets.WAF_RATE_LIMIT_EVALUATION_WINDOW }}
+          WAF_RATE_LIMIT: ${{ secrets.WAF_RATE_LIMIT }}
+
         working-directory: ./cdk
         run: |
-          pip install -r requirements.txt
-          cdk deploy openaq-api-staging --require-approval never
+          poetry self add poetry-plugin-export
+          poetry lock
+          poetry install
+          poetry run cdk deploy openaq-api-staging --require-approval never

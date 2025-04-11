@@ -14,7 +14,7 @@ from settings import settings
 import os
 import sys
 
-p = os.path.abspath("../openaq_api")
+p = os.path.abspath("../api")
 sys.path.insert(1, p)
 from openaq_api.settings import settings as lambda_env
 

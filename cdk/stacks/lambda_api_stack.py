@@ -129,15 +129,21 @@ class LambdaApiStack(Stack):
         if lambda_sec_group:
             security_groups = [lambda_sec_group]
 
-        openaq_api = aws_lambda.Function(
+        api_lambda = aws_lambda.Function(
             self,
             f"openaq-api-{env_name}-lambda",
             code=aws_lambda.Code.from_asset(
-                path="../openaq_api",
+                path="..",
                 exclude=[
                     "venv",
+                    "tests",
                     "__pycache__",
                     "pytest_cache",
+                    ".*",
+                    "*.md",
+                    "cdk",
+                    "cloudfront_logs",
+                    "pages",
                 ],
             ),
             handler="openaq_api.main.handler",
@@ -153,13 +159,13 @@ class LambdaApiStack(Stack):
                 create_dependencies_layer(
                     self,
                     f"{env_name}",
-                    "api",
-                    Path("../openaq_api/requirements.txt"),
+                    "openaq_api",
+                    aws_lambda.Runtime.PYTHON_3_11,
                 ),
             ],
         )
 
-        openaq_api.add_to_role_policy(
+        api_lambda.add_to_role_policy(
             aws_iam.PolicyStatement(
                 actions=["ses:SendEmail", "SES:SendRawEmail"],
                 resources=["*"],
@@ -188,7 +194,7 @@ class LambdaApiStack(Stack):
             create_default_stage=True,
             default_integration=HttpLambdaIntegration(
                 f"openaq-api-integration-{env_name}",
-                openaq_api,
+                api_lambda,
             ),
         )
 
@@ -271,7 +277,7 @@ class LambdaApiStack(Stack):
                         self,
                         f"{env_name}",
                         "cloudfront_logs",
-                        Path("../cloudfront_logs/requirements.txt"),
+                        aws_lambda.Runtime.PYTHON_3_11,
                     ),
                 ],
             )
