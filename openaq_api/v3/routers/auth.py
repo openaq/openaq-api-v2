@@ -27,11 +27,11 @@ router = APIRouter(
 )
 
 
-def send_email(full_name: str, destination_email: str, msg: EmailMessage):
+def send_email(destination_email: str, msg: EmailMessage, full_name: str | None):
     if settings.USE_SMTP_EMAIL:
         return send_smtp_email(destination_email, msg)
     else:
-        return send_ses_email(destination_email, msg)
+        return send_ses_email(full_name, destination_email, msg)
 
 
 def send_smtp_email(msg: EmailMessage):
@@ -119,7 +119,7 @@ def send_verification_email(verification_code: str, full_name: str, email: str):
     msg["Subject"] = "OpenAQ Explorer - Verify your email"
     msg["From"] = settings.EMAIL_SENDER
     msg["To"] = email
-    response = send_email(email, msg)
+    response = send_email(email, msg, full_name)
     logger.info(
         SESEmailLog(
             detail=json.dumps(
