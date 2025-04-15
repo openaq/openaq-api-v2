@@ -295,6 +295,7 @@ async def post_send_verification(
         logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
     except Exception as e:
         logger.error(ErrorLog(detail=str(e)))
+        return HTTPException(500, detail=str(e))
 
 
 class ResendVerificationEmailBody(JsonBase):
