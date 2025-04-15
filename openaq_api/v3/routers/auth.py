@@ -27,7 +27,7 @@ router = APIRouter(
 )
 
 
-def send_email(destination_email: str, msg: EmailMessage, full_name: str | None):
+def send_email(destination_email: str, msg: EmailMessage, full_name: str | None = None):
     if settings.USE_SMTP_EMAIL:
         return send_smtp_email(msg)
     else:
@@ -76,7 +76,7 @@ def send_change_password_email(full_name: str, email: str):
     msg["Subject"] = "OpenAQ Explorer - Password changed"
     msg["From"] = settings.EMAIL_SENDER
     msg["To"] = email
-    response = send_email(full_name, email, msg)
+    response = send_email(email, msg, full_name)
     logger.info(
         SESEmailLog(
             detail=json.dumps(
@@ -319,6 +319,7 @@ async def resend_verification_email(
         logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
     except Exception as e:
         logger.error(ErrorLog(detail=str(e)))
+        return HTTPException(500, detail=str(e))
 
 
 class PasswordResetEmailBody(JsonBase):
@@ -337,6 +338,7 @@ async def request_password_reset_email(
         logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
     except Exception as e:
         logger.error(ErrorLog(detail=str(e)))
+        return HTTPException(500, detail=str(e))
 
 
 @router.post("/send-password-changed-email")
@@ -349,6 +351,7 @@ async def password_changed_email(
         logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
     except Exception as e:
         logger.error(ErrorLog(detail=str(e)))
+        return HTTPException(500, detail=str(e))
 
 
 class VerifyBody(JsonBase):
@@ -387,5 +390,9 @@ async def change_password_email(
         return HTTPException(401, "invalid user")
     full_name = user[0][0]
     email_address = user[0][1]
-    response = send_change_password_email(full_name, email_address)
-    logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
+    try:
+        response = send_change_password_email(full_name, email_address)
+        logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
+    except Exception as e:
+        logger.error(ErrorLog(detail=str(e)))
+        return HTTPException(500, detail=str(e))
