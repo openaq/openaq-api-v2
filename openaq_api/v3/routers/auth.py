@@ -290,8 +290,11 @@ async def post_send_verification(
     full_name = user[0][0]
     email_address = user[0][1]
     verification_code = user[0][2]
-    response = send_verification_email(verification_code, full_name, email_address)
-    logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
+    try:
+        response = send_verification_email(verification_code, full_name, email_address)
+        logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
+    except Exception as e:
+        logger.error(ErrorLog(detail=str(e)))
 
 
 class ResendVerificationEmailBody(JsonBase):
@@ -304,15 +307,17 @@ async def resend_verification_email(
     body: ResendVerificationEmailBody,
     db: DB = Depends(),
 ):
-    user = await db.get_user(body.users_id)
-    if not user:
-        return HTTPException(401, "invalid user")
-    if user[0][2] != body.verification_code:
-        return HTTPException(401, "invalid verification code")
-    print(user[0][1])
-    verification_code = await db.generate_verification_code(user[0][1])
-    response = send_verification_email(verification_code, user[0][0], user[0][1])
-    logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
+    try:
+        user = await db.get_user(body.users_id)
+        if not user:
+            return HTTPException(401, "invalid user")
+        if user[0][2] != body.verification_code:
+            return HTTPException(401, "invalid verification code")
+        verification_code = await db.generate_verification_code(user[0][1])
+        response = send_verification_email(verification_code, user[0][0], user[0][1])
+        logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
+    except Exception as e:
+        logger.error(ErrorLog(detail=str(e)))
 
 
 class PasswordResetEmailBody(JsonBase):
@@ -325,9 +330,12 @@ async def request_password_reset_email(
     db: DB = Depends(),
 ):
     email_address = body.email_address
-    verification_code = await db.generate_verification_code(email_address)
-    response = send_password_reset_email(verification_code, email_address)
-    logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
+    try:
+        verification_code = await db.generate_verification_code(email_address)
+        response = send_password_reset_email(verification_code, email_address)
+        logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
+    except Exception as e:
+        logger.error(ErrorLog(detail=str(e)))
 
 
 @router.post("/send-password-changed-email")
@@ -335,8 +343,11 @@ async def password_changed_email(
     body: PasswordResetEmailBody,
 ):
     email_address = body.email_address
-    response = send_password_changed_email(email_address)
-    logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
+    try:
+        response = send_password_changed_email(email_address)
+        logger.info(InfoLog(detail=json.dumps(response)).model_dump_json())
+    except Exception as e:
+        logger.error(ErrorLog(detail=str(e)))
 
 
 class VerifyBody(JsonBase):
