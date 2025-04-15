@@ -29,7 +29,7 @@ router = APIRouter(
 
 def send_email(destination_email: str, msg: EmailMessage, full_name: str | None):
     if settings.USE_SMTP_EMAIL:
-        return send_smtp_email(destination_email, msg)
+        return send_smtp_email(msg)
     else:
         return send_ses_email(full_name, destination_email, msg)
 
