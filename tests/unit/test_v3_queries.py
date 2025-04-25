@@ -7,12 +7,12 @@ import pytest
 from buildpg import render
 from pydantic import TypeAdapter
 
-from v3.routers.latest import (
+from openaq_api.v3.routers.latest import (
     ParameterLatestPathQuery,
     LocationLatestPathQuery,
     DatetimeMinQuery,
 )
-from v3.models.queries import (
+from openaq_api.v3.models.queries import (
     BboxQuery,
     CommaSeparatedList,
     CountryIdQuery,
@@ -35,7 +35,7 @@ from v3.models.queries import (
     SortingBase,
     truncate_float,
 )
-from v3.routers.locations import LocationPathQuery, LocationsQueries
+from openaq_api.v3.routers.locations import LocationPathQuery, LocationsQueries
 
 
 class TestTruncateFloat:
