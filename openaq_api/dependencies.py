@@ -37,11 +37,19 @@ def in_allowed_list(route: str) -> bool:
     return False
 
 
+def set_rate_limit_headers(response, limit, requests_used, ttl):
+    response.headers["x-ratelimit-limit"] = str(limit)
+    response.headers["x-ratelimit-remaining"] = str(requests_used)
+    response.headers["x-ratelimit-used"] = str(limit - requests_used)
+    response.headers["x-ratelimit-reset"] = str(ttl)
+
+
 async def check_api_key(
     request: Request,
     response: Response,
     api_key=Security(APIKeyHeader(name="X-API-Key", auto_error=False)),
 ):
+    print("✅ check_api_key called")
     """
     Check for an api key and then to see if they are rate limited. Throws a
     `not authenticated` or `too many reqests` error if appropriate.
@@ -69,7 +77,6 @@ async def check_api_key(
             )
             raise NOT_AUTHENTICATED_EXCEPTION
         else:
-
             # check valid key
             if await redis.sismember("keys", api_key) == 0:
                 logging.info(
@@ -118,14 +125,12 @@ async def check_api_key(
                 )
                 limited = True
                 requests_used = int(value)
+
             ttl = await redis.ttl(key)
             request.state.rate_limiter = (
                 f"{key}/{limit}/{requests_used}/{limit - requests_used}/{ttl}"
             )
-            response.headers["x-ratelimit-limit"] = str(limit)
-            response.headers["x-ratelimit-remaining"] = str(requests_used)
-            response.headers["x-ratelimit-used"] = str(limit - requests_used)
-            response.headers["x-ratelimit-reset"] = str(ttl)
+            set_rate_limit_headers(response, limit, requests_used, ttl)
 
             if limited:
                 logging.info(

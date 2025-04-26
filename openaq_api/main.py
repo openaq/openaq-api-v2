@@ -5,6 +5,10 @@ import time
 from os import environ
 from pathlib import Path
 from typing import Any
+from fastapi import Response
+from fastapi import HTTPException
+from fastapi.responses import JSONResponse
+
 
 import orjson
 from fastapi import FastAPI, Request, Depends
@@ -50,6 +54,9 @@ logging.basicConfig(
     level=settings.LOG_LEVEL.upper(),
     force=True,
 )
+
+settings.RATE_LIMITING = True
+
 # When debuging we dont want to debug these libraries
 logging.getLogger("boto3").setLevel(logging.WARNING)
 logging.getLogger("botocore").setLevel(logging.WARNING)
@@ -116,6 +123,35 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+@app.get("/fake429", include_in_schema=False)
+def fake_429(response: Response):
+    headers = {
+        "X-RateLimit-Limit": "60",
+        "X-RateLimit-Remaining": "0",
+        "X-RateLimit-Reset": "1714100000"
+    }
+    raise HTTPException(status_code=429, detail="Rate limit exceeded", headers=headers)
+
+@app.get("/_test-redis-error", include_in_schema=False)
+async def test_redis_error_route(
+    request: Request, 
+    response: Response, 
+    api_key: str = Depends(check_api_key)
+):
+    return {"status": "ok", "api_key": api_key}
+
+@app.get("/metrics/timing", include_in_schema=False)
+async def get_timing_metrics():
+    stats = getattr(app.state, "endpoint_stats", {})
+    result = {}
+    for key, val in stats.items():
+        avg = val["total_time_ms"] / val["count"]
+        result[key] = {
+            "count": val["count"],
+            "avg_ms": round(avg, 2),
+        }
+    return JSONResponse(result)
+
 
 app.redis = None
 if settings.RATE_LIMITING is True:
@@ -132,6 +168,7 @@ if settings.RATE_LIMITING is True:
             )
             # attach to the app so it can be retrieved via the request
             app.redis = redis_client
+            app.state.redis = redis_client
             logger.debug("Redis connected")
 
         except Exception as e:
@@ -235,6 +272,7 @@ def run():
             logger.debug("waiting for database to start")
             time.sleep(3)
             pass
+
 
 
 if __name__ == "__main__":
