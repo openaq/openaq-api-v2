@@ -49,7 +49,7 @@ async def check_api_key(
     """
     route = request.url.path
     # no checking or limiting for whitelistted routes
-    logger.debug(settings.EXPLORER_API_KEY)
+    logger.debug(f'Explorer api key: {settings.EXPLORER_API_KEY}')
     if in_allowed_list(route):
         return api_key
     elif api_key == settings.EXPLORER_API_KEY:
@@ -92,40 +92,41 @@ async def check_api_key(
             key = f"{api_key}:{now.year}{now.month}{now.day}{now.hour}{now.minute}"
             # if the that key is in our redis db it will return the number of requests
             # that key has made during the current minute
-            value = await redis.get(key)
+            requests_used = await redis.get(key)
 
-            if value is None:
+            if requests_used is None:
                 # if the value is none than we need to add that key to the redis db
                 # and set it, increment it and set it to timeout/delete is 60 seconds
                 logger.debug("redis no key for current minute so not limited")
                 async with redis.pipeline() as pipe:
-                    [incr, _] = await pipe.incr(key).expire(key, 60).execute()
-                    requests_used = limit - incr
-            elif int(value) < limit:
+                    [requests_used, _] = await pipe.incr(key).expire(key, 60).execute()
+            elif int(requests_used) < limit:
                 # if that key does exist and the value is below the allowed number of requests
                 # wea re going to increment it and move on
                 logger.debug(
-                    f"redis - has key for current minute value ({value}) < limit ({limit})"
+                    f"redis - has key for current minute ({requests_used}) < limit ({limit})"
                 )
                 async with redis.pipeline() as pipe:
-                    [incr] = await pipe.incr(key).execute()
-                    requests_used = limit - incr
+                    [requests_used] = await pipe.incr(key).execute()
             else:
                 # otherwise the user is over their limit and so we are going to throw a 429
                 # after we set the headers
                 logger.debug(
-                    f"redis - has key for current minute and value ({value}) >= limit ({limit})"
+                    f"redis - has key for current minute ({requests_used}) >= limit ({limit})"
                 )
                 limited = True
-                requests_used = int(value)
+
             ttl = await redis.ttl(key)
             request.state.rate_limiter = (
-                f"{key}/{limit}/{requests_used}/{limit - requests_used}/{ttl}"
+                f"{key}/{limit}/{requests_used}/{limit - int(requests_used)}/{ttl}"
             )
-            response.headers["x-ratelimit-limit"] = str(limit)
-            response.headers["x-ratelimit-remaining"] = str(requests_used)
-            response.headers["x-ratelimit-used"] = str(limit - requests_used)
-            response.headers["x-ratelimit-reset"] = str(ttl)
+            rate_limit_headers = {
+                "x-ratelimit-limit": str(limit),
+                "x-ratelimit-used": str(requests_used),
+                "x-ratelimit-remaining": str(limit - int(requests_used)),
+                "x-ratelimit-reset": str(ttl),
+            }
+            response.headers.update(rate_limit_headers)
 
             if limited:
                 logging.info(
@@ -134,7 +135,7 @@ async def check_api_key(
                         rate_limiter=f"{key}/{limit}/{requests_used}",
                     ).model_dump_json()
                 )
-                raise TOO_MANY_REQUESTS
+                raise TOO_MANY_REQUESTS(rate_limit_headers)
 
             # it would be ideal if we were returing the user information right here
             # even it was just an email address it might be useful

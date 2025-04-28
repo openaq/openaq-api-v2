@@ -1,7 +1,7 @@
 import pytest
 from datetime import date
 
-from v3.models.utils import fix_date
+from openaq_api.v3.models.utils import fix_date
 
 
 def test_infinity_date():
