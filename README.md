@@ -55,6 +55,12 @@ LOG_LEVEL=debug \
 poetry run uvicorn openaq_api.main:app --reload --lifespan on
 ```
 
+## Testing
+From the root directory
+```bash
+DOTENV=local poetry run pytest tests/
+```
+
 ## Rate limiting
 
 In the production environment, rate limiting is handled in two places, AWS WAF and at the application level with [Starlette Middleware](https://www.starlette.io/middleware/). The application rate limiting is configurable via environment variables. The rate limiting middleware requires access to an instance of a [redis](https://redis.io/) cluster. For local development, [docker](https://www.docker.com/) can be a convenient method to set up a local redis cluster. With docker, use the following command:
