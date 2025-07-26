@@ -33,7 +33,10 @@ class ManufacturerInstrumentsQuery(QueryBaseModel):
     """
 
     manufacturers_id: int = Path(
-        ..., description="Limit results to a specific manufacturer id", ge=1
+        ...,
+        description="Limit results to a specific manufacturer id",
+        ge=1,
+        le=2147483647,
     )
 
     def where(self) -> str:
@@ -50,7 +53,10 @@ class InstrumentPathQuery(QueryBaseModel):
     """
 
     instruments_id: int = Path(
-        ..., description="Limit the results to a specific instruments id", ge=1
+        ...,
+        description="Limit the results to a specific instruments id",
+        ge=1,
+        le=2147483647,
     )
 
     def where(self) -> str:
