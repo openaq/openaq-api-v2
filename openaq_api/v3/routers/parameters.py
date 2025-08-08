@@ -2,9 +2,10 @@ import logging
 from enum import StrEnum, auto
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, Path, Query
 
 from openaq_api.db import DB
+from openaq_api.exceptions import NotFoundException
 from openaq_api.v3.models.queries import (
     BboxQuery,
     CountryIdQuery,
@@ -15,7 +16,7 @@ from openaq_api.v3.models.queries import (
     RadiusQuery,
     SortingBase,
 )
-from openaq_api.v3.models.responses import ParametersResponse
+from openaq_api.v3.models.responses import ParametersResponse, additional_responses
 
 logger = logging.getLogger("parameters")
 
@@ -143,14 +144,15 @@ class ParametersQueries(
     response_model=ParametersResponse,
     summary="Get a parameter by ID",
     description="Provides a parameter by parameter ID",
+    responses=additional_responses("parameter", True),
 )
 async def parameter_get(
-    parameter: Annotated[ParameterPathQuery, Depends(ParameterPathQuery.depends())],
+    parameters: Annotated[ParameterPathQuery, Depends(ParameterPathQuery.depends())],
     db: DB = Depends(),
 ) -> ParametersResponse:
-    response = await fetch_parameters(parameter, db)
+    response = await fetch_parameters(parameters, db)
     if len(response.results) == 0:
-        raise HTTPException(status_code=404, detail="Parameter not found")
+        raise NotFoundException("Parameter", parameters.parameters_id)
     return response
 
 
@@ -159,6 +161,7 @@ async def parameter_get(
     response_model=ParametersResponse,
     summary="Get a parameters",
     description="Provides a list of parameters",
+    responses=additional_responses("parameter"),
 )
 async def parameters_get(
     parameter: Annotated[ParametersQueries, Depends(ParametersQueries.depends())],

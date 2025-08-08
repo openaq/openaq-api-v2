@@ -1,9 +1,10 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Depends, Path
 
 from openaq_api.db import DB
+from openaq_api.exceptions import NotFoundException
 from openaq_api.v3.models.queries import (
     QueryBaseModel,
     QueryBuilder,
@@ -11,7 +12,9 @@ from openaq_api.v3.models.queries import (
 
 from openaq_api.v3.models.responses import (
     SensorsResponse,
+    additional_responses,
 )
+from openaq_api.v3.routers.locations import fetch_locations
 
 logger = logging.getLogger("sensors")
 
@@ -45,6 +48,7 @@ class LocationSensorQuery(QueryBaseModel):
     response_model=SensorsResponse,
     summary="Get sensors by location ID",
     description="Provides a list of sensors by location ID",
+    responses=additional_responses("location", True),
 )
 async def sensors_get(
     location_sensors: Annotated[
@@ -52,7 +56,12 @@ async def sensors_get(
     ],
     db: DB = Depends(),
 ):
-    return await fetch_sensors(location_sensors, db)
+    response = await fetch_sensors(location_sensors, db)
+    if not response.results:
+        locations_response = fetch_locations(location_sensors, db)
+        if not locations_response.results:
+            raise NotFoundException("Locations", location_sensors.sensors_id)
+    return response
 
 
 @router.get(
@@ -60,6 +69,7 @@ async def sensors_get(
     response_model=SensorsResponse,
     summary="Get a sensor by ID",
     description="Provides a sensor by sensor ID",
+    responses=additional_responses("sensor", True),
 )
 async def sensor_get(
     sensors: Annotated[SensorPathQuery, Depends(SensorPathQuery.depends())],
@@ -67,7 +77,7 @@ async def sensor_get(
 ):
     response = await fetch_sensors(sensors, db)
     if len(response.results) == 0:
-        raise HTTPException(status_code=404, detail="Sensor not found")
+        raise NotFoundException("Sensor", sensors.sensors_id)
     return response
 
 

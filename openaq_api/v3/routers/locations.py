@@ -1,9 +1,10 @@
 import logging
 from typing import Annotated
 from enum import StrEnum, auto
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
+from fastapi import APIRouter, Depends, Path, Query, Request
 
 from openaq_api.db import DB
+from openaq_api.exceptions import NotFoundException
 from openaq_api.v3.models.queries import (
     BboxQuery,
     CountryIdQuery,
@@ -22,7 +23,10 @@ from openaq_api.v3.models.queries import (
     RadiusQuery,
     SortingBase,
 )
-from openaq_api.v3.models.responses import LocationsResponse
+from openaq_api.v3.models.responses import (
+    LocationsResponse,
+    additional_responses,
+)
 
 logger = logging.getLogger("locations")
 
@@ -92,6 +96,7 @@ class LocationsQueries(
     response_model=LocationsResponse,
     summary="Get a location by ID",
     description="Provides a location by location ID",
+    responses=additional_responses("location", True),
 )
 async def location_get(
     locations: Annotated[LocationPathQuery, Depends(LocationPathQuery.depends())],
@@ -100,7 +105,7 @@ async def location_get(
 ):
     response = await fetch_locations(locations, db)
     if len(response.results) == 0:
-        raise HTTPException(status_code=404, detail="Location not found")
+        raise NotFoundException("Location", locations.locations_id)
     return response
 
 
@@ -109,6 +114,7 @@ async def location_get(
     response_model=LocationsResponse,
     summary="Get locations",
     description="Provides a list of locations",
+    responses=additional_responses("location"),
 )
 async def locations_get(
     locations: Annotated[LocationsQueries, Depends(LocationsQueries.depends())],
@@ -143,6 +149,5 @@ async def fetch_locations(query, db):
     {query_builder.order_by()}
     {query_builder.pagination()}
     """
-    print("SQL", sql)
     response = await db.fetchPage(sql, query_builder.params())
     return response

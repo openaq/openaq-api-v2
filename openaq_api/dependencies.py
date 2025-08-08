@@ -14,8 +14,8 @@ from openaq_api.models.logging import (
 )
 
 from openaq_api.exceptions import (
-    NOT_AUTHENTICATED_EXCEPTION,
-    TOO_MANY_REQUESTS,
+    TooManyRequestsException,
+    UnauthorizedException,
 )
 
 logger = logging.getLogger("dependencies")
@@ -49,7 +49,7 @@ async def check_api_key(
     """
     route = request.url.path
     # no checking or limiting for whitelistted routes
-    logger.debug(f'Explorer api key: {settings.EXPLORER_API_KEY}')
+    logger.debug(f"Explorer api key: {settings.EXPLORER_API_KEY}")
     if in_allowed_list(route):
         return api_key
     elif api_key == settings.EXPLORER_API_KEY:
@@ -67,7 +67,7 @@ async def check_api_key(
                     request=request, detail="api key not provided"
                 ).model_dump_json()
             )
-            raise NOT_AUTHENTICATED_EXCEPTION
+            raise UnauthorizedException()
         else:
 
             # check valid key
@@ -77,7 +77,7 @@ async def check_api_key(
                         request=request, detail="api key not found"
                     ).model_dump_json()
                 )
-                raise NOT_AUTHENTICATED_EXCEPTION
+                raise UnauthorizedException()
             # check api key
             limit = await redis.hget(api_key, "rate")
             try:
@@ -135,7 +135,7 @@ async def check_api_key(
                         rate_limiter=f"{key}/{limit}/{requests_used}",
                     ).model_dump_json()
                 )
-                raise TOO_MANY_REQUESTS(rate_limit_headers)
+                raise TooManyRequestsException(rate_limit_headers)
 
             # it would be ideal if we were returing the user information right here
             # even it was just an email address it might be useful
