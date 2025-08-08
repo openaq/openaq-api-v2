@@ -7,6 +7,7 @@ from pydantic import model_validator
 from datetime import date, timedelta
 
 from openaq_api.db import DB
+from openaq_api.exceptions import NotFoundException
 from openaq_api.v3.models.queries import (
     DateFromQuery,
     DateToQuery,
@@ -22,7 +23,9 @@ from openaq_api.v3.models.responses import (
     HourlyDataResponse,
     DailyDataResponse,
     AnnualDataResponse,
+    additional_responses,
 )
+from openaq_api.v3.routers.sensors import fetch_sensors
 
 logger = logging.getLogger("measurements")
 
@@ -100,6 +103,7 @@ class PagedDateQueries(
     response_model=MeasurementsResponse,
     summary="Get measurements by sensor ID",
     description="Provides a list of measurements by sensor ID",
+    responses=additional_responses("sensor", True),
 )
 async def sensor_measurements_get(
     sensors: Annotated[PagedDatetimeQueries, Depends(PagedDatetimeQueries.depends())],
@@ -107,6 +111,10 @@ async def sensor_measurements_get(
 ):
     query = QueryBuilder(sensors)
     response = await fetch_measurements(query, db)
+    if not response.results:
+        sensors_response = await fetch_sensors(sensors, db)
+        if not sensors_response.results:
+            raise NotFoundException("Sensors", sensors.sensors_id)
     return response
 
 
@@ -115,6 +123,7 @@ async def sensor_measurements_get(
     response_model=MeasurementsResponse,
     summary="Get measurements aggregated to hours by sensor ID",
     description="Provides a list of measurements by sensor ID",
+    responses=additional_responses("sensor", True),
 )
 async def sensor_measurements_aggregated_get_hourly(
     sensors: Annotated[PagedDatetimeQueries, Depends(PagedDatetimeQueries.depends())],
@@ -123,6 +132,10 @@ async def sensor_measurements_aggregated_get_hourly(
     aggregate_to = "hour"
     query = QueryBuilder(sensors)
     response = await fetch_measurements_aggregated(query, aggregate_to, db)
+    if not response.results:
+        sensors_response = await fetch_sensors(sensors, db)
+        if not sensors_response.results:
+            raise NotFoundException("Sensors", sensors.sensors_id)
     return response
 
 
@@ -131,6 +144,7 @@ async def sensor_measurements_aggregated_get_hourly(
     response_model=MeasurementsResponse,
     summary="Get measurements aggregated to days by sensor ID",
     description="Provides a list of measurements by sensor ID",
+    responses=additional_responses("sensor", True),
 )
 async def sensor_measurements_aggregated_get_daily(
     sensors: Annotated[PagedDatetimeQueries, Depends(PagedDatetimeQueries.depends())],
@@ -139,6 +153,10 @@ async def sensor_measurements_aggregated_get_daily(
     aggregate_to = "day"
     query = QueryBuilder(sensors)
     response = await fetch_measurements_aggregated(query, aggregate_to, db)
+    if not response.results:
+        sensors_response = await fetch_sensors(sensors, db)
+        if not sensors_response.results:
+            raise NotFoundException("Sensors", sensors.sensors_id)
     return response
 
 
@@ -147,6 +165,7 @@ async def sensor_measurements_aggregated_get_daily(
     response_model=HourlyDataResponse,
     summary="Get measurements aggregated to hour by sensor ID",
     description="Provides a list of hourly data by sensor ID",
+    responses=additional_responses("sensor", True),
 )
 async def sensor_hourly_measurements_get(
     sensors: Annotated[PagedDatetimeQueries, Depends(PagedDatetimeQueries.depends())],
@@ -154,6 +173,10 @@ async def sensor_hourly_measurements_get(
 ):
     query = QueryBuilder(sensors)
     response = await fetch_hours(query, db)
+    if not response.results:
+        sensors_response = await fetch_sensors(sensors, db)
+        if not sensors_response.results:
+            raise NotFoundException("Sensors", sensors.sensors_id)
     return response
 
 
@@ -162,6 +185,7 @@ async def sensor_hourly_measurements_get(
     response_model=HourlyDataResponse,
     summary="Get measurements aggregated from hour to day by sensor ID",
     description="Provides a list of daily summaries of hourly data by sensor ID",
+    responses=additional_responses("sensor", True),
 )
 async def sensor_hourly_measurements_aggregate_to_day_get(
     sensors: Annotated[PagedDatetimeQueries, Depends(PagedDatetimeQueries.depends())],
@@ -170,6 +194,10 @@ async def sensor_hourly_measurements_aggregate_to_day_get(
     aggregate_to = "day"
     query = QueryBuilder(sensors)
     response = await fetch_hours_aggregated(query, aggregate_to, db)
+    if not response.results:
+        sensors_response = await fetch_sensors(sensors, db)
+        if not sensors_response.results:
+            raise NotFoundException("Sensors", sensors.sensors_id)
     return response
 
 
@@ -178,6 +206,7 @@ async def sensor_hourly_measurements_aggregate_to_day_get(
     response_model=HourlyDataResponse,
     summary="Get measurements aggregated from hour to month by sensor ID",
     description="Provides a list of daily summaries of hourly data by sensor ID",
+    responses=additional_responses("sensor", True),
 )
 async def sensor_hourly_measurements_aggregate_to_month_get(
     sensors: Annotated[PagedDatetimeQueries, Depends(PagedDatetimeQueries.depends())],
@@ -186,6 +215,10 @@ async def sensor_hourly_measurements_aggregate_to_month_get(
     aggregate_to = "month"
     query = QueryBuilder(sensors)
     response = await fetch_hours_aggregated(query, aggregate_to, db)
+    if not response.results:
+        sensors_response = await fetch_sensors(sensors, db)
+        if not sensors_response.results:
+            raise NotFoundException("Sensors", sensors.sensors_id)
     return response
 
 
@@ -194,6 +227,7 @@ async def sensor_hourly_measurements_aggregate_to_month_get(
     response_model=HourlyDataResponse,
     summary="Get measurements aggregated from hour to year by sensor ID",
     description="Provides a list of yearly summaries of hourly data by sensor ID",
+    responses=additional_responses("sensor", True),
 )
 async def sensor_hourly_measurements_aggregate_to_year_get(
     sensors: Annotated[PagedDatetimeQueries, Depends(PagedDatetimeQueries.depends())],
@@ -202,6 +236,10 @@ async def sensor_hourly_measurements_aggregate_to_year_get(
     aggregate_to = "year"
     query = QueryBuilder(sensors)
     response = await fetch_hours_aggregated(query, aggregate_to, db)
+    if not response.results:
+        sensors_response = await fetch_sensors(sensors, db)
+        if not sensors_response.results:
+            raise NotFoundException("Sensors", sensors.sensors_id)
     return response
 
 
@@ -210,6 +248,7 @@ async def sensor_hourly_measurements_aggregate_to_year_get(
     response_model=HourlyDataResponse,
     summary="Get measurements aggregated from hour to day of week by sensor ID",
     description="Provides a list of yearly summaries of hourly data by sensor ID",
+    responses=additional_responses("sensor", True),
 )
 async def sensor_hourly_measurements_aggregate_to_hod_get(
     sensors: Annotated[BaseDatetimeQueries, Depends(BaseDatetimeQueries.depends())],
@@ -219,6 +258,10 @@ async def sensor_hourly_measurements_aggregate_to_hod_get(
     query = QueryBuilder(sensors)
     logger.debug(query)
     response = await fetch_hours_trends(aggregate_to, query, db)
+    if not response.results:
+        sensors_response = await fetch_sensors(sensors, db)
+        if not sensors_response.results:
+            raise NotFoundException("Sensors", sensors.sensors_id)
     return response
 
 
@@ -227,6 +270,7 @@ async def sensor_hourly_measurements_aggregate_to_hod_get(
     response_model=HourlyDataResponse,
     summary="Get measurements aggregated from hour to day of week by sensor ID",
     description="Provides a list of yearly summaries of hourly data by sensor ID",
+    responses=additional_responses("sensor", True),
 )
 async def sensor_hourly_measurements_aggregate_to_dow_get(
     sensors: Annotated[BaseDatetimeQueries, Depends(BaseDatetimeQueries.depends())],
@@ -235,6 +279,10 @@ async def sensor_hourly_measurements_aggregate_to_dow_get(
     aggregate_to = "dow"
     query = QueryBuilder(sensors)
     response = await fetch_hours_trends(aggregate_to, query, db)
+    if not response.results:
+        sensors_response = await fetch_sensors(sensors, db)
+        if not sensors_response.results:
+            raise NotFoundException("Sensors", sensors.sensors_id)
     return response
 
 
@@ -243,6 +291,7 @@ async def sensor_hourly_measurements_aggregate_to_dow_get(
     response_model=HourlyDataResponse,
     summary="Get measurements aggregated from hour to day of week by sensor ID",
     description="Provides a list of yearly summaries of hourly data by sensor ID",
+    responses=additional_responses("sensor", True),
 )
 async def sensor_hourly_measurements_aggregate_to_moy_get(
     sensors: Annotated[BaseDatetimeQueries, Depends(BaseDatetimeQueries.depends())],
@@ -251,6 +300,10 @@ async def sensor_hourly_measurements_aggregate_to_moy_get(
     aggregate_to = "moy"
     query = QueryBuilder(sensors)
     response = await fetch_hours_trends(aggregate_to, query, db)
+    if not response.results:
+        sensors_response = await fetch_sensors(sensors, db)
+        if not sensors_response.results:
+            raise NotFoundException("Sensors", sensors.sensors_id)
     return response
 
 
@@ -259,6 +312,7 @@ async def sensor_hourly_measurements_aggregate_to_moy_get(
     response_model=HourlyDataResponse,
     summary="Get measurements aggregated from day to day of week by sensor ID",
     description="Provides a list of yearly summaries of dayly data by sensor ID",
+    responses=additional_responses("sensor", True),
 )
 async def sensor_daily_measurements_aggregate_to_dow_get(
     sensors: Annotated[BaseDateQueries, Depends(BaseDateQueries.depends())],
@@ -267,6 +321,10 @@ async def sensor_daily_measurements_aggregate_to_dow_get(
     aggregate_to = "dow"
     query = QueryBuilder(sensors)
     response = await fetch_days_trends(aggregate_to, query, db)
+    if not response.results:
+        sensors_response = await fetch_sensors(sensors, db)
+        if not sensors_response.results:
+            raise NotFoundException("Sensors", sensors.sensors_id)
     return response
 
 
@@ -275,6 +333,7 @@ async def sensor_daily_measurements_aggregate_to_dow_get(
     response_model=HourlyDataResponse,
     summary="Get measurements aggregated from day to day of week by sensor ID",
     description="Provides a list of yearly summaries of daily data by sensor ID",
+    responses=additional_responses("sensor", True),
 )
 async def sensor_daily_measurements_aggregate_to_moy_get(
     sensors: Annotated[BaseDateQueries, Depends(BaseDateQueries.depends())],
@@ -283,6 +342,10 @@ async def sensor_daily_measurements_aggregate_to_moy_get(
     aggregate_to = "moy"
     query = QueryBuilder(sensors)
     response = await fetch_days_trends(aggregate_to, query, db)
+    if not response.results:
+        sensors_response = await fetch_sensors(sensors, db)
+        if not sensors_response.results:
+            raise NotFoundException("Sensors", sensors.sensors_id)
     return response
 
 
@@ -291,6 +354,7 @@ async def sensor_daily_measurements_aggregate_to_moy_get(
     response_model=DailyDataResponse,
     summary="Get measurements aggregated to day by sensor ID",
     description="Provides a list of daily data by sensor ID",
+    responses=additional_responses("sensor", True),
 )
 async def sensor_daily_get(
     sensors: Annotated[PagedDateQueries, Depends(PagedDateQueries.depends())],
@@ -298,6 +362,10 @@ async def sensor_daily_get(
 ):
     query = QueryBuilder(sensors)
     response = await fetch_days(query, db)
+    if not response.results:
+        sensors_response = await fetch_sensors(sensors, db)
+        if not sensors_response.results:
+            raise NotFoundException("Sensors", sensors.sensors_id)
     return response
 
 
@@ -306,6 +374,7 @@ async def sensor_daily_get(
     response_model=HourlyDataResponse,
     summary="Get measurements aggregated from hour to month by sensor ID",
     description="Provides a list of daily summaries of hourly data by sensor ID",
+    responses=additional_responses("sensor", True),
 )
 async def sensor_daily_aggregate_to_month_get(
     sensors: Annotated[PagedDateQueries, Depends(PagedDateQueries.depends())],
@@ -314,6 +383,10 @@ async def sensor_daily_aggregate_to_month_get(
     aggregate_to = "month"
     query = QueryBuilder(sensors)
     response = await fetch_days_aggregated(query, aggregate_to, db)
+    if not response.results:
+        sensors_response = await fetch_sensors(sensors, db)
+        if not sensors_response.results:
+            raise NotFoundException("Sensors", sensors.sensors_id)
     return response
 
 
@@ -322,6 +395,7 @@ async def sensor_daily_aggregate_to_month_get(
     response_model=HourlyDataResponse,
     summary="Get measurements aggregated from day to year by sensor ID",
     description="Provides a list of yearly summaries of daily data by sensor ID",
+    responses=additional_responses("sensor", True),
 )
 async def sensor_daily_aggregate_to_year_get(
     sensors: Annotated[PagedDateQueries, Depends(PagedDateQueries.depends())],
@@ -330,6 +404,10 @@ async def sensor_daily_aggregate_to_year_get(
     aggregate_to = "year"
     query = QueryBuilder(sensors)
     response = await fetch_days_aggregated(query, aggregate_to, db)
+    if not response.results:
+        sensors_response = await fetch_sensors(sensors, db)
+        if not sensors_response.results:
+            raise NotFoundException("Sensors", sensors.sensors_id)
     return response
 
 
@@ -338,6 +416,7 @@ async def sensor_daily_aggregate_to_year_get(
     response_model=AnnualDataResponse,
     summary="Get measurements aggregated to year by sensor ID",
     description="Provides a list of annual data by sensor ID",
+    responses=additional_responses("sensor", True),
 )
 async def sensor_yearly_get(
     sensors: Annotated[PagedDateQueries, Depends(PagedDateQueries.depends())],
@@ -345,6 +424,10 @@ async def sensor_yearly_get(
 ):
     query = QueryBuilder(sensors)
     response = await fetch_years(query, db)
+    if not response.results:
+        sensors_response = await fetch_sensors(sensors, db)
+        if not sensors_response.results:
+            raise NotFoundException("Sensors", sensors.sensors_id)
     return response
 
 

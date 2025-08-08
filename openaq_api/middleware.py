@@ -1,5 +1,8 @@
 import logging
 import time
+from http import HTTPMethod
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import ORJSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.types import ASGIApp
@@ -8,6 +11,7 @@ from openaq_api.models.logging import (
     HTTPLog,
     LogType,
 )
+from openaq_api.v3.models.responses import MethodNotAllowedError
 
 logger = logging.getLogger("middleware")
 

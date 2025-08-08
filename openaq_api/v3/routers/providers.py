@@ -2,9 +2,10 @@ import logging
 from typing import Annotated
 from enum import StrEnum, auto
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, Path, Query
 
 from openaq_api.db import DB
+from openaq_api.exceptions import NotFoundException
 from openaq_api.v3.models.queries import (
     BboxQuery,
     CountryIdQuery,
@@ -17,7 +18,7 @@ from openaq_api.v3.models.queries import (
     RadiusQuery,
     SortingBase,
 )
-from openaq_api.v3.models.responses import ProvidersResponse
+from openaq_api.v3.models.responses import ProvidersResponse, additional_responses
 
 logger = logging.getLogger("providers")
 
@@ -95,6 +96,7 @@ class ProvidersQueries(
     response_model=ProvidersResponse,
     summary="Get a provider by ID",
     description="Provides a provider by provider ID",
+    responses=additional_responses("provider", True),
 )
 async def provider_get(
     providers: Annotated[ProviderPathQuery, Depends(ProviderPathQuery.depends())],
@@ -102,7 +104,7 @@ async def provider_get(
 ):
     response = await fetch_providers(providers, db)
     if len(response.results) == 0:
-        raise HTTPException(status_code=404, detail="Provider not found")
+        raise NotFoundException("Provider", providers.providers_id)
     return response
 
 
@@ -111,6 +113,7 @@ async def provider_get(
     response_model=ProvidersResponse,
     summary="Get providers",
     description="Provides a list of providers",
+    responses=additional_responses("provider"),
 )
 async def providers_get(
     provider: Annotated[ProvidersQueries, Depends(ProvidersQueries.depends())],

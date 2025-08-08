@@ -1,5 +1,6 @@
 import inspect
 import itertools
+import json
 import logging
 import operator
 import types
@@ -14,7 +15,7 @@ import fastapi
 import humps
 from annotated_types import Interval
 from fastapi import Path, Query
-from fastapi.exceptions import HTTPException
+from fastapi.exceptions import HTTPException, RequestValidationError
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -25,7 +26,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from pydantic_core import CoreSchema, core_schema
+from pydantic_core import CoreSchema, ErrorDetails, core_schema
 
 
 logger = logging.getLogger("queries")
@@ -469,7 +470,21 @@ class CountryIsoQuery(QueryBaseModel):
         countries_id = values.get("countries_id", None)
         iso = values.get("iso", None)
         if countries_id is not None and iso is not None:
-            raise ValueError("Cannot pass both countries_id and iso code")
+            countries_id_error_details = ErrorDetails(
+                type="mutually_exclusive_params.countries_id",
+                loc=("query", "iso"),
+                input=countries_id,
+                msg="Cannot pass both countries_id and iso code",
+            )
+            iso_error_details = ErrorDetails(
+                type="mutually_exclusive_params.iso",
+                loc=("query", "countries_id"),
+                input=iso,
+                msg="Cannot pass both countries_id and iso code",
+            )
+            raise RequestValidationError(
+                errors=[iso_error_details, countries_id_error_details]
+            )
         return values
 
     def where(self) -> str | None:
@@ -727,18 +742,32 @@ class RadiusQuery(QueryBaseModel):
         """Vadidates that coordinates are within range [-180,180],[-90,90].
 
         Raises:
-            ValueError: if `coordinates` x value is outside range [-180, 180] or
+            RequestValidationError: if `coordinates` x value is outside range [-180, 180] or
             or if y value is outside range [-90,90]
         """
         if v:
             errors = []
             lat, lng = [float(x) for x in v.split(",")]
             if lat > 90 or lat < -90:
-                errors.append("foo")
+                errors.append(
+                    ErrorDetails(
+                        type="coordinates_range.latitude",
+                        loc=("query", "coordinates"),
+                        input=v,
+                        msg="Latitude values must be within range -90 to 90",
+                    )
+                )
             if lng > 180 or lng < -180:
-                errors.append("foo")
+                errors.append(
+                    ErrorDetails(
+                        type="coordinates_range.longitude",
+                        loc=("query", "coordinates"),
+                        input=v,
+                        msg="Longitude values must be within range -180 to 180",
+                    )
+                )
             if errors:
-                raise ValueError(f"Invalid coordinates. Error(s): {' '.join(errors)}")
+                raise RequestValidationError(errors=errors)
         return v
 
     @model_validator(mode="before")
@@ -750,7 +779,7 @@ class RadiusQuery(QueryBaseModel):
         `radius`/`coordinates` is set `bbox` is not also set.
 
         Raises:
-            ValueError: if `bbox` is set and `coordinates` and `radius` are
+            RequestValidationError: if `bbox` is set and `coordinates` and `radius` are
             set or if `coordinates` is set but `radius` is not set or if
             `coordinates` is not set but `radius` is set.
         """
@@ -758,13 +787,55 @@ class RadiusQuery(QueryBaseModel):
         coordinates = values.get("coordinates", None)
         radius = values.get("radius", None)
         if bbox is not None and (coordinates is not None or radius is not None):
-            raise ValueError(
-                "Cannot pass both bounding box and coordinate/radius query in the same URL"
+            message = "Cannot pass both bounding box and coordinate and/or radius query parameter(s) in the same URL"
+            errors = []
+            errors.append(
+                ErrorDetails(
+                    type="mutually_exclusive_params.bbox",
+                    loc=("query", "bbox"),
+                    input=bbox,
+                    msg=message,
+                )
             )
+            if radius is not None:
+                errors.append(
+                    ErrorDetails(
+                        type="mutually_exclusive_params.radius",
+                        loc=("query", "radius"),
+                        input=radius,
+                        msg=message,
+                    )
+                )
+            if coordinates is not None:
+                errors.append(
+                    ErrorDetails(
+                        type="mutually_exclusive_params.coordinates",
+                        loc=("query", "coordinates"),
+                        input=coordinates,
+                        msg=message,
+                    )
+                )
+            raise RequestValidationError(errors=errors)
         if coordinates is not None and radius is None:
-            raise ValueError("Coordinates must be passed with a radius")
+            errors = [
+                ErrorDetails(
+                    type="missing_required_companion.radius",
+                    loc=("query", "radius"),
+                    input=radius,
+                    msg="Coordinates must be passed with a radius",
+                )
+            ]
+            raise RequestValidationError(errors=errors)
         if coordinates is None and radius is not None:
-            raise ValueError("Radius must be passed with a coordinate pair")
+            errors = [
+                ErrorDetails(
+                    type="missing_required_companion.coordinates",
+                    loc=("query", "coordinates"),
+                    input=coordinates,
+                    msg="Radius must be passed with a coordinate pair",
+                )
+            ]
+            raise RequestValidationError(errors=errors)
         return values
 
     def fields(self, geometry_field: str = "geog") -> str | None:
@@ -835,7 +906,7 @@ class BboxQuery(QueryBaseModel):
         """Validates `bbox` values are in correct order and within range.
 
         Raises:
-            ValueError: if `bbox` is not in correct order or values fall outside
+            RequestValidationError: if `bbox` is not in correct order or values fall outside
             coordinate range.
         """
         if v:
@@ -843,19 +914,61 @@ class BboxQuery(QueryBaseModel):
             bbox = [float(x) for x in v.split(",")]
             minx, miny, maxx, maxy = bbox
             if not (minx >= -180 and minx <= 180):
-                errors.append("X min must be between -180 and 180")
+                errors.append(
+                    ErrorDetails(
+                        type="bbox_range.minx",
+                        loc=("query", "bbox"),
+                        input=bbox,
+                        msg="Bounding box X min must be between -180 and 180",
+                    )
+                )
             if not (miny >= -90 and miny <= 90):
-                errors.append("Y min must be between -90 and 90")
+                errors.append(
+                    ErrorDetails(
+                        type="bbox_range.miny",
+                        loc=("query", "bbox"),
+                        input=bbox,
+                        msg="Bounding box Y min must be between -90 and 90",
+                    )
+                )
             if not (maxx >= -180 and maxx <= 180):
-                errors.append("X max must be between -180 and 180")
+                errors.append(
+                    ErrorDetails(
+                        type="bbox_range.maxx",
+                        loc=("query", "bbox"),
+                        input=bbox,
+                        msg="Bounding box X max must be between -180 and 180",
+                    )
+                )
             if not (maxy >= -90 and maxy <= 90):
-                errors.append("Y max must be between -90 and 90")
+                errors.append(
+                    ErrorDetails(
+                        type="bbox_range.maxy",
+                        loc=("query", "bbox"),
+                        input=bbox,
+                        msg="Bounding box Y max must be between -90 and 90",
+                    )
+                )
             if minx > maxx:
-                errors.append("X max must be greater than or equal to X min")
+                errors.append(
+                    ErrorDetails(
+                        type="bbox_order.minx",
+                        loc=("query", "bbox"),
+                        input=bbox,
+                        msg="Bounding box X max must be greater than or equal to X min",
+                    )
+                )
             if miny > maxy:
-                errors.append("Y max must be greater than or equal to Y min")
+                errors.append(
+                    ErrorDetails(
+                        type="bbox_order.miny",
+                        loc=("query", "bbox"),
+                        input=bbox,
+                        msg="Bounding box Y max must be greater than or equal to Y min",
+                    )
+                )
             if errors:
-                raise ValueError("Invalid bounding box. Error(s): " + " ".join(errors))
+                raise RequestValidationError(errors=errors)
         return v
 
     @computed_field(return_type=float | None)

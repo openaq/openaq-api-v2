@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
 from openaq_api.db import DB
+from openaq_api.exceptions import NotFoundException
 from openaq_api.v3.models.queries import (
     Paging,
     ParametersQuery,
@@ -13,7 +14,7 @@ from openaq_api.v3.models.queries import (
     QueryBuilder,
     SortingBase,
 )
-from openaq_api.v3.models.responses import CountriesResponse
+from openaq_api.v3.models.responses import CountriesResponse, additional_responses
 
 logger = logging.getLogger("countries")
 
@@ -69,6 +70,7 @@ class CountriesQueries(Paging, ParametersQuery, ProviderQuery, CountriesSorting)
     response_model=CountriesResponse,
     summary="Get a country by ID",
     description="Provides a country by country ID",
+    responses=additional_responses("country", True),
 )
 async def country_get(
     countries: Annotated[CountryPathQuery, Depends(CountryPathQuery)],
@@ -76,7 +78,7 @@ async def country_get(
 ):
     response = await fetch_countries(countries, db)
     if len(response.results) == 0:
-        raise HTTPException(status_code=404, detail="Country not found")
+        raise NotFoundException("Country", countries.countries_id)
     return response
 
 
@@ -85,6 +87,7 @@ async def country_get(
     response_model=CountriesResponse,
     summary="Get countries",
     description="Provides a list of countries",
+    responses=additional_responses("country"),
 )
 async def countries_get(
     countries: Annotated[CountriesQueries, Depends(CountriesQueries.depends())],

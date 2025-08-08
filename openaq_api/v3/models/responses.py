@@ -1,14 +1,156 @@
 from datetime import datetime, date
-from typing import Any, List
+from typing import Any, Dict, List, Literal
+from urllib.parse import urljoin
 
+
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import ORJSONResponse
 from humps import camelize
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .utils import fix_date
 
 
+DOCS_BASE_URL = "https://docs.openaq.org"
+
+
 class JsonBase(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=camelize)
+
+
+class HTTPErrorResponse(JsonBase):
+    status_code: int
+    detail: str
+    docs_url: str
+
+    def to_response(self) -> ORJSONResponse:
+        return ORJSONResponse(
+            status_code=self.status_code,
+            content=jsonable_encoder(self),
+        )
+
+
+class RequestValidationExceptionError(JsonBase):
+    input: str
+    location: tuple[str | int, ...]
+    message: str
+
+
+class BadRequestError(HTTPErrorResponse):
+    status_code: Literal[400] = 400
+    docs_url: str = urljoin(DOCS_BASE_URL, "errors/bad-request")
+
+
+class NotAuthorizedError(HTTPErrorResponse):
+    status_code: Literal[401] = 401
+    docs_url: str = urljoin(DOCS_BASE_URL, "errors/unauthorized")
+
+
+class ForbiddenError(HTTPErrorResponse):
+    status_code: Literal[403] = 403
+    docs_url: str = urljoin(DOCS_BASE_URL, "errors/forbidden")
+
+
+class NotFoundError(HTTPErrorResponse):
+    status_code: Literal[404] = 404
+    docs_url: str = urljoin(DOCS_BASE_URL, "errors/not-found")
+
+
+class MethodNotAllowedError(HTTPErrorResponse):
+    status_code: Literal[405] = 405
+    docs_url: str = urljoin(DOCS_BASE_URL, "errors/method-not-allowed")
+
+
+class RequestTimeoutError(HTTPErrorResponse):
+    status_code: Literal[408] = 408
+    docs_url: str = urljoin(DOCS_BASE_URL, "errors/request-timeout")
+
+
+class UnprocessableContentError(HTTPErrorResponse):
+    status_code: Literal[422] = 422
+    docs_url: str = urljoin(DOCS_BASE_URL, "errors/unprocessable-content")
+    errors: List[RequestValidationExceptionError]
+
+
+class TooManyRequestsError(HTTPErrorResponse):
+    status_code: Literal[429] = 429
+    docs_url: str = urljoin(DOCS_BASE_URL, "errors/too-many-requests")
+
+
+class NotImplementedError(HTTPErrorResponse):
+    status_code: Literal[501] = 501
+    docs_url: str = urljoin(DOCS_BASE_URL, "errors/not-implemented")
+
+
+class BadGatewayError(HTTPErrorResponse):
+    status_code: Literal[502] = 502
+    docs_url: str = urljoin(DOCS_BASE_URL, "errors/bad-gateway")
+
+
+class ServiceUnavailableError(HTTPErrorResponse):
+    status_code: Literal[503] = 503
+    docs_url: str = urljoin(DOCS_BASE_URL, "errors/service-unavailable")
+
+
+class GatewayTimeoutError(HTTPErrorResponse):
+    status_code: Literal[504] = 504
+    docs_url: str = urljoin(DOCS_BASE_URL, "errors/gateway-timeout")
+
+
+def additional_responses(
+    resource: str, not_found=False
+) -> Dict[int | str, Dict[str, Any]]:
+    responses = {
+        400: {
+            "model": BadRequestError,
+            "description": "HTTP 400 Bad Request error indicating a bad request made by the client.",
+        },
+        401: {
+            "model": NotAuthorizedError,
+            "description": "HTTP 401 Not Authorized error indicating a valid API key is missing from the request.",
+        },
+        403: {
+            "model": ForbiddenError,
+            "description": "HTTP 403 Forbidden error indicating your account or IP has been blocked, contact dev@openaq.org to get unblocked.",
+        },
+        405: {
+            "model": MethodNotAllowedError,
+            "description": "HTTP 405 Method Not Allowed Error indicating an invalid HTTP method used. The OpenAQ API only accepts GET requests.",
+        },
+        408: {
+            "model": RequestTimeoutError,
+            "description": "HTTP 408 Request Timeout error indicating the request was too complex, resulting in a timeout. Simplify the query and try again.",
+        },
+        422: {
+            "model": UnprocessableContentError,
+            "description": "HTTP 422 Unprocessable Content error indicating invalid path and/or query parameters, see the errors below for more detail.",
+        },
+        429: {
+            "model": TooManyRequestsError,
+            "description": "HTTP 429 Too Many Requests error indicating the request exceeded the API rate limit.",
+        },
+        501: {
+            "model": NotImplementedError,
+            "description": "HTTP 504 Not Implemented error indicating a server error, please contact dev@openaq.org.",
+        },
+        502: {
+            "model": BadGatewayError,
+            "description": "HTTP 504 Bad Gateway error indicating a server error, please contact dev@openaq.org.",
+        },
+        503: {
+            "model": ServiceUnavailableError,
+            "description": "HTTP 504 Service Unavailable error indicating a server error, please contact dev@openaq.org.",
+        },
+        504: {
+            "model": GatewayTimeoutError,
+            "description": "HTTP 504 Gateway Timeout error indicating a server error, please contact dev@openaq.org.",
+        },
+    }
+    if not_found:
+        return responses | {
+            404: {"model": NotFoundError, "description": f"{resource} not found"}
+        }
+    return responses
 
 
 class Meta(JsonBase):
@@ -243,12 +385,13 @@ class Location(JsonBase):
 
 
 class FlagType(JsonBase):
-    flag_types_id: int = Field(alias='id')
+    flag_types_id: int = Field(alias="id")
     label: str
     level: str
 
+
 class LocationFlag(JsonBase):
-    #model_config = ConfigDict(exclude_unset=True)
+    # model_config = ConfigDict(exclude_unset=True)
     location_id: int
     flag_type: FlagType
     datetime_from: DatetimeObject
@@ -260,11 +403,11 @@ class LocationFlag(JsonBase):
 class FlagInfo(JsonBase):
     has_flags: bool
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def check_data_type(cls, data: Any):
         if isinstance(data, bool):
-            data = { "has_flags": data }
+            data = {"has_flags": data}
         return data
 
 

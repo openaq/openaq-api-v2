@@ -2,16 +2,18 @@ from enum import StrEnum, auto
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, Path, Query
 
 from openaq_api.db import DB
+from openaq_api.exceptions import NotFoundException
 from openaq_api.v3.models.queries import (
     Paging,
     QueryBaseModel,
     QueryBuilder,
     SortingBase,
 )
-from openaq_api.v3.models.responses import InstrumentsResponse
+from openaq_api.v3.models.responses import InstrumentsResponse, additional_responses
+from openaq_api.v3.routers.manufacturers import fetch_manufacturers
 
 logger = logging.getLogger("instruments")
 
@@ -84,6 +86,7 @@ class InstrumentsQueries(Paging, InstrumentsSorting): ...
     response_model=InstrumentsResponse,
     summary="Get an instrument by ID",
     description="Provides a instrument by instrument ID",
+    responses=additional_responses("insrument", True),
 )
 async def instrument_get(
     instruments: Annotated[InstrumentPathQuery, Depends(InstrumentPathQuery.depends())],
@@ -91,7 +94,7 @@ async def instrument_get(
 ):
     response = await fetch_instruments(instruments, db)
     if len(response.results) == 0:
-        raise HTTPException(status_code=404, detail="Instrument not found")
+        raise NotFoundException("Instrument", instruments.instruments_id)
     return response
 
 
@@ -100,6 +103,7 @@ async def instrument_get(
     response_model=InstrumentsResponse,
     summary="Get instruments",
     description="Provides a list of instruments",
+    responses=additional_responses("instrument"),
 )
 async def instruments_get(
     instruments: Annotated[InstrumentsQueries, Depends(InstrumentsQueries.depends())],
@@ -114,14 +118,19 @@ async def instruments_get(
     response_model=InstrumentsResponse,
     summary="Get instruments by manufacturer ID",
     description="Provides a list of instruments for a specific manufacturer",
+    responses=additional_responses("manufacturer", True),
 )
 async def get_instruments_by_manufacturer(
-    manufacturer: Annotated[
+    manufacturers: Annotated[
         ManufacturerInstrumentsQuery, Depends(ManufacturerInstrumentsQuery.depends())
     ],
     db: DB = Depends(),
 ):
-    response = await fetch_instruments(manufacturer, db)
+    response = await fetch_instruments(manufacturers, db)
+    if not response.results:
+        manufacturers_response = await fetch_manufacturers(manufacturers, db)
+        if not manufacturers_response.results:
+            raise NotFoundException("Manufacturer", manufacturers.manufacturers_id)
     return response
 
 
