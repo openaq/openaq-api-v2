@@ -48,7 +48,10 @@ class ParameterPathQuery(QueryBaseModel):
     """
 
     parameters_id: int = Path(
-        ..., description="Limit the results to a specific parameters id", ge=1
+        ...,
+        description="Limit the results to a specific parameters id",
+        ge=1,
+        le=2147483647,
     )
 
     def where(self) -> str:
