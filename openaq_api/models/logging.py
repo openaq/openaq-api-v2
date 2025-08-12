@@ -73,7 +73,7 @@ class HTTPLog(BaseLog):
         counter:
         ip:
         api_key:
-        user-agent:
+        user_agent:
         path:
         params:
         params_obj:
