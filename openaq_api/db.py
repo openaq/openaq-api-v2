@@ -316,14 +316,24 @@ class DB:
         Long information about api use and errors in the logs
         """
         query = """
-        INSERT INTO api_logs (api_key, status_code, endpoint, params, agent)
+        INSERT INTO api_logs (api_key, status_code, endpoint, params, agent, counter, timing, rate_limiter, ip_address)
         VALUES
-        (:api_key, :status_code, :endpoint, :params, :agent)
+        (:api_key, :status_code, :endpoint, :params, :agent, :counter, :timing, :rate_limiter, :ip_address)
         """
         conn = None
         try:
             conn = await asyncpg.connect(settings.DATABASE_WRITE_URL)
-            rquery, args = render(query, api_key=entry.api_key, endpoint=entry.path, params=json.dumps(entry.params_obj), status_code=entry.http_code, agent=entry.user_agent)
+            rquery, args = render(query,
+                                  api_key=entry.api_key,
+                                  endpoint=entry.path,
+                                  params=json.dumps(entry.params_obj),
+                                  status_code=entry.http_code,
+                                  agent=entry.user_agent,
+                                  counter=entry.counter,
+                                  timing=entry.timing,
+                                  rate_limiter=entry.rate_limiter,
+                                  ip_address=entry.ip
+                                  )
             await conn.fetch(rquery, *args)
             await conn.close()
         except Exception as e:
