@@ -329,6 +329,6 @@ class DB:
         except Exception as e:
             logger.error(e)
             if conn is not None:
-                conn.close()
+                await conn.close()
 
         return True
