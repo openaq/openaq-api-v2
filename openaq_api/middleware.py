@@ -59,7 +59,8 @@ class Timer:
 
 async def logEntry(entry: HTTPLog, db: DB):
     await db.post_log(entry)
-    logger.debug('Posted log entry')
+    ## delete me later
+    logger.info(entry.model_dump_json())
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
