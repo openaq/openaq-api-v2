@@ -5,10 +5,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
 from openaq_api.db import DB
+from openaq_api.exceptions import NotFoundException
 from openaq_api.v3.routers.locations import LocationPathQuery, fetch_locations
 from openaq_api.v3.routers.parameters import fetch_parameters
 from openaq_api.v3.models.queries import QueryBaseModel, QueryBuilder, Paging
-from openaq_api.v3.models.responses import LatestResponse
+from openaq_api.v3.models.responses import LatestResponse, additional_responses
 
 logger = logging.getLogger("latest")
 
@@ -91,6 +92,7 @@ class ParametersLatestQueries(ParameterLatestPathQuery, DatetimeMinQuery, Paging
     response_model=LatestResponse,
     summary="",
     description="",
+    responses=additional_responses("parameter", True),
 )
 async def parameters_latest_get(
     parameters_latest: Annotated[
@@ -99,10 +101,10 @@ async def parameters_latest_get(
     db: DB = Depends(),
 ):
     response = await fetch_latest(parameters_latest, db)
-    if len(response.results) == 0:
+    if not response.results:
         parameters_response = await fetch_parameters(parameters_latest, db)
-        if len(parameters_response.results) == 0:
-            raise HTTPException(status_code=404, detail="Parameter not found")
+        if not parameters_response.results:
+            raise NotFoundException("Parameter", parameters_latest.parameters_id)
     return response
 
 
@@ -138,6 +140,7 @@ class LocationsLatestQueries(LocationLatestPathQuery, DatetimeMinQuery, Paging):
     response_model=LatestResponse,
     summary="Get a location's latest measurements",
     description="Providers a location's latest measurement values",
+    responses=additional_responses("location", True),
 )
 async def location_latest_get(
     locations_latest: Annotated[
@@ -146,12 +149,12 @@ async def location_latest_get(
     db: DB = Depends(),
 ):
     response = await fetch_latest(locations_latest, db)
-    if len(response.results) == 0:
+    if not response.results:
         locations_response = await fetch_locations(
             LocationPathQuery(locations_id=locations_latest.locations_id), db
         )
-        if len(locations_response.results) == 0:
-            raise HTTPException(status_code=404, detail="Location not found")
+        if not locations_response.results:
+            raise NotFoundException("Location", locations_latest.locations_id)
     return response
 
 

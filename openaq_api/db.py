@@ -4,6 +4,7 @@ import os
 import json
 
 import asyncpg
+from openaq_api.exceptions import RequestTimeoutException
 from openaq_api.models.auth import User
 import orjson
 from aiocache import SimpleMemoryCache, cached
@@ -133,10 +134,7 @@ class DB:
                 logger.error(f"Data Error: {e}\n{rquery}\n{args}")
                 raise ValueError(f"{e}") from e
             except TimeoutError:
-                raise HTTPException(
-                    status_code=408,
-                    detail="Connection timed out: Try to provide more specific query parameters or a smaller time frame.",
-                )
+                raise RequestTimeoutException()
             except Exception as e:
                 logger.error(f"Unknown database error: {e}\n{rquery}\n{args}")
                 if str(e).startswith("ST_TileEnvelope"):

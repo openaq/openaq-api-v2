@@ -1,5 +1,5 @@
 import pytest
-import requests
+import httpx
 
 base_url = "http://localhost:8000"
 
@@ -48,5 +48,5 @@ endpoints = [
 
 @pytest.mark.parametrize("endpoint", endpoints)
 def test_endpoints(endpoint):
-    response = requests.get(base_url + endpoint)
+    response = httpx.get(base_url + endpoint)
     assert response.status_code == 200
