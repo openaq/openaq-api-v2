@@ -320,8 +320,15 @@ class DB:
         VALUES
         (:api_key, :status_code, :endpoint, :params)
         """
-        conn = await asyncpg.connect(settings.DATABASE_WRITE_URL)
-        rquery, args = render(query, api_key=entry.api_key, endpoint=entry.path, params=json.dumps(entry.params_obj), status_code=entry.http_code)
-        await conn.fetch(rquery, *args)
-        await conn.close()
+        conn = None
+        try:
+            conn = await asyncpg.connect(settings.DATABASE_WRITE_URL)
+            rquery, args = render(query, api_key=entry.api_key, endpoint=entry.path, params=json.dumps(entry.params_obj), status_code=entry.http_code)
+            await conn.fetch(rquery, *args)
+            await conn.close()
+        except Exception as e:
+            logger.error(e)
+            if conn is not None:
+                conn.close()
+
         return True
