@@ -3,6 +3,10 @@ import time
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.types import ASGIApp
+from starlette.background import BackgroundTask
+
+from openaq_api.db import DB
+from fastapi import Depends
 
 from openaq_api.models.logging import (
     HTTPLog,
@@ -53,10 +57,18 @@ class Timer:
         return mrk.get(return_time)
 
 
+async def logEntry(entry: HTTPLog, db: DB):
+    await db.post_log(entry)
+    logger.debug('Posted log entry')
+
+
 class LoggingMiddleware(BaseHTTPMiddleware):
     """MiddleWare to set servers url on App with current url."""
 
-    async def dispatch(self, request: Request, call_next):
+    async def dispatch(self,
+                       request: Request,
+                       call_next,
+                       ):
         request.state.timer = Timer()
         response = await call_next(request)
         timing = request.state.timer.mark("process")
@@ -69,28 +81,17 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         else:
             counter = None
         api_key = request.headers.get("x-api-key", None)
-        if response.status_code == 200:
-            logger.info(
-                HTTPLog(
-                    request=request,
-                    type=LogType.SUCCESS,
-                    http_code=response.status_code,
-                    timing=timing,
-                    rate_limiter=rate_limiter,
-                    counter=counter,
-                    api_key=api_key,
-                ).model_dump_json()
+
+        entry = HTTPLog(
+            request=request,
+            type=LogType.SUCCESS if response.status_code == 200 else LogType.WARNING,
+            http_code=response.status_code,
+            timing=timing,
+            rate_limiter=rate_limiter,
+            counter=counter,
+            api_key=api_key,
             )
-        else:
-            logger.info(
-                HTTPLog(
-                    request=request,
-                    type=LogType.WARNING,
-                    http_code=response.status_code,
-                    timing=timing,
-                    rate_limiter=rate_limiter,
-                    counter=counter,
-                    api_key=api_key,
-                ).model_dump_json()
-            )
+
+        response.background = BackgroundTask(logEntry, entry, DB(request))
+
         return response

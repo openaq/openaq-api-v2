@@ -1,6 +1,7 @@
 import logging
 import time
 import os
+import json
 
 import asyncpg
 from openaq_api.models.auth import User
@@ -15,6 +16,7 @@ from asyncio import wait_for
 from openaq_api.settings import settings
 
 from openaq_api.models.responses import Meta, OpenAQResult
+from openaq_api.models.logging import HTTPLog
 
 logger = logging.getLogger("db")
 
@@ -308,3 +310,35 @@ class DB:
         )
         output = OpenAQResult(meta=meta, results=results)
         return output
+
+    async def post_log(self, entry: HTTPLog) -> bool:
+        """
+        Long information about api use and errors in the logs
+        """
+        query = """
+        INSERT INTO api_logs (api_key, status_code, endpoint, params, agent, counter, timing, rate_limiter, ip_address)
+        VALUES
+        (:api_key, :status_code, :endpoint, :params, :agent, :counter, :timing, :rate_limiter, :ip_address)
+        """
+        conn = None
+        try:
+            conn = await asyncpg.connect(settings.DATABASE_WRITE_URL)
+            rquery, args = render(query,
+                                  api_key=entry.api_key,
+                                  endpoint=entry.path,
+                                  params=json.dumps(entry.params_obj),
+                                  status_code=entry.http_code,
+                                  agent=entry.user_agent,
+                                  counter=entry.counter,
+                                  timing=entry.timing,
+                                  rate_limiter=entry.rate_limiter,
+                                  ip_address=entry.ip
+                                  )
+            await conn.fetch(rquery, *args)
+            await conn.close()
+        except Exception as e:
+            logger.error(e)
+            if conn is not None:
+                await conn.close()
+
+        return True
