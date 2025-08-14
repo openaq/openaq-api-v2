@@ -3,12 +3,13 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from pydantic import ConfigDict
 
 from openaq_api.db import DB
 from openaq_api.v3.models.queries import (
+    CommaSeparatedList,
     Paging,
     ParametersQuery,
-    ProviderQuery,
     QueryBaseModel,
     QueryBuilder,
     SortingBase,
@@ -61,7 +62,33 @@ class CountriesSorting(SortingBase):
     )
 
 
-class CountriesQueries(Paging, ParametersQuery, ProviderQuery, CountriesSorting): ...
+class CountriesProvider(QueryBaseModel):
+    """Pydantic query model for the `providers_id` query parameter
+
+    Inherits from QueryBaseModel
+
+    Attributes:
+        providers_id: providers_id or comma separated list of providers_id
+            for filtering results to a provider or providers
+    """
+
+    providers_id: CommaSeparatedList[int] | None = Query(
+        None,
+        description="Limit the results to a specific provider or multiple providers  with a single provider ID or a comma delimited list of IDs",
+        examples=["1", "1,2,3"],
+    )
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def where(self) -> str | None:
+        """ """
+        if self.has("providers_id"):
+            return "providers_ids && :providers_id"
+
+
+class CountriesQueries(
+    Paging, ParametersQuery, CountriesProvider, CountriesSorting
+): ...
 
 
 @router.get(
@@ -96,6 +123,8 @@ async def countries_get(
 
 async def fetch_countries(query, db):
     query_builder = QueryBuilder(query)
+    print("QUERY")
+    print(query_builder.where())
     sql = f"""
     SELECT id
     , code
