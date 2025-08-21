@@ -27,6 +27,7 @@ def client():
 paths = [
     ("/v3/instruments/3", {"instruments_id": "3"}),
     ("/v3/locations/42", {"locations_id": "42"}),
+    ("/v3/locations/42?locations_id=24", {"locations_id": "42"}),
     ("/v3/sensors/42/measurements", {"sensors_id": "42"}),
     (
         "/v3/sensors/42/measurements?limit=100&page=2",
