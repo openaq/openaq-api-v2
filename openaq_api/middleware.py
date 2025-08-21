@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -66,10 +67,11 @@ async def logEntry(entry: HTTPLog, db: DB):
 class LoggingMiddleware(BaseHTTPMiddleware):
     """MiddleWare to set servers url on App with current url."""
 
-    async def dispatch(self,
-                       request: Request,
-                       call_next,
-                       ):
+    async def dispatch(
+        self,
+        request: Request,
+        call_next,
+    ):
         request.state.timer = Timer()
         response = await call_next(request)
         timing = request.state.timer.mark("process")
@@ -91,8 +93,9 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             rate_limiter=rate_limiter,
             counter=counter,
             api_key=api_key,
-            )
+        )
 
-        response.background = BackgroundTask(logEntry, entry, DB(request))
+        if os.environ.get("LOGGING_DB"):
+            response.background = BackgroundTask(logEntry, entry, DB(request))
 
         return response

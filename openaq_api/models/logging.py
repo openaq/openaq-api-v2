@@ -1,10 +1,12 @@
 from enum import StrEnum
+from typing import Any
 
 from fastapi import Request, status
 from humps import camelize
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 import re
 from dateutil.parser import parse
+
 
 class LogType(StrEnum):
     SUCCESS = "SUCCESS"
@@ -109,7 +111,13 @@ class HTTPLog(BaseLog):
     @property
     def path(self) -> str:
         """str: returns URL path from request but replaces numbers in the path with :id"""
-        return re.sub(r'/[0-9]+', '/:id', self.request.url.path)
+        return re.sub(r"/[0-9]+", "/:id", self.request.url.path)
+
+    @computed_field(return_type=dict)
+    @property
+    def path_params(self) -> dict[str, Any] | None:
+        """str: returns URL path from request but replaces numbers in the path with :id"""
+        return self.request.path_params
 
     @computed_field(return_type=str)
     @property
@@ -120,14 +128,16 @@ class HTTPLog(BaseLog):
     @computed_field(return_type=dict)
     @property
     def params_obj(self) -> dict:
-        """dict: returns URL query params as key values from request"""
+        """returns URL query params and path params as key values from request"""
         params = dict(x.split("=", 1) for x in self.params.split("&") if "=" in x)
+        if self.path_params:
+            params = params | self.path_params
         try:
-			# if bad strings make it past our validation than this will protect the log
-            if 'date_from' in params.keys():
-                params['date_from_epoch'] = parse(params['date_from']).timestamp()
-            if 'date_to' in params.keys():
-                params['date_to_epoch'] = parse(params['date_to']).timestamp()
+            # if bad strings make it past our validation than this will protect the log
+            if "date_from" in params.keys():
+                params["date_from_epoch"] = parse(params["date_from"]).timestamp()
+            if "date_to" in params.keys():
+                params["date_to_epoch"] = parse(params["date_to"]).timestamp()
         except Exception:
             pass
 
