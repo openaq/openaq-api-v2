@@ -2,16 +2,17 @@ from enum import StrEnum, auto
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, Path, Query
 
 from openaq_api.db import DB
+from openaq_api.exceptions import NotFoundException
 from openaq_api.v3.models.queries import (
     Paging,
     QueryBaseModel,
     QueryBuilder,
     SortingBase,
 )
-from openaq_api.v3.models.responses import LicensesResponse
+from openaq_api.v3.models.responses import LicensesResponse, additional_responses
 
 logger = logging.getLogger("licenses")
 
@@ -66,6 +67,7 @@ class LicensesQueries(Paging, LicensesSorting): ...
     response_model=LicensesResponse,
     summary="Get an instrument by ID",
     description="Provides a instrument by instrument ID",
+    responses=additional_responses("license", True),
 )
 async def license_get(
     licenses: Annotated[LicensesPathQuery, Depends(LicensesPathQuery.depends())],
@@ -73,7 +75,7 @@ async def license_get(
 ):
     response = await fetch_licenses(licenses, db)
     if len(response.results) == 0:
-        raise HTTPException(status_code=404, detail="License not found")
+        raise NotFoundException("License", licenses.licenses_id)
     return response
 
 
@@ -82,6 +84,7 @@ async def license_get(
     response_model=LicensesResponse,
     summary="Get licenses",
     description="Provides a list of licenses",
+    responses=additional_responses("license"),
 )
 async def instruments_get(
     licenses: Annotated[LicensesQueries, Depends(LicensesQueries.depends())],

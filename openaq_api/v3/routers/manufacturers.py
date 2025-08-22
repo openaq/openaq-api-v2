@@ -2,16 +2,17 @@ from enum import StrEnum, auto
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, Path, Query
 
 from openaq_api.db import DB
+from openaq_api.exceptions import NotFoundException
 from openaq_api.v3.models.queries import (
     Paging,
     QueryBaseModel,
     QueryBuilder,
     SortingBase,
 )
-from openaq_api.v3.models.responses import ManufacturersResponse
+from openaq_api.v3.models.responses import ManufacturersResponse, additional_responses
 
 logger = logging.getLogger("manufacturers")
 
@@ -66,6 +67,7 @@ class ManufacturersQueries(Paging, InstrumentsSorting): ...
     response_model=ManufacturersResponse,
     summary="Get a manufacturer by ID",
     description="Provides a manufacturer by manufacturer ID",
+    responses=additional_responses("manufacturer", True),
 )
 async def manufacturer_get(
     manufacturers: Annotated[
@@ -75,7 +77,7 @@ async def manufacturer_get(
 ):
     response = await fetch_manufacturers(manufacturers, db)
     if len(response.results) == 0:
-        raise HTTPException(status_code=404, detail="Manufacturer not found")
+        raise NotFoundException("Manufacturer", manufacturers.manufacturers_id)
     return response
 
 
@@ -84,6 +86,7 @@ async def manufacturer_get(
     response_model=ManufacturersResponse,
     summary="Get manufacturers",
     description="Provides a list of manufacturers",
+    responses=additional_responses("manufacturer"),
 )
 async def manufacturers_get(
     manufacturer: Annotated[

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import orjson
-from fastapi import FastAPI, Request, Depends
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,15 +19,26 @@ from starlette.responses import JSONResponse, RedirectResponse
 
 from openaq_api.db import db_pool
 from openaq_api.dependencies import check_api_key
+from openaq_api.exceptions import (
+    NotFoundException,
+    TooManyRequestsException,
+)
 from openaq_api.middleware import (
     CacheControlMiddleware,
     LoggingMiddleware,
+    MethodNotAllowedError,
 )
 from openaq_api.models.logging import InfrastructureErrorLog
 
 from openaq_api.settings import settings
 
 # V3 routers
+from openaq_api.v3.models.responses import (
+    NotFoundError,
+    RequestValidationExceptionError,
+    TooManyRequestsError,
+    UnprocessableContentError,
+)
 from openaq_api.v3.routers import (
     auth,
     countries,
@@ -139,7 +150,7 @@ if settings.RATE_LIMITING is True:
                 InfrastructureErrorLog(detail=f"failed to connect to redis: {e}")
             )
 
-
+# app.add_middleware(HttpMethodMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -152,26 +163,56 @@ app.add_middleware(LoggingMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
-class OpenAQValidationResponseDetail(BaseModel):
-    loc: list[str] | None = None
-    msg: str | None = None
-    type: str | None = None
+@app.exception_handler(405)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    method_not_allowed_error = MethodNotAllowedError(
+        detail=f"HTTP {request.method} not allowed for this endpoint."
+    )
+    return method_not_allowed_error.to_response()
 
 
-class OpenAQValidationResponse(BaseModel):
-    detail: list[OpenAQValidationResponseDetail] | None = None
+@app.exception_handler(NotFoundException)
+async def not_found_exception_handler(request: Request, exc: NotFoundException):
+    not_found_error = NotFoundError(detail=exc.detail)
+    return not_found_error.to_response()
+
+
+@app.exception_handler(TooManyRequestsException)
+async def too_many_requests_exception_handler(
+    request: Request, exc: TooManyRequestsException
+):
+    too_many_requests_error = TooManyRequestsError(detail=exc.detail)
+    return too_many_requests_error.to_response()
 
 
 @app.exception_handler(RequestValidationError)
-async def openaq_request_validation_exception_handler(
+async def request_validation_exception_handler(
     request: Request, exc: RequestValidationError
 ):
-    return ORJSONResponse(status_code=422, content=jsonable_encoder(str(exc)))
+    errors = [
+        RequestValidationExceptionError(
+            input=e["input"], location=e["loc"], message=e["msg"]
+        )
+        for e in exc.errors()
+    ]
+    unprocessable_content_error = UnprocessableContentError(
+        detail="Invalid path or query parameter(s) passed.", errors=errors
+    )
+    return unprocessable_content_error.to_response()
 
 
 @app.exception_handler(ValidationError)
-async def openaq_exception_handler(request: Request, exc: ValidationError):
-    return ORJSONResponse(status_code=422, content=jsonable_encoder(str(exc)))
+async def validation_error_handler(request: Request, exc: ValidationError):
+    errors = [
+        RequestValidationExceptionError(
+            input=e["input"], location=e["loc"], message=e["msg"]
+        )
+        for e in exc.errors()
+    ]
+    unprocessable_content_error = UnprocessableContentError(
+        detail="Invalid path or query parameter(s) passed.", errors=errors
+    )
+    unprocessable_content_error.to_response()
 
 
 @app.get("/ping", include_in_schema=False)

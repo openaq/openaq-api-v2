@@ -2,16 +2,17 @@ from enum import StrEnum, auto
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, Path, Query
 
 from openaq_api.db import DB
+from openaq_api.exceptions import NotFoundException
 from openaq_api.v3.models.queries import (
     Paging,
     QueryBaseModel,
     QueryBuilder,
     SortingBase,
 )
-from openaq_api.v3.models.responses import OwnersResponse
+from openaq_api.v3.models.responses import OwnersResponse, additional_responses
 
 logger = logging.getLogger("owners")
 
@@ -67,6 +68,7 @@ class OwnersQueries(Paging, OwnersSorting): ...
     response_model=OwnersResponse,
     summary="Get a owner by ID",
     description="Provides a owner by owner ID",
+    responses=additional_responses("owner", True),
 )
 async def owner_get(
     owners: Annotated[OwnerPathQuery, Depends(OwnerPathQuery.depends())],
@@ -74,7 +76,7 @@ async def owner_get(
 ):
     response = await fetch_owners(owners, db)
     if len(response.results) == 0:
-        raise HTTPException(status_code=404, detail="Owner not found")
+        raise NotFoundException("Owner", owners.owners_id)
     return response
 
 
@@ -83,6 +85,7 @@ async def owner_get(
     response_model=OwnersResponse,
     summary="Get owners",
     description="Provides a list of owners",
+    responses=additional_responses("owner"),
 )
 async def owners_get(
     owner: Annotated[OwnersQueries, Depends(OwnersQueries.depends())],
