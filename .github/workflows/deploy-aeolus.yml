@@ -72,6 +72,7 @@ jobs:
           VPC_ID: ${{ env.AEOLUS_VPC_ID }}
 
           RATE_LIMITING: True
+          LOGGING_DB: True
           RATE_AMOUNT_KEY: 60
           RATE_TIME: 1
           USER_AGENT: ${{ env.AEOLUS_USER_AGENT }}
