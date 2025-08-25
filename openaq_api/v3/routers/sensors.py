@@ -24,7 +24,10 @@ router = APIRouter(
 
 class SensorPathQuery(QueryBaseModel):
     sensors_id: int = Path(
-        ..., description="Limit the results to a specific sensors id", ge=1
+        ...,
+        description="Limit the results to a specific sensors id",
+        ge=1,
+        le=2147483647,
     )
 
     def where(self):
@@ -33,7 +36,10 @@ class SensorPathQuery(QueryBaseModel):
 
 class LocationSensorQuery(QueryBaseModel):
     locations_id: int = Path(
-        ..., description="Limit the results to a specific sensors id", ge=1
+        ...,
+        description="Limit the results to a specific sensors id",
+        ge=1,
+        le=2147483647,
     )
 
     def where(self):

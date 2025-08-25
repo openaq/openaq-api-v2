@@ -63,7 +63,10 @@ class DatetimePeriodQuery(QueryBaseModel):
 
 class LocationFlagQuery(QueryBaseModel):
     locations_id: int = Path(
-        ..., description="Limit the results to a specific locations", ge=1
+        ...,
+        description="Limit the results to a specific locations",
+        ge=1,
+        le=2147483647,
     )
 
     def where(self):
@@ -72,7 +75,7 @@ class LocationFlagQuery(QueryBaseModel):
 
 class SensorFlagQuery(QueryBaseModel):
     sensor_id: int = Path(
-        ..., description="Limit the results to a specific sensor", ge=1
+        ..., description="Limit the results to a specific sensor", ge=1, le=2147483647
     )
 
     def where(self):
