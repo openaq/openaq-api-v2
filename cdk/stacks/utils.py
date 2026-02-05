@@ -27,8 +27,8 @@ def create_dependencies_layer(
     layer_id = f"openaq-{function_name}-{env_name}-dependencies"
 
     if not environ.get("SKIP_BUILD"):
-        print(f'Building {layer_id} into {output_dir}')
-        if 'arm' in platform.uname().version.lower():
+        print(f"Building {layer_id} into {output_dir}")
+        if "arm" in platform.uname().version.lower():
             shutil.copy(requirements_file, f"./requirements.docker.txt")
             client = docker.from_env()
             print("starting docker image build...")
@@ -73,7 +73,7 @@ def create_dependencies_layer(
                  && find . -type f -a -name '*.so' -print0 | xargs -0 strip --strip-unneeded
                  """,
                 shell=True,
-                )
+            )
 
     layer_code = aws_lambda.Code.from_asset(output_dir)
 
@@ -81,6 +81,6 @@ def create_dependencies_layer(
         self,
         layer_id,
         code=layer_code,
-        compatible_architectures=[aws_lambda.Architecture.X86_64],
+        compatible_architectures=[aws_lambda.Architecture.ARM_64],
         compatible_runtimes=[python_version],
     )
