@@ -1,4 +1,4 @@
-name: Deploy aeolus
+name: Deploy ARM
 
 on:
   workflow_dispatch:
