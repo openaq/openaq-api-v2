@@ -308,9 +308,9 @@ class LambdaApiStack(Stack):
                 query_string_behavior=cloudfront.OriginRequestQueryStringBehavior.all(),
             )
 
-            # waf = create_waf(
-            #     self, waf_rate_limit, waf_evaluation_window_sec, waf_block_ips
-            # )
+            waf = create_waf(
+                self, waf_rate_limit, waf_evaluation_window_sec, waf_block_ips
+            )
 
             dist = cloudfront.Distribution(
                 self,
@@ -327,9 +327,9 @@ class LambdaApiStack(Stack):
                 ),
                 domain_names=[domain_name],
                 certificate=cert,
-                # web_acl_id=waf.attr_arn,
-                enable_logging=False,
-                # log_bucket=log_bucket,
+                web_acl_id=waf.attr_arn,
+                enable_logging=True,
+                log_bucket=log_bucket,
             )
 
             route53.ARecord(
