@@ -99,4 +99,4 @@ jobs:
           poetry self add poetry-plugin-export
           poetry lock
           poetry install
-          poetry run cdk deploy openaq-api-aeolus --require-approval never
+          poetry run cdk deploy openaq-api-arm --require-approval never
