@@ -114,7 +114,9 @@ async def sensor_measurements_get(
     "/sensors/{sensors_id}/measurements/hourly",
     response_model=MeasurementsResponse,
     summary="Get measurements aggregated to hours by sensor ID",
-    description="Provides a list of measurements by sensor ID",
+    description="Provides a list of measurements aggregated to hourly values \
+        on the fly by sensor ID. For better performance but similar functionality, \
+        `/sensors/{sensors_id}/hours` is the recommended endpoint.",
 )
 async def sensor_measurements_aggregated_get_hourly(
     sensors: Annotated[PagedDatetimeQueries, Depends(PagedDatetimeQueries.depends())],
@@ -145,8 +147,11 @@ async def sensor_measurements_aggregated_get_daily(
 @router.get(
     "/sensors/{sensors_id}/hours",
     response_model=HourlyDataResponse,
-    summary="Get measurements aggregated to hour by sensor ID",
-    description="Provides a list of hourly data by sensor ID",
+    summary="Get precomputed hourly measurements by sensor ID",
+    description="Provides a list of hourly measurements by sensor ID. If a sensor \
+        is reporting at a higher frequency than hourly (e.g. one measurement \
+        every 10 minutes), this endpoint returns the precomputed average \
+        measurement value by the hour.",
 )
 async def sensor_hourly_measurements_get(
     sensors: Annotated[PagedDatetimeQueries, Depends(PagedDatetimeQueries.depends())],
@@ -177,7 +182,7 @@ async def sensor_hourly_measurements_aggregate_to_day_get(
     "/sensors/{sensors_id}/hours/monthly",
     response_model=HourlyDataResponse,
     summary="Get measurements aggregated from hour to month by sensor ID",
-    description="Provides a list of daily summaries of hourly data by sensor ID",
+    description="Provides a list of monthly summaries of hourly data by sensor ID",
 )
 async def sensor_hourly_measurements_aggregate_to_month_get(
     sensors: Annotated[PagedDatetimeQueries, Depends(PagedDatetimeQueries.depends())],
@@ -208,8 +213,8 @@ async def sensor_hourly_measurements_aggregate_to_year_get(
 @router.get(
     "/sensors/{sensors_id}/hours/hourofday",
     response_model=HourlyDataResponse,
-    summary="Get measurements aggregated from hour to day of week by sensor ID",
-    description="Provides a list of yearly summaries of hourly data by sensor ID",
+    summary="Get measurements aggregated from hour to hour of day by sensor ID",
+    description="Provides a list of summaries of hourly data by hour of day value by sensor ID",
 )
 async def sensor_hourly_measurements_aggregate_to_hod_get(
     sensors: Annotated[BaseDatetimeQueries, Depends(BaseDatetimeQueries.depends())],
@@ -226,7 +231,7 @@ async def sensor_hourly_measurements_aggregate_to_hod_get(
     "/sensors/{sensors_id}/hours/dayofweek",
     response_model=HourlyDataResponse,
     summary="Get measurements aggregated from hour to day of week by sensor ID",
-    description="Provides a list of yearly summaries of hourly data by sensor ID",
+    description="Provides a list of summaries of hourly data by day of week by sensor ID",
 )
 async def sensor_hourly_measurements_aggregate_to_dow_get(
     sensors: Annotated[BaseDatetimeQueries, Depends(BaseDatetimeQueries.depends())],
@@ -241,8 +246,8 @@ async def sensor_hourly_measurements_aggregate_to_dow_get(
 @router.get(
     "/sensors/{sensors_id}/hours/monthofyear",
     response_model=HourlyDataResponse,
-    summary="Get measurements aggregated from hour to day of week by sensor ID",
-    description="Provides a list of yearly summaries of hourly data by sensor ID",
+    summary="Get measurements aggregated from hour to month of year by sensor ID",
+    description="Provides a list of summaries of hourly data by month of year by sensor ID",
 )
 async def sensor_hourly_measurements_aggregate_to_moy_get(
     sensors: Annotated[BaseDatetimeQueries, Depends(BaseDatetimeQueries.depends())],
@@ -258,7 +263,7 @@ async def sensor_hourly_measurements_aggregate_to_moy_get(
     "/sensors/{sensors_id}/days/dayofweek",
     response_model=HourlyDataResponse,
     summary="Get measurements aggregated from day to day of week by sensor ID",
-    description="Provides a list of yearly summaries of dayly data by sensor ID",
+    description="Provides a list of summaries of daily data by day of week by sensor ID",
 )
 async def sensor_daily_measurements_aggregate_to_dow_get(
     sensors: Annotated[BaseDateQueries, Depends(BaseDateQueries.depends())],
@@ -273,8 +278,8 @@ async def sensor_daily_measurements_aggregate_to_dow_get(
 @router.get(
     "/sensors/{sensors_id}/days/monthofyear",
     response_model=HourlyDataResponse,
-    summary="Get measurements aggregated from day to day of week by sensor ID",
-    description="Provides a list of yearly summaries of daily data by sensor ID",
+    summary="Get measurements aggregated from day to month of year by sensor ID",
+    description="Provides a list of summaries of daily data by month of year by sensor ID",
 )
 async def sensor_daily_measurements_aggregate_to_moy_get(
     sensors: Annotated[BaseDateQueries, Depends(BaseDateQueries.depends())],
@@ -304,8 +309,8 @@ async def sensor_daily_get(
 @router.get(
     "/sensors/{sensors_id}/days/monthly",
     response_model=HourlyDataResponse,
-    summary="Get measurements aggregated from hour to month by sensor ID",
-    description="Provides a list of daily summaries of hourly data by sensor ID",
+    summary="Get measurements aggregated from day to month by sensor ID",
+    description="Provides a list of monthly summaries of daily data by sensor ID",
 )
 async def sensor_daily_aggregate_to_month_get(
     sensors: Annotated[PagedDateQueries, Depends(PagedDateQueries.depends())],
