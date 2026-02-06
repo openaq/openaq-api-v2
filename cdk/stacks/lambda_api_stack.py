@@ -329,7 +329,7 @@ class LambdaApiStack(Stack):
                 certificate=cert,
                 # web_acl_id=waf.attr_arn,
                 enable_logging=False,
-                log_bucket=log_bucket,
+                # log_bucket=log_bucket,
             )
 
             route53.ARecord(
