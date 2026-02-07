@@ -89,8 +89,8 @@ class ParametersLatestQueries(ParameterLatestPathQuery, DatetimeMinQuery, Paging
 @router.get(
     "/parameters/{parameters_id}/latest",
     response_model=LatestResponse,
-    summary="",
-    description="",
+    summary="Get latest measurements by parameters ID",
+    description="Provides a list of latest measurements of the indicated parameters ID",
 )
 async def parameters_latest_get(
     parameters_latest: Annotated[

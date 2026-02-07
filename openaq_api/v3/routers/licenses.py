@@ -64,8 +64,8 @@ class LicensesQueries(Paging, LicensesSorting): ...
 @router.get(
     "/licenses/{licenses_id}",
     response_model=LicensesResponse,
-    summary="Get an instrument by ID",
-    description="Provides a instrument by instrument ID",
+    summary="Get a license by ID",
+    description="Provides a license by license ID",
 )
 async def license_get(
     licenses: Annotated[LicensesPathQuery, Depends(LicensesPathQuery.depends())],
